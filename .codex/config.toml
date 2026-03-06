@@ -1,0 +1,5 @@
+approval_policy = "on-request"
+personality = "pragmatic"
+
+[mcp_servers.openaiDeveloperDocs]
+url = "https://developers.openai.com/mcp"
