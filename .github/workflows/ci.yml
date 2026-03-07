@@ -1,0 +1,59 @@
+name: Free CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Python syntax check (if source dirs exist)
+        shell: bash
+        run: |
+          set -euo pipefail
+          targets=()
+          for d in python_scripts src app; do
+            if [ -d "$d" ]; then
+              targets+=("$d")
+            fi
+          done
+
+          if [ "${#targets[@]}" -eq 0 ]; then
+            echo "No Python source directories found; skipping."
+            exit 0
+          fi
+
+          python -m compileall -q "${targets[@]}"
+
+      - name: Setup Node (if ui_web exists)
+        if: ${{ hashFiles('ui_web/package.json') != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build web UI (if ui_web exists)
+        if: ${{ hashFiles('ui_web/package.json') != '' }}
+        working-directory: ui_web
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+          npm run build
