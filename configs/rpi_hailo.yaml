@@ -1,0 +1,15 @@
+name: rpi_hailo
+runtime_mode: embedded
+model_path: models/drone_bird.hef
+device: hailo
+imgsz: 640
+conf_thresh: 0.25
+small_target_mode: false
+adaptive_scan_enabled: true
+global_scan_interval: 8
+lock_tracker_enabled: true
+night_enabled: false
+roi_assist_enabled: false
+show_gt_overlay: false
+show_debug_timings: false
+show_trails: false

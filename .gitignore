@@ -1,0 +1,11 @@
+.DS_Store
+__pycache__/
+*.pyc
+tracker_env/
+datasets/
+runs/
+logs/
+ui_web/node_modules/
+ui_web/dist/
+models/*.pt
+models/*.hef
