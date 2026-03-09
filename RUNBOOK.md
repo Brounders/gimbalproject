@@ -23,8 +23,22 @@ tracker_env\Scripts\python.exe python_scripts\train_yolo_from_yaml.py --help
   - `results.csv`
 
 ## 3) Экспорт артефакта с RTX
-- Положить модель в:
-  - `models/checkpoints/rtx_drone_first_6h_v2_best.pt`
+- Канонический цикл приема на Mac (одна команда):
+```bash
+cd /Users/bround/Documents/Projects/GimbalProject
+./tracker_env/bin/python python_scripts/ingest_rtx_cycle.py \
+  --url "http://192.168.1.102:8000/<artifact>.zip" \
+  --candidate-preset night_rtx_candidate \
+  --device mps \
+  --mode operator \
+  --max-frames 240
+```
+- Скрипт автоматически:
+  - скачивает zip в `imports/rtx/incoming/`
+  - распаковывает в `imports/rtx/unpacked/`
+  - сохраняет архивный checkpoint как `models/checkpoints/<tag>_best.pt`
+  - обновляет канонический путь `models/checkpoints/rtx_latest_best.pt`
+  - запускает `stable_cycle` (benchmark + quality-gate + решение)
 
 ## 4) Качество на Mac (benchmark + quality-gate)
 ```bash

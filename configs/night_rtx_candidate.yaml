@@ -1,6 +1,6 @@
 name: night_rtx_candidate
 runtime_mode: research
-model_path: models/checkpoints/rtx_drone_first_6h_v2_best.pt
+model_path: models/checkpoints/rtx_latest_best.pt
 device: mps
 imgsz: 960
 conf_thresh: 0.12

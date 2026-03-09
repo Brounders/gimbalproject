@@ -18,6 +18,7 @@
 - `run_quality_gate.py` - Compare run KPIs against baseline thresholds.
 - `run_profile_ab.py` - A/B of operator profiles (`operator_standard` vs `fast`) on fixed night/IR clips.
 - `run_stable_cycle.py` - Single orchestrator: RTX artifact -> benchmark -> quality-gate -> release decision.
+- `ingest_rtx_cycle.py` - End-to-end Mac intake: download RTX zip -> install `rtx_latest_best.pt` -> run stable cycle.
 - `run_backend_parity.py` - Compare KPI parity across backend/preset pairs.
 - `run_scenario_sweep.py` - Batch sweep of presets over one source.
 - `run_dataset_batch.py` - Batch dataset-level evaluation helper.
