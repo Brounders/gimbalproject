@@ -13,3 +13,4 @@ roi_assist_enabled: false
 show_gt_overlay: false
 show_debug_timings: false
 show_trails: false
+display_box_alpha: 0.40

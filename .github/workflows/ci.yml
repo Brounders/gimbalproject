@@ -38,22 +38,3 @@ jobs:
           fi
 
           python -m compileall -q "${targets[@]}"
-
-      - name: Setup Node (if ui_web exists)
-        if: ${{ hashFiles('ui_web/package.json') != '' }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Build web UI (if ui_web exists)
-        if: ${{ hashFiles('ui_web/package.json') != '' }}
-        working-directory: ui_web
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
-          npm run build

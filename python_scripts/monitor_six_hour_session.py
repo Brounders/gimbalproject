@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+"""
+DEPRECATED: kept for backward compatibility with older `*_session.log` launches.
+Prefer `check_training_status.py` for current autosession flows.
+"""
+
 import argparse
 import csv
 from datetime import datetime, timezone

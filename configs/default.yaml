@@ -37,3 +37,4 @@ budget_roi_skip_level2: 2
 show_gt_overlay: false
 show_debug_timings: false
 show_trails: false
+display_box_alpha: 0.40

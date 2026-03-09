@@ -3,6 +3,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / 'src'
@@ -10,6 +11,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 import cv2
+import numpy as np
 from PySide6.QtCore import QSettings, QThread, Qt, Signal
 from PySide6.QtGui import QAction, QImage, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
@@ -44,213 +46,40 @@ from uav_tracker.modes import RUNTIME_MODES, apply_runtime_mode
 from uav_tracker.pipeline import TrackerPipeline, VideoSession, apply_runtime_preset, parse_video_source
 from uav_tracker.profile_io import apply_overrides, available_presets, load_preset, load_profile, save_profile
 from app.ui import UIState, UIStateMachine, VideoStage
+from app.ui.theme import UI_STATE_VIEW, build_app_stylesheet
 
-
-APP_STYLESHEET = """
-QMainWindow {
-    background: #23272B;
-    color: #E6EBEF;
-}
-QWidget {
-    color: #E6EBEF;
-    font-size: 13px;
-    font-family: "Segoe UI", "Noto Sans", "Inter", sans-serif;
-}
-QWidget#CentralRoot {
-    background: #23272B;
-}
-QMenuBar {
-    background: #2B3136;
-    color: #AAB4BE;
-    border-bottom: 1px solid #3E474F;
-}
-QMenuBar::item:selected {
-    background: #31383E;
-}
-
-QFrame#HeaderBar {
-    background: #2B3136;
-    border: 1px solid #3E474F;
-    border-radius: 10px;
-}
-QLabel#WindowTitle {
-    font-size: 17px;
-    font-weight: 600;
-    color: #E6EBEF;
-}
-QLabel#HeaderMeta {
-    color: #AAB4BE;
-    font-size: 13px;
-}
-QLabel#HeaderStatus {
-    border: 1px solid #3E474F;
-    border-radius: 8px;
-    padding: 5px 10px;
-    background: #31383E;
-    color: #E6EBEF;
-    font-weight: 600;
-}
-QLabel#HeaderStatus[state="idle"] { background: #31383E; }
-QLabel#HeaderStatus[state="running"] { background: #3F5A4C; }
-QLabel#HeaderStatus[state="lock"] { background: #5B7183; }
-QLabel#HeaderStatus[state="lost"] { background: #9A7B3F; }
-QLabel#HeaderStatus[state="stopping"] { background: #5D4F3A; }
-QLabel#HeaderStatus[state="evaluating"] { background: #5B7183; }
-QLabel#HeaderStatus[state="error"] { background: #7A4141; }
-
-QLabel#RecordIndicator {
-    border: 1px solid #3E474F;
-    border-radius: 8px;
-    padding: 5px 10px;
-    background: #31383E;
-    color: #AAB4BE;
-}
-QLabel#RecordIndicator[recording="true"] {
-    background: #A24A4A;
-    color: #E6EBEF;
-    border-color: #A24A4A;
-}
-
-QFrame#LeftControlRail {
-    background: #2B3136;
-    border: 1px solid #3E474F;
-    border-radius: 10px;
-}
-QLabel#RailSectionTitle {
-    color: #AAB4BE;
-    font-size: 12px;
-    font-weight: 600;
-}
-QLabel#BottomConsoleText {
-    color: #AAB4BE;
-    font-family: "Consolas", "JetBrains Mono", monospace;
-}
-QFrame#BottomConsole {
-    background: #2B3136;
-    border: 1px solid #3E474F;
-    border-radius: 8px;
-}
-
-QGroupBox {
-    border: 1px solid #3E474F;
-    border-radius: 10px;
-    margin-top: 10px;
-    padding-top: 12px;
-    background: #2B3136;
-    color: #E6EBEF;
-}
-QGroupBox::title {
-    subcontrol-origin: margin;
-    left: 10px;
-    padding: 0 6px;
-    color: #AAB4BE;
-    font-weight: 600;
-    font-size: 12px;
-}
-
-QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QPlainTextEdit {
-    background: #31383E;
-    color: #E6EBEF;
-    border: 1px solid #3E474F;
-    border-radius: 8px;
-    padding: 6px 8px;
-}
-QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus, QPlainTextEdit:focus {
-    border-color: #5B7183;
-}
-
-QPushButton {
-    background: #31383E;
-    color: #E6EBEF;
-    border: 1px solid #3E474F;
-    border-radius: 8px;
-    padding: 7px 11px;
-    font-weight: 600;
-}
-QPushButton:hover { background: #3A4248; }
-QPushButton:disabled {
-    background: #2A2F34;
-    color: #7C8792;
-    border-color: #384047;
-}
-QPushButton[variant="primary"] {
-    background: #35654C;
-    border-color: #35654C;
-}
-QPushButton[variant="primary"]:hover {
-    background: #3D7358;
-}
-QPushButton[variant="destructive"] {
-    background: #7A4141;
-    border-color: #7A4141;
-}
-QPushButton[variant="destructive"]:hover {
-    background: #8B4A4A;
-}
-QPushButton[variant="ghost"] {
-    background: transparent;
-    border-color: #3E474F;
-    color: #AAB4BE;
-}
-QPushButton[variant="ghost"]:hover {
-    background: #31383E;
-    color: #E6EBEF;
-}
-
-QCheckBox {
-    spacing: 7px;
-    color: #E6EBEF;
-}
-QCheckBox::indicator {
-    width: 14px;
-    height: 14px;
-    border: 1px solid #3E474F;
-    border-radius: 4px;
-    background: #31383E;
-}
-QCheckBox::indicator:checked {
-    background: #5B7183;
-    border-color: #5B7183;
-}
-
-QFrame#VideoStage {
-    background: #2B3136;
-    border: 1px solid #3E474F;
-    border-radius: 10px;
-    padding: 8px;
-}
-
-QLabel#VideoSurface {
-    background: #1F2428;
-    color: #AAB4BE;
-    border: 1px solid #3E474F;
-    border-radius: 10px;
-    font-size: 14px;
-}
-
-QFrame#InspectorCard {
-    background: #31383E;
-    border: 1px solid #3E474F;
-    border-radius: 8px;
-}
-QLabel#InspectorTitle {
-    color: #AAB4BE;
-    font-size: 12px;
-    font-weight: 600;
-}
-QLabel#InspectorValue {
-    color: #E6EBEF;
-    font-size: 13px;
-}
-"""
 
 SCENARIO_LABELS = {
     'default': 'Дневной (базовый)',
     'small_target': 'Малые цели',
     'night': 'Ночной режим',
+    'fast': 'Fast (маневренные цели)',
+    'operator_standard': 'Оператор (базовый)',
     'antiuav_thermal': 'Thermal / Anti-UAV',
     'rpi_hailo': 'RPi + Hailo',
     'custom': 'Пользовательский',
+}
+
+OPERATOR_ENV_LABELS = {
+    'day': 'Day',
+    'night': 'Night',
+    'ir': 'IR',
+}
+
+OPERATOR_ENV_TO_PRESET = {
+    'day': 'default',
+    'night': 'night_ir_lock_v2',
+    'ir': 'antiuav_thermal',
+}
+
+OPERATOR_TRACKING_PROFILE_LABELS = {
+    'standard': 'Стандарт (0.40)',
+    'fast': 'Fast (0.30)',
+}
+
+OPERATOR_TRACKING_PROFILE_TO_PRESET = {
+    'standard': 'operator_standard',
+    'fast': 'fast',
 }
 
 
@@ -269,9 +98,13 @@ class TrackerWorker(QThread):
         self.small_target_mode = small_target_mode
         self.lock_log_path = lock_log_path.strip()
         self._stop_requested = False
+        self._switch_target_requested = False
 
     def stop(self):
         self._stop_requested = True
+
+    def request_switch_target(self):
+        self._switch_target_requested = True
 
     def run(self):
         reason = 'stopped'
@@ -310,6 +143,9 @@ class TrackerWorker(QThread):
                     render=True,
                     source_fps=meta.get('source_fps'),
                 )
+                if self._switch_target_requested:
+                    pipeline.request_manual_target_switch()
+                    self._switch_target_requested = False
                 if result.frame is not None:
                     session.write(result.frame)
                     self.frame_ready.emit(result.frame)
@@ -333,9 +169,12 @@ class TrackerWorker(QThread):
                         'fps': result.fps,
                         'active_id': result.active_id,
                         'active_source': result.active_source,
+                        'active_cycle_index': result.active_cycle_index,
+                        'active_cycle_total': result.active_cycle_total,
                         'target_count': result.target_count,
                         'visible_target_count': result.visible_target_count,
                         'mode': result.mode,
+                        'lock_confirmed': result.lock_confirmed,
                         'frame_index': result.frame_index,
                         'scan_strategy': result.scan_strategy,
                         'gt_visible': result.gt_visible,
@@ -355,6 +194,9 @@ class TrackerWorker(QThread):
                         'budget_frame_ms': result.budget_frame_ms,
                         'roi_budget_candidates': result.roi_budget_candidates,
                         'night_skip': result.night_skip,
+                        'ir_noise_level': result.ir_noise_level,
+                        'ir_noise_gate_active': result.ir_noise_gate_active,
+                        'lock_confirm_frames_effective': result.lock_confirm_frames_effective,
                         'timings_ms': result.timings_ms,
                     }
                 )
@@ -426,17 +268,40 @@ class MainWindow(QMainWindow):
         self._evaluation_reports: list[str] = []
         self._log_count = 0
         self._preview_pixmap: QPixmap | None = None
+        self._header_meta_full_text = 'Источник: CAM 0'
+        self._header_meta_tooltip = 'Источник: CAM 0'
+        self._operator_env_last_resolved = 'day'
+        self._runtime_selected_preset = 'default'
+        self._runtime_selected_env = 'day'
+        self._runtime_env_note = ''
+        self._runtime_tracking_profile = 'standard'
+        self._last_target_count = 0
+        self._lock_started_at_monotonic: float | None = None
 
         self.settings = QSettings('GimbalProject', 'UAVTrackerApp')
+        self.ui_v2_enabled = self._to_bool(self.settings.value('ui/ui_v2_enabled', 'true'), default=True)
 
         self.setWindowTitle('Система сопровождения БПЛА')
         self.resize(1520, 980)
         self.setMinimumSize(1360, 860)
-        self.setStyleSheet(APP_STYLESHEET)
+        self.setStyleSheet(build_app_stylesheet(self.ui_v2_enabled))
         self._build_ui()
         self._wire_actions()
         self._apply_defaults()
         self._load_app_settings()
+
+    @staticmethod
+    def _to_bool(value: Any, default: bool = False) -> bool:
+        if value is None:
+            return default
+        if isinstance(value, bool):
+            return value
+        text = str(value).strip().lower()
+        if text in {'1', 'true', 'yes', 'on'}:
+            return True
+        if text in {'0', 'false', 'no', 'off'}:
+            return False
+        return default
 
     def _build_ui(self):
         central = QWidget()
@@ -458,7 +323,7 @@ class MainWindow(QMainWindow):
         body_splitter.addWidget(self.build_video_stage())
         body_splitter.setStretchFactor(0, 0)
         body_splitter.setStretchFactor(1, 1)
-        body_splitter.setSizes([280, 1040])
+        body_splitter.setSizes([280, 1080])
         root.addWidget(body_splitter, 1)
 
         root.addWidget(self.build_bottom_console())
@@ -468,11 +333,14 @@ class MainWindow(QMainWindow):
         self.log_view.document().setMaximumBlockCount(500)
         self.logs_workspace_view = self.log_view
 
-        self.top_scenario_label = self.header_source_label
-        self.console_status_label = self.bottom_console_label
-
         self.build_expert_dialog()
         self._refresh_workspace_overviews()
+
+        self.ui_v2_action = QAction('UI v2', self)
+        self.ui_v2_action.setCheckable(True)
+        self.ui_v2_action.setChecked(self.ui_v2_enabled)
+        self.ui_v2_action.toggled.connect(self._set_ui_v2_enabled)
+        self.menuBar().addAction(self.ui_v2_action)
 
         quit_action = QAction('Выход', self)
         quit_action.triggered.connect(self.close)
@@ -482,7 +350,7 @@ class MainWindow(QMainWindow):
         header = QFrame()
         header.setObjectName('HeaderBar')
         header.setMinimumHeight(60)
-        header.setMaximumHeight(66)
+        header.setMaximumHeight(60)
 
         layout = QHBoxLayout(header)
         layout.setContentsMargins(10, 8, 10, 8)
@@ -498,7 +366,7 @@ class MainWindow(QMainWindow):
         self.top_state_badge.setProperty('state', 'idle')
         layout.addWidget(self.top_state_badge)
 
-        self.header_source_label = QLabel('Источник: CAM 0')
+        self.header_source_label = QLabel('Источник: CAM 0 · Режим: Day')
         self.header_source_label.setObjectName('HeaderMeta')
         layout.addWidget(self.header_source_label, 1)
 
@@ -507,33 +375,24 @@ class MainWindow(QMainWindow):
         self.record_indicator_label.setProperty('recording', False)
         layout.addWidget(self.record_indicator_label)
 
-        self.diagnostics_btn = QPushButton('Диагностика')
-        self.diagnostics_btn.setProperty('variant', 'ghost')
-        layout.addWidget(self.diagnostics_btn)
-
-        self.expert_btn = QPushButton('Эксперт')
-        self.expert_btn.setProperty('variant', 'ghost')
-        layout.addWidget(self.expert_btn)
-
-        self.expert_badge = QLabel('EXP')
-        self.expert_badge.setObjectName('HeaderMeta')
-        self.expert_badge.setVisible(False)
-        layout.addWidget(self.expert_badge)
-
-        self.fullscreen_btn = QPushButton('⛶')
-        self.fullscreen_btn.setFixedWidth(34)
-        self.fullscreen_btn.setProperty('variant', 'ghost')
-        self.fullscreen_btn.setToolTip('Полный экран')
-        layout.addWidget(self.fullscreen_btn)
-
-        self.start_btn = QPushButton('Старт')
+        self.start_btn = QPushButton('Start')
         self.start_btn.setProperty('variant', 'primary')
         layout.addWidget(self.start_btn)
 
-        self.stop_btn = QPushButton('Стоп')
+        self.stop_btn = QPushButton('Stop')
         self.stop_btn.setProperty('variant', 'destructive')
         self.stop_btn.setEnabled(False)
         layout.addWidget(self.stop_btn)
+
+        self.next_target_btn = QPushButton('Next Target')
+        self.next_target_btn.setProperty('variant', 'ghost')
+        self.next_target_btn.setToolTip('Переключить lock на следующий ID из фоновых целей')
+        self.next_target_btn.setEnabled(False)
+        layout.addWidget(self.next_target_btn)
+
+        self.expert_btn = QPushButton('Expert')
+        self.expert_btn.setProperty('variant', 'ghost')
+        layout.addWidget(self.expert_btn)
 
         return header
 
@@ -541,75 +400,102 @@ class MainWindow(QMainWindow):
         rail = QFrame()
         rail.setObjectName('LeftControlRail')
         rail.setMinimumWidth(280)
-        rail.setMaximumWidth(310)
+        rail.setMaximumWidth(300)
         layout = QVBoxLayout(rail)
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
 
-        title = QLabel('Операционное управление')
+        title = QLabel('Управление')
         title.setObjectName('RailSectionTitle')
         layout.addWidget(title)
 
-        self.quick_day_btn = QPushButton('День')
-        self.quick_day_btn.setProperty('variant', 'ghost')
-        self.quick_night_btn = QPushButton('Ночь')
-        self.quick_night_btn.setProperty('variant', 'ghost')
-        self.quick_ir_btn = QPushButton('IR')
-        self.quick_ir_btn.setProperty('variant', 'ghost')
-        self.quick_day_btn.setToolTip('Быстро применить дневной preset')
-        self.quick_night_btn.setToolTip('Быстро применить ночной preset')
-        self.quick_ir_btn.setToolTip('Быстро применить thermal/IR preset')
+        primary_card = QFrame()
+        primary_card.setObjectName('PrimaryControlCard')
+        primary_layout = QVBoxLayout(primary_card)
+        primary_layout.setContentsMargins(8, 8, 8, 8)
+        primary_layout.setSpacing(6)
+        primary_layout.addWidget(QLabel('Режим камеры', objectName='RailSectionTitle'))
 
-        quick_row = QHBoxLayout()
-        quick_row.setContentsMargins(0, 0, 0, 0)
-        quick_row.setSpacing(6)
-        quick_row.addWidget(self.quick_day_btn)
-        quick_row.addWidget(self.quick_night_btn)
-        quick_row.addWidget(self.quick_ir_btn)
-        layout.addLayout(quick_row)
+        self.operator_env_combo = QComboBox()
+        self.operator_env_combo.addItem('Day', 'day')
+        self.operator_env_combo.addItem('Night', 'night')
+        self.operator_env_combo.addItem('IR', 'ir')
+        self.operator_env_combo.setToolTip('Режим камеры: Day / Night / IR')
+        primary_layout.addWidget(self.operator_env_combo)
+
+        self.operator_env_hint = QLabel('Режим: Day')
+        self.operator_env_hint.setObjectName('InspectorValueSub')
+        self.operator_env_hint.setWordWrap(True)
+        primary_layout.addWidget(self.operator_env_hint)
+
+        # Скрытый контрол для обратной совместимости профилей.
+        self.operator_profile_label = QLabel('Профиль сопровождения')
+        self.operator_profile_label.setObjectName('RailSectionTitle')
+        self.operator_profile_label.setVisible(False)
+        primary_layout.addWidget(self.operator_profile_label)
+
+        self.operator_profile_combo = QComboBox()
+        self.operator_profile_combo.addItem(OPERATOR_TRACKING_PROFILE_LABELS['standard'], 'standard')
+        self.operator_profile_combo.addItem(OPERATOR_TRACKING_PROFILE_LABELS['fast'], 'fast')
+        self.operator_profile_combo.setVisible(False)
+        primary_layout.addWidget(self.operator_profile_combo)
+        layout.addWidget(primary_card)
+
+        source_card = QFrame()
+        source_card.setObjectName('SecondaryControlCard')
+        source_layout = QVBoxLayout(source_card)
+        source_layout.setContentsMargins(8, 8, 8, 8)
+        source_layout.setSpacing(6)
+        source_layout.addWidget(QLabel('Источник', objectName='RailSectionTitle'))
 
         self.source_type_combo = QComboBox()
-        self.source_type_combo.addItem('Камера', 'camera')
-        self.source_type_combo.addItem('Видео', 'video')
-        self.source_type_combo.addItem('Поток', 'stream')
-        layout.addWidget(self.source_type_combo)
+        self.source_type_combo.addItem('Camera', 'camera')
+        self.source_type_combo.addItem('Video', 'video')
+        self.source_type_combo.addItem('Stream', 'stream')
+        source_layout.addWidget(self.source_type_combo)
 
         self.camera_index_spin = QSpinBox()
         self.camera_index_spin.setRange(0, 16)
         self.camera_index_spin.setValue(0)
-        layout.addWidget(self.camera_index_spin)
+        source_layout.addWidget(self.camera_index_spin)
 
         self.source_path_label = QLabel('Видео файл')
         self.source_path_label.setObjectName('RailSectionTitle')
-        layout.addWidget(self.source_path_label)
+        source_layout.addWidget(self.source_path_label)
 
         self.source_path_edit = QLineEdit('')
         self.source_path_edit.setPlaceholderText('/путь/к/видео.mp4')
-        layout.addWidget(self.source_path_edit)
+        source_layout.addWidget(self.source_path_edit)
 
         self.source_browse_btn = QPushButton('Выбрать...')
-        layout.addWidget(self.source_browse_btn)
+        source_layout.addWidget(self.source_browse_btn)
+        layout.addWidget(source_card)
+
+        session_card = QFrame()
+        session_card.setObjectName('TertiaryControlCard')
+        session_layout = QVBoxLayout(session_card)
+        session_layout.setContentsMargins(8, 8, 8, 8)
+        session_layout.setSpacing(6)
+        session_layout.addWidget(QLabel('Сессия', objectName='RailSectionTitle'))
 
         self.record_check = QCheckBox('Сохранять видео')
         self.record_check.setChecked(True)
-        layout.addWidget(self.record_check)
+        session_layout.addWidget(self.record_check)
 
         self.output_path_label = QLabel('Выход')
         self.output_path_label.setObjectName('RailSectionTitle')
-        layout.addWidget(self.output_path_label)
+        session_layout.addWidget(self.output_path_label)
 
         self.output_edit = QLineEdit(str(ROOT / 'runs' / 'gui_output.mp4'))
-        layout.addWidget(self.output_edit)
+        session_layout.addWidget(self.output_edit)
 
         self.output_browse_btn = QPushButton('Куда сохранить...')
-        layout.addWidget(self.output_browse_btn)
+        session_layout.addWidget(self.output_browse_btn)
 
-        self.eval_btn = QPushButton('Оценка')
-        layout.addWidget(self.eval_btn)
-
-        self.inspector_module = self.build_inspector_drawer()
-        self.inspector_module.setVisible(False)
-        layout.addWidget(self.inspector_module, 1)
+        self.eval_btn = QPushButton('Evaluate')
+        self.eval_btn.setProperty('variant', 'ghost')
+        session_layout.addWidget(self.eval_btn)
+        layout.addWidget(session_card)
 
         layout.addStretch(1)
         return rail
@@ -617,13 +503,58 @@ class MainWindow(QMainWindow):
     def build_video_stage(self) -> QWidget:
         self.video_stage = VideoStage()
         self.video_label = self.video_stage.surface
+        self.target_info_card = self.build_target_info_card()
+        self.video_stage.set_overlay_widget(self.target_info_card)
         return self.video_stage
+
+    def build_target_info_card(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName('TargetInfoCard')
+        layout = QGridLayout(card)
+        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setHorizontalSpacing(8)
+        layout.setVerticalSpacing(4)
+
+        self.target_info_state = QLabel('IDLE')
+        self.target_info_state.setObjectName('TargetInfoState')
+        self.target_info_state.setProperty('state', 'idle')
+        layout.addWidget(self.target_info_state, 0, 0, 1, 2)
+
+        id_title = QLabel('ID')
+        id_title.setObjectName('TargetInfoTitle')
+        self.target_info_id = QLabel('—')
+        self.target_info_id.setObjectName('TargetInfoValue')
+        layout.addWidget(id_title, 1, 0)
+        layout.addWidget(self.target_info_id, 1, 1)
+
+        conf_title = QLabel('БПЛА')
+        conf_title.setObjectName('TargetInfoTitle')
+        self.target_info_confidence = QLabel('0%')
+        self.target_info_confidence.setObjectName('TargetInfoValue')
+        layout.addWidget(conf_title, 2, 0)
+        layout.addWidget(self.target_info_confidence, 2, 1)
+
+        lock_title = QLabel('Захват')
+        lock_title.setObjectName('TargetInfoTitle')
+        self.target_info_lock_time = QLabel('00:00')
+        self.target_info_lock_time.setObjectName('TargetInfoValue')
+        layout.addWidget(lock_title, 3, 0)
+        layout.addWidget(self.target_info_lock_time, 3, 1)
+
+        fps_title = QLabel('FPS')
+        fps_title.setObjectName('TargetInfoTitle')
+        self.target_info_fps = QLabel('0.0')
+        self.target_info_fps.setObjectName('TargetInfoValue')
+        layout.addWidget(fps_title, 4, 0)
+        layout.addWidget(self.target_info_fps, 4, 1)
+
+        return card
 
     def build_bottom_console(self) -> QFrame:
         bar = QFrame()
         bar.setObjectName('BottomConsole')
-        bar.setMinimumHeight(32)
-        bar.setMaximumHeight(36)
+        bar.setMinimumHeight(30)
+        bar.setMaximumHeight(32)
         layout = QHBoxLayout(bar)
         layout.setContentsMargins(8, 0, 8, 0)
         layout.setSpacing(6)
@@ -634,58 +565,58 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.bottom_console_label, 1)
         return bar
 
-    def _build_inspector_card(self, title: str) -> tuple[QFrame, QLabel]:
+    def _build_compact_diag_card(self, title: str) -> tuple[QFrame, QLabel, QLabel]:
         card = QFrame()
-        card.setObjectName('InspectorCard')
+        card.setObjectName('InspectorCompactCard')
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(4)
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(2)
+
         header = QLabel(title)
         header.setObjectName('InspectorTitle')
         layout.addWidget(header)
-        value = QLabel('-')
-        value.setObjectName('InspectorValue')
-        value.setWordWrap(True)
-        layout.addWidget(value)
-        return card, value
 
-    def build_inspector_drawer(self) -> QWidget:
-        body = QGroupBox('Диагностика')
-        body.setObjectName('InspectorModule')
+        main_value = QLabel('—')
+        main_value.setObjectName('InspectorValueMain')
+        main_value.setWordWrap(False)
+        layout.addWidget(main_value)
+
+        sub_value = QLabel('—')
+        sub_value.setObjectName('InspectorValueSub')
+        sub_value.setWordWrap(False)
+        layout.addWidget(sub_value)
+        return card, main_value, sub_value
+
+    def build_compact_diagnostics(self) -> QWidget:
+        body = QGroupBox('Данные цели')
+        body.setObjectName('CompactDiagnostics')
         body_layout = QVBoxLayout(body)
         body_layout.setContentsMargins(8, 8, 8, 8)
-        body_layout.setSpacing(8)
+        body_layout.setSpacing(6)
 
-        target_card, self.panel_target_summary = self._build_inspector_card('Цель')
-        quality_card, self.panel_quality_summary = self._build_inspector_card('Качество')
-        runtime_card, self.panel_monitoring_summary = self._build_inspector_card('Runtime health')
-        params_card, self.panel_params_summary = self._build_inspector_card('Параметры')
-        eval_card, self.eval_summary_label = self._build_inspector_card('Оценка')
-        self.eval_summary_hint = QLabel('-')
-        self.eval_summary_hint.setObjectName('InspectorValue')
-        eval_card.layout().addWidget(self.eval_summary_hint)
+        state_card, self.compact_state_main, self.compact_state_sub = self._build_compact_diag_card('Состояние')
+        target_card, self.compact_target_main, self.compact_target_sub = self._build_compact_diag_card('Цель')
+        prob_card, self.compact_probability_main, self.compact_probability_sub = self._build_compact_diag_card('Класс')
+        runtime_card, self.compact_runtime_main, self.compact_runtime_sub = self._build_compact_diag_card('Захват / FPS')
 
-        events_card = QFrame()
-        events_card.setObjectName('InspectorCard')
-        events_layout = QVBoxLayout(events_card)
-        events_layout.setContentsMargins(8, 8, 8, 8)
-        events_layout.setSpacing(4)
-        events_title = QLabel('События')
-        events_title.setObjectName('InspectorTitle')
-        events_layout.addWidget(events_title)
-        self.panel_events_view = QPlainTextEdit()
-        self.panel_events_view.setReadOnly(True)
-        self.panel_events_view.setMaximumBlockCount(120)
-        self.panel_events_view.setMaximumHeight(180)
-        events_layout.addWidget(self.panel_events_view)
+        self._set_compact_label_text(self.compact_state_main, 'IDLE')
+        self._set_compact_label_text(self.compact_state_sub, 'Ожидание цели')
+        self._set_compact_label_text(self.compact_target_main, 'ID —')
+        self._set_compact_label_text(self.compact_target_sub, 'Фоновых: 0')
+        self._set_compact_label_text(self.compact_probability_main, 'БПЛА 0%')
+        self._set_compact_label_text(self.compact_probability_sub, 'Подтверждение: 0/0')
+        self._set_compact_label_text(self.compact_runtime_main, 'Захват 00:00')
+        self._set_compact_label_text(self.compact_runtime_sub, 'FPS 0.0')
 
+        body_layout.addWidget(state_card)
         body_layout.addWidget(target_card)
-        body_layout.addWidget(quality_card)
+        body_layout.addWidget(prob_card)
         body_layout.addWidget(runtime_card)
-        body_layout.addWidget(params_card)
-        body_layout.addWidget(eval_card)
-        body_layout.addWidget(events_card, 1)
         return body
+
+    def build_diagnostics_dialog(self) -> None:
+        # Диалог диагностики удален из операторского контура.
+        return
 
     def build_expert_dialog(self) -> None:
         self.expert_dialog = QDialog(self)
@@ -798,14 +729,59 @@ class MainWindow(QMainWindow):
         close_btn.clicked.connect(self._hide_expert_dialog)
         root.addWidget(close_btn, 0, Qt.AlignRight)
 
-    def _on_expert_dialog_closed(self):
-        self.expert_badge.setVisible(False)
+    def _on_expert_dialog_closed(self, _result: int | None = None):
         self.expert_btn.setProperty('variant', 'ghost')
         self._refresh_widget_style(self.expert_btn)
 
     def _hide_expert_dialog(self):
         self.expert_dialog.hide()
         self._on_expert_dialog_closed()
+
+    def _set_ui_v2_enabled(self, enabled: bool) -> None:
+        self.ui_v2_enabled = bool(enabled)
+        self.setStyleSheet(build_app_stylesheet(self.ui_v2_enabled))
+        self._refresh_header_state()
+        if hasattr(self, 'ui_v2_action') and self.ui_v2_action.isChecked() != self.ui_v2_enabled:
+            self.ui_v2_action.blockSignals(True)
+            self.ui_v2_action.setChecked(self.ui_v2_enabled)
+            self.ui_v2_action.blockSignals(False)
+
+    def _toggle_diagnostics_dialog(self) -> None:
+        return
+
+    @staticmethod
+    def _compact_source_short(source_type: str, source_hint: str, source_display: str) -> str:
+        if source_type == 'video':
+            return Path(source_hint).name or source_display
+        if source_type != 'stream':
+            return source_display
+        parsed = urlparse(source_hint)
+        if parsed.scheme and parsed.netloc:
+            path_part = parsed.path.rstrip('/').split('/')[-1] if parsed.path else ''
+            if path_part:
+                return f'{parsed.scheme}://{parsed.netloc}/.../{path_part}'
+            return f'{parsed.scheme}://{parsed.netloc}'
+        text = source_hint.strip()
+        if len(text) <= 44:
+            return text
+        return f'{text[:20]}...{text[-16:]}'
+
+    def _apply_header_meta_text(self) -> None:
+        if not hasattr(self, 'header_source_label'):
+            return
+        metrics = self.header_source_label.fontMetrics()
+        width = max(120, self.header_source_label.width() - 8)
+        elided = metrics.elidedText(self._header_meta_full_text, Qt.ElideRight, width)
+        self.header_source_label.setText(elided)
+        self.header_source_label.setToolTip(self._header_meta_tooltip)
+
+    @staticmethod
+    def _set_compact_label_text(label: QLabel, text: str) -> None:
+        width = max(60, label.width() - 6)
+        metrics = label.fontMetrics()
+        elided = metrics.elidedText(text, Qt.ElideRight, width)
+        label.setText(elided)
+        label.setToolTip(text)
 
     def _toggle_fullscreen(self):
         if self.isFullScreen():
@@ -837,10 +813,116 @@ class MainWindow(QMainWindow):
     def _refresh_workspace_overviews(self):
         return
 
+    @staticmethod
+    def _operator_env_to_preset(env_key: str) -> str:
+        return OPERATOR_ENV_TO_PRESET.get(env_key, 'default')
+
+    @staticmethod
+    def _operator_tracking_profile_to_preset(profile_key: str) -> str:
+        return OPERATOR_TRACKING_PROFILE_TO_PRESET.get(profile_key, 'operator_standard')
+
+    def _detect_operator_environment(self, source: Any, source_type: str) -> tuple[str, str]:
+        # Conservative auto-switch based on first frames brightness/saturation.
+        # It runs once before tracking start and does not change runtime logic mid-session.
+        frames: list[np.ndarray] = []
+
+        if source_type == 'video':
+            src_path = Path(str(source))
+            if src_path.exists() and src_path.is_dir():
+                image_files = sorted(
+                    [
+                        p
+                        for p in src_path.iterdir()
+                        if p.suffix.lower() in {'.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff'}
+                    ]
+                )
+                for path in image_files[:18]:
+                    frame = cv2.imread(str(path))
+                    if frame is not None:
+                        frames.append(frame)
+            else:
+                cap = cv2.VideoCapture(source)
+                if cap.isOpened():
+                    for _ in range(18):
+                        ok, frame = cap.read()
+                        if not ok or frame is None:
+                            break
+                        frames.append(frame)
+                cap.release()
+        else:
+            cap = cv2.VideoCapture(source)
+            if cap.isOpened():
+                for _ in range(18):
+                    ok, frame = cap.read()
+                    if not ok or frame is None:
+                        break
+                    frames.append(frame)
+            cap.release()
+
+        if not frames:
+            return 'day', 'авто: нет данных для анализа, выбран День'
+
+        v_values = []
+        s_values = []
+        for frame in frames:
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            v_values.append(float(np.mean(hsv[:, :, 2])))
+            s_values.append(float(np.mean(hsv[:, :, 1])))
+
+        v_mean = float(np.mean(v_values))
+        s_mean = float(np.mean(s_values))
+        if v_mean < 82.0 or (v_mean < 102.0 and s_mean < 46.0):
+            return 'night', f'авто: V={v_mean:.1f}, S={s_mean:.1f} -> Ночь'
+        return 'day', f'авто: V={v_mean:.1f}, S={s_mean:.1f} -> День'
+
+    def _resolve_operator_env_for_start(self, source: Any, source_type: str) -> tuple[str, str]:
+        env_key = str(self.operator_env_combo.currentData() or 'day')
+        if env_key in {'day', 'night', 'ir'}:
+            return env_key, f'ручной режим: {OPERATOR_ENV_LABELS.get(env_key, env_key)}'
+        return self._detect_operator_environment(source, source_type)
+
+    def _on_operator_env_changed(self) -> None:
+        if self._updating_controls:
+            return
+        env_key = str(self.operator_env_combo.currentData() or 'day')
+        preset_key = self._operator_env_to_preset(env_key)
+        if self.scenario_combo.findData(preset_key) >= 0:
+            self._apply_scenario_preset(preset_key)
+        profile_key = str(self.operator_profile_combo.currentData() or 'standard')
+        profile_preset = self._operator_tracking_profile_to_preset(profile_key)
+        if profile_preset in set(available_presets()):
+            _cfg, overlay_data = load_preset(profile_preset, Config())
+            self._profile_extras.update(overlay_data)
+        self._runtime_tracking_profile = profile_key
+        self.operator_env_hint.setText(f'Ручной режим: {OPERATOR_ENV_LABELS.get(env_key, env_key)}')
+        self._refresh_header_state()
+
+    def _on_operator_profile_changed(self) -> None:
+        if self._updating_controls:
+            return
+        env_key = str(self.operator_env_combo.currentData() or 'day')
+        if env_key in {'day', 'night', 'ir'}:
+            preset_key = self._operator_env_to_preset(env_key)
+            if self.scenario_combo.findData(preset_key) >= 0:
+                self._apply_scenario_preset(preset_key)
+        profile_key = str(self.operator_profile_combo.currentData() or 'standard')
+        profile_preset = self._operator_tracking_profile_to_preset(profile_key)
+        if profile_preset in set(available_presets()):
+            _cfg, overlay_data = load_preset(profile_preset, Config())
+            self._profile_extras.update(overlay_data)
+        self._runtime_tracking_profile = profile_key
+        try:
+            self.settings.setValue('ui/profile_json', json.dumps(self._collect_profile(), ensure_ascii=False))
+        except Exception:
+            pass
+        self._refresh_header_state()
+
     def _fill_scenarios(self):
         available = set(available_presets())
         ordered = [
             'default',
+            'operator_standard',
+            'fast',
             'small_target',
             'night',
             'antiuav_thermal',
@@ -863,17 +945,12 @@ class MainWindow(QMainWindow):
         self.camera_index_spin.valueChanged.connect(self._refresh_header_state)
         self.source_path_edit.textChanged.connect(self._refresh_header_state)
 
-        self.diagnostics_btn.clicked.connect(
-            lambda: self.inspector_module.setVisible(not self.inspector_module.isVisible())
-        )
         self.expert_btn.clicked.connect(self._toggle_expert_mode)
-        self.fullscreen_btn.clicked.connect(self._toggle_fullscreen)
         self.model_browse_btn.clicked.connect(self._browse_model)
+        self.operator_env_combo.currentIndexChanged.connect(self._on_operator_env_changed)
+        self.operator_profile_combo.currentIndexChanged.connect(self._on_operator_profile_changed)
 
         self.scenario_combo.currentIndexChanged.connect(self._on_scenario_changed)
-        self.quick_day_btn.clicked.connect(lambda: self._apply_quick_profile('default'))
-        self.quick_night_btn.clicked.connect(lambda: self._apply_quick_profile('night'))
-        self.quick_ir_btn.clicked.connect(lambda: self._apply_quick_profile('antiuav_thermal'))
         self.mode_combo.currentTextChanged.connect(self._apply_runtime_mode_controls)
         self.apply_preset_btn.clicked.connect(self._apply_selected_preset)
         self.profile_load_btn.clicked.connect(self._load_profile_from_disk)
@@ -882,17 +959,28 @@ class MainWindow(QMainWindow):
         self.start_btn.clicked.connect(self._start)
         self.stop_btn.clicked.connect(self._stop)
         self.eval_btn.clicked.connect(self._evaluate)
+        self.next_target_btn.clicked.connect(self._switch_target)
 
         self.command_palette_shortcut = QShortcut(QKeySequence('Ctrl+K'), self)
         self.command_palette_shortcut.activated.connect(self._open_command_palette)
+        self.next_target_shortcut = QShortcut(QKeySequence('N'), self)
+        self.next_target_shortcut.activated.connect(self._switch_target)
 
     def _apply_defaults(self):
-        self.mode_combo.setCurrentText('research')
-        self._apply_runtime_mode_controls('research')
+        self.mode_combo.setCurrentText('operator')
+        self._apply_runtime_mode_controls('operator')
         idx = self.scenario_combo.findData('default')
         if idx >= 0:
             self.scenario_combo.setCurrentIndex(idx)
             self._on_scenario_changed()
+        env_idx = self.operator_env_combo.findData('day')
+        if env_idx >= 0:
+            self.operator_env_combo.setCurrentIndex(env_idx)
+            self._on_operator_env_changed()
+        profile_idx = self.operator_profile_combo.findData('standard')
+        if profile_idx >= 0:
+            self.operator_profile_combo.setCurrentIndex(profile_idx)
+            self._on_operator_profile_changed()
         self._refresh_record_controls()
         self._on_source_type_changed()
         self._refresh_header_state()
@@ -911,14 +999,16 @@ class MainWindow(QMainWindow):
             'Справка',
             'Быстрый сценарий:\n'
             '1) Выберите источник (камера/видео/поток).\n'
-            '2) Выберите режим камеры (День/Ночь/IR).\n'
-            '3) Нажмите Старт.\n\n'
-            'Диагностика раскрывается модулем в левом блоке.\n'
+            '2) Выберите режим камеры (Day/Night/IR).\n'
+            '3) При необходимости включите запись.\n'
+            '4) Нажмите Старт.\n\n'
+            'Карточка цели находится в правом верхнем углу видео.\n'
+            'Горячая клавиша: N — следующая цель.\n'
             'Экспертные настройки открываются отдельным окном.',
         )
 
     def _open_command_palette(self):
-        items = ['Старт', 'Стоп', 'Оценка', 'Диагностика', 'Экспертные настройки']
+        items = ['Старт', 'Стоп', 'Оценка', 'Следующая цель', 'Экспертные настройки']
         selected, ok = QInputDialog.getItem(self, 'Командная палитра', 'Выберите действие', items, 0, False)
         if not ok or not selected:
             return
@@ -932,8 +1022,8 @@ class MainWindow(QMainWindow):
         if selected == 'Оценка':
             self._evaluate()
             return
-        if selected == 'Диагностика':
-            self.inspector_module.setVisible(not self.inspector_module.isVisible())
+        if selected == 'Следующая цель':
+            self._switch_target()
             return
         if selected == 'Экспертные настройки':
             self._toggle_expert_mode()
@@ -949,6 +1039,10 @@ class MainWindow(QMainWindow):
     def _refresh_header_state(self):
         scenario_key = str(self.scenario_combo.currentData() or 'custom')
         scenario_label = SCENARIO_LABELS.get(scenario_key, scenario_key)
+        env_key = str(self.operator_env_combo.currentData() or 'day')
+        operator_scene_label = OPERATOR_ENV_LABELS.get(env_key, env_key)
+        tracking_profile = str(self.operator_profile_combo.currentData() or 'standard')
+        tracking_profile_label = OPERATOR_TRACKING_PROFILE_LABELS.get(tracking_profile, tracking_profile)
 
         source_type = str(self.source_type_combo.currentData() or 'camera')
         if source_type == 'camera':
@@ -958,41 +1052,23 @@ class MainWindow(QMainWindow):
         else:
             source_display = 'ВИДЕО'
         source_hint = str(self.source_path_edit.text().strip() or source_display)
-        if source_type == 'video':
-            source_short = Path(source_hint).name or source_display
-        elif source_type == 'stream':
-            source_short = source_hint[:48]
-        else:
-            source_short = source_display
+        source_short = self._compact_source_short(source_type, source_hint, source_display)
 
-        self.top_scenario_label.setText(f"Источник: {source_short} | Сцена: {scenario_label}")
+        self._header_meta_full_text = f"Источник: {source_short} · Режим: {operator_scene_label}"
+        self._header_meta_tooltip = (
+            f"Режим оператора: {operator_scene_label}\n"
+            f"Профиль сопровождения: {tracking_profile_label}\n"
+            f"Сценарий: {scenario_label}\n"
+            f"Источник: {source_hint}"
+        )
+        self._apply_header_meta_text()
 
-        state_map = {
-            UIState.IDLE: ('IDLE', 'idle'),
-            UIState.CHECKING: ('CHECK', 'stopping'),
-            UIState.RUNNING: ('RUNNING', 'running'),
-            UIState.LOCK: ('LOCK', 'lock'),
-            UIState.LOST: ('LOST', 'lost'),
-            UIState.EVALUATION: ('EVALUATE', 'evaluating'),
-            UIState.ERROR: ('ERROR', 'error'),
-        }
-        state_text, state_name = state_map.get(self._state_machine.state, ('IDLE', 'idle'))
+        state_meta = UI_STATE_VIEW.get(self._state_machine.state, UI_STATE_VIEW[UIState.IDLE])
+        state_text = state_meta['badge']
+        state_name = state_meta['state']
         self.top_state_badge.setText(state_text)
         self.top_state_badge.setProperty('state', state_name)
         self._refresh_widget_style(self.top_state_badge)
-
-        readable_state = {
-            UIState.IDLE: 'Ожидание',
-            UIState.CHECKING: 'Остановка',
-            UIState.RUNNING: 'Сканирование',
-            UIState.LOCK: 'Захват',
-            UIState.LOST: 'Потеря',
-            UIState.EVALUATION: 'Оценка',
-            UIState.ERROR: 'Ошибка',
-        }
-        self.console_status_label.setText(
-            f"$ {readable_state.get(self._state_machine.state, 'Ожидание').lower()} // {source_display.lower()} // {source_hint}"
-        )
 
         recording = self._job_state in {'tracking', 'stopping'} and self.record_check.isChecked()
         if recording:
@@ -1004,16 +1080,9 @@ class MainWindow(QMainWindow):
         self.record_indicator_label.setProperty('recording', recording)
         self._refresh_widget_style(self.record_indicator_label)
 
-        self.panel_params_summary.setText(
-            'Сценарий: '
-            f"{scenario_label}\n"
-            f"Источник: {self.source_type_combo.currentText()} | device: {self.device_combo.currentText()}\n"
-            f"imgsz/conf: {self.imgsz_spin.value()} / {self.conf_spin.value():.2f}"
-        )
-
     def _video_idle_text(self, detail: str | None = None) -> str:
         base = 'Операторская сцена пока не активна'
-        steps = '1) Выбери источник\n2) Примени сценарий\n3) Нажми Старт'
+        steps = '1) Выбери источник\n2) Выбери режим камеры\n3) Нажми Старт'
         if detail:
             return f'{detail}\n\n{steps}'
         return f'{base}\n\n{steps}'
@@ -1022,6 +1091,7 @@ class MainWindow(QMainWindow):
         self._preview_pixmap = None
         self.video_label.clear()
         self.video_label.setText(self._video_idle_text(detail))
+        self._set_target_info_values('IDLE', '—', '0%', '00:00', '0.0')
 
     def _render_preview_pixmap(self) -> None:
         if self._preview_pixmap is None:
@@ -1108,7 +1178,6 @@ class MainWindow(QMainWindow):
         self.expert_dialog.show()
         self.expert_dialog.raise_()
         self.expert_dialog.activateWindow()
-        self.expert_badge.setVisible(True)
         self.expert_btn.setProperty('variant', 'primary')
         self._refresh_widget_style(self.expert_btn)
 
@@ -1134,6 +1203,8 @@ class MainWindow(QMainWindow):
         cfg, data = load_preset(preset_key, Config())
         profile = {
             'preset': preset_key,
+            'operator_env_mode': str(self.operator_env_combo.currentData() or 'day'),
+            'operator_profile_mode': str(self.operator_profile_combo.currentData() or 'standard'),
             'runtime_mode': cfg.RUNTIME_MODE,
             'model_path': cfg.MODEL_PATH,
             'device': cfg.DEVICE,
@@ -1196,6 +1267,14 @@ class MainWindow(QMainWindow):
             mode = str(profile.get('runtime_mode', self.mode_combo.currentText()))
             if self.mode_combo.findText(mode) >= 0:
                 self.mode_combo.setCurrentText(mode)
+            op_env = str(profile.get('operator_env_mode', self.operator_env_combo.currentData() or 'day'))
+            env_idx = self.operator_env_combo.findData(op_env)
+            if env_idx >= 0:
+                self.operator_env_combo.setCurrentIndex(env_idx)
+            op_profile = str(profile.get('operator_profile_mode', self.operator_profile_combo.currentData() or 'standard'))
+            profile_idx = self.operator_profile_combo.findData(op_profile)
+            if profile_idx >= 0:
+                self.operator_profile_combo.setCurrentIndex(profile_idx)
 
             device = str(profile.get('device', self.device_combo.currentText()))
             if self.device_combo.findText(device) >= 0:
@@ -1222,7 +1301,7 @@ class MainWindow(QMainWindow):
                 'preset', 'runtime_mode', 'source', 'model_path', 'device', 'imgsz', 'conf_thresh',
                 'small_target_mode', 'adaptive_scan_enabled', 'global_scan_interval', 'lock_tracker_enabled',
                 'night_enabled', 'roi_assist_enabled', 'show_gt_overlay', 'show_debug_timings', 'show_trails',
-                'record_output', 'output_path'
+                'record_output', 'output_path', 'operator_env_mode', 'operator_profile_mode'
             }
             self._profile_extras = {k: v for k, v in profile.items() if k not in ignored}
         finally:
@@ -1248,6 +1327,8 @@ class MainWindow(QMainWindow):
         preset_key = self.scenario_combo.currentData() or 'custom'
         profile = {
             'preset': preset_key,
+            'operator_env_mode': str(self.operator_env_combo.currentData() or 'day'),
+            'operator_profile_mode': str(self.operator_profile_combo.currentData() or 'standard'),
             'runtime_mode': self.mode_combo.currentText(),
             'source': str(source),
             'model_path': self.model_edit.text().strip(),
@@ -1289,7 +1370,39 @@ class MainWindow(QMainWindow):
         small_target_mode = self.small_target_check.isChecked()
         source_type = self.source_type_combo.currentData()
 
-        cfg = apply_runtime_mode(Config(), self.mode_combo.currentText())
+        resolved_env, env_note = self._resolve_operator_env_for_start(source, str(source_type))
+        preset_key = self._operator_env_to_preset(resolved_env)
+        tracking_profile_key = str(self.operator_profile_combo.currentData() or 'standard')
+        tracking_profile_preset = self._operator_tracking_profile_to_preset(tracking_profile_key)
+        available = set(available_presets())
+        if preset_key in available:
+            cfg, _preset_data = load_preset(preset_key, Config())
+        else:
+            cfg = Config()
+            preset_key = 'custom'
+        if tracking_profile_preset in available:
+            cfg, _tracking_overrides = load_preset(tracking_profile_preset, cfg)
+
+        self._runtime_selected_preset = preset_key
+        self._runtime_selected_env = resolved_env
+        self._runtime_env_note = env_note
+        self._runtime_tracking_profile = tracking_profile_key
+        self._operator_env_last_resolved = resolved_env
+        self.operator_env_hint.setText(env_note)
+
+        if preset_key != 'custom':
+            self._updating_controls = True
+            try:
+                idx = self.scenario_combo.findData(preset_key)
+                if idx >= 0:
+                    self.scenario_combo.setCurrentIndex(idx)
+                pidx = self.preset_combo.findText(preset_key)
+                if pidx >= 0:
+                    self.preset_combo.setCurrentIndex(pidx)
+            finally:
+                self._updating_controls = False
+
+        cfg = apply_runtime_mode(cfg, self.mode_combo.currentText())
         cfg.MODEL_PATH = self.model_edit.text().strip() or cfg.MODEL_PATH
         cfg.DEVICE = self.device_combo.currentText()
         cfg.NIGHT_ENABLED = self.night_check.isChecked()
@@ -1342,9 +1455,8 @@ class MainWindow(QMainWindow):
 
         for widget in [
             self.scenario_combo,
-            self.quick_day_btn,
-            self.quick_night_btn,
-            self.quick_ir_btn,
+            self.operator_env_combo,
+            self.operator_profile_combo,
             self.source_type_combo,
             self.camera_index_spin,
             self.source_path_edit,
@@ -1355,12 +1467,16 @@ class MainWindow(QMainWindow):
             self.expert_btn,
         ]:
             widget.setEnabled(not busy)
+        self.next_target_btn.setEnabled(tracking_active and self._last_target_count > 1)
         self._refresh_record_controls()
 
         if state == 'idle':
             self._target_present_latched = False
             self._target_missing_streak = 0
             self._had_target_in_session = False
+            self._lock_started_at_monotonic = None
+            self._last_target_count = 0
+            self._set_target_info_values('IDLE', '—', '0%', '00:00', '0.0')
 
         self._on_source_type_changed()
         self._refresh_header_state()
@@ -1377,7 +1493,8 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, 'Ошибка конфигурации', str(exc))
             return
 
-        scenario_key = str(self.scenario_combo.currentData() or 'custom')
+        base_preset = str(self._runtime_selected_preset or self.scenario_combo.currentData() or 'custom')
+        scenario_key = f'{base_preset}_{self._runtime_tracking_profile}'
         source_name = Path(str(source)).stem if isinstance(source, str) and str(source) else f'camera_{source}'
         safe_source = ''.join(ch if ch.isalnum() or ch in {'-', '_'} else '_' for ch in source_name)[:40] or 'source'
         ts = time.strftime('%Y%m%d_%H%M%S')
@@ -1395,7 +1512,6 @@ class MainWindow(QMainWindow):
 
         self._set_job_state('tracking')
         self._set_video_idle_state('Подключение к источнику...')
-        self.console_status_label.setText('$ запуск // подключение к источнику')
         source_descriptor = f"camera:{source}" if isinstance(source, int) else str(source)
         self._session_history.append(f"{ts} | {scenario_key} | {source_descriptor}")
         if source_descriptor not in self._recent_sources:
@@ -1403,10 +1519,13 @@ class MainWindow(QMainWindow):
         self._refresh_workspace_overviews()
         self._refresh_sidebar_meta()
         self._log(
-            f'Старт: source={source} mode={cfg.RUNTIME_MODE} device={cfg.DEVICE} '
+            f'Старт: source={source} env={self._runtime_selected_env} profile={self._runtime_tracking_profile} preset={scenario_key} '
+            f'mode={cfg.RUNTIME_MODE} device={cfg.DEVICE} '
             f'imgsz={cfg.IMG_SIZE} conf={cfg.CONF_THRESH:.2f} '
             f'adaptive={cfg.ADAPTIVE_SCAN_ENABLED} lock_tracker={cfg.LOCK_TRACKER_ENABLED}'
         )
+        if self._runtime_env_note:
+            self._log(self._runtime_env_note)
         self._log(f'Lock events -> {lock_log_path}')
 
     def _stop(self):
@@ -1419,6 +1538,12 @@ class MainWindow(QMainWindow):
             self._set_job_state('stopping')
             self.eval_worker.stop()
             self._log('Остановка оценки запрошена...')
+
+    def _switch_target(self):
+        if self.worker is None or not self.worker.isRunning():
+            return
+        self.worker.request_switch_target()
+        self._log('Запрошено переключение на следующий ID.')
 
     def _evaluate(self):
         if self.worker is not None and self.worker.isRunning():
@@ -1448,15 +1573,12 @@ class MainWindow(QMainWindow):
         if reason == 'stopped':
             self._log('Сессия остановлена пользователем.')
             self._set_video_idle_state('Сессия остановлена. Поток не активен.')
-            self.console_status_label.setText('$ остановлено // поток завершен')
         elif reason == 'eof':
             self._log('Сессия завершена: поток закончился.')
             self._set_video_idle_state('Источник закончился. Поток не активен.')
-            self.console_status_label.setText('$ завершено // источник исчерпан')
         else:
             self._log(f'Сессия завершена: {reason}')
             self._set_video_idle_state(f'Сессия завершена: {reason}')
-            self.console_status_label.setText('$ завершено // см. журнал')
         self.worker = None
         self._set_job_state('idle')
 
@@ -1466,11 +1588,9 @@ class MainWindow(QMainWindow):
         if reason == 'stopped':
             self._log('Оценка остановлена пользователем.')
             self._set_video_idle_state('Оценка остановлена. Поток не активен.')
-            self.console_status_label.setText('$ оценка остановлена')
         else:
             self._log('Оценка завершена.')
             self._set_video_idle_state('Оценка завершена. Поток не активен.')
-            self.console_status_label.setText('$ оценка завершена')
 
     def _on_failed(self, message: str):
         self.worker = None
@@ -1479,19 +1599,11 @@ class MainWindow(QMainWindow):
         self._state_machine.set(UIState.ERROR)
         self._refresh_header_state()
         self._set_video_idle_state('Ошибка потока. Проверь журнал и конфигурацию.')
-        self.console_status_label.setText('$ ошибка // открой журнал')
         self._log(f'Ошибка: {message}')
         if not self._is_closing:
             QMessageBox.critical(self, 'Ошибка', message)
 
     def _on_eval_report(self, report: dict):
-        self.eval_summary_label.setText(
-            f"lock {report['lock_frames']}/{report['gt_frames']} | IoU {report['avg_gt_iou']:.3f} | fps {report['avg_fps']:.1f}"
-        )
-        self.eval_summary_hint.setText(
-            f"false {report['false_alarm_frames']} | cont {report.get('continuity_score', 0.0) * 100.0:.1f}% | sw/min {report.get('lock_switches_per_min', 0.0):.2f}"
-        )
-        self.console_status_label.setText('$ оценка // отчет готов')
         self._evaluation_reports.append(
             f"{time.strftime('%Y-%m-%d %H:%M:%S')} | frames={report.get('total_frames', 0)} | "
             f"lock={report.get('lock_frames', 0)} | fps={report.get('avg_fps', 0.0):.1f}"
@@ -1512,6 +1624,7 @@ class MainWindow(QMainWindow):
         active_id = stats.get('active_id')
         active_source = str(stats.get('active_source', '-'))
         tracker_mode = str(stats.get('mode', 'SCAN')).upper()
+        lock_confirmed = bool(stats.get('lock_confirmed', False))
         frame_index = int(stats.get('frame_index', 0))
         fps = float(stats.get('fps') or 0.0)
         gt_visible = bool(stats.get('gt_visible', False))
@@ -1522,12 +1635,11 @@ class MainWindow(QMainWindow):
         active_presence_rate = max(0.0, min(1.0, float(stats.get('active_presence_rate') or 0.0)))
         lock_switches_per_min = float(stats.get('lock_switches_per_min') or 0.0)
         lock_switch_count = int(stats.get('lock_switch_count', 0))
-        budget_level = int(stats.get('budget_level', 0))
-        budget_load = float(stats.get('budget_load') or 0.0)
-        budget_frame_ms = float(stats.get('budget_frame_ms') or 0.0)
-        roi_budget_candidates = int(stats.get('roi_budget_candidates', 0))
-        night_skip = int(stats.get('night_skip', 0))
-        scan_strategy = str(stats.get('scan_strategy', '-'))
+        lock_confirm_frames_effective = int(stats.get('lock_confirm_frames_effective', 0))
+        ir_noise_level = float(stats.get('ir_noise_level') or 0.0)
+        ir_noise_gate_active = bool(stats.get('ir_noise_gate_active', False))
+        cycle_index = int(stats.get('active_cycle_index', 0))
+        cycle_total = int(stats.get('active_cycle_total', 0))
 
         if tracker_mode == 'TRACK':
             self._target_present_latched = True
@@ -1544,7 +1656,10 @@ class MainWindow(QMainWindow):
 
         if self._job_state == 'tracking':
             if tracker_mode == 'TRACK':
-                self._state_machine.set(UIState.LOCK)
+                if lock_confirmed:
+                    self._state_machine.set(UIState.LOCK)
+                else:
+                    self._state_machine.set(UIState.RUNNING)
             elif tracker_mode == 'LOST':
                 self._state_machine.set(UIState.LOST)
             else:
@@ -1557,20 +1672,11 @@ class MainWindow(QMainWindow):
             self._state_machine.set(UIState.IDLE)
         self._last_active_id = active_id
 
-        state_value_map = {
-            UIState.IDLE: 'Ожидание',
-            UIState.CHECKING: 'Остановка',
-            UIState.RUNNING: 'Сканирование',
-            UIState.LOCK: 'Захват',
-            UIState.LOST: 'Повторный захват',
-            UIState.EVALUATION: 'Оценка',
-            UIState.ERROR: 'Ошибка',
-        }
-        state_value = state_value_map.get(self._state_machine.state, 'Ожидание')
-
         target_count = int(stats.get('target_count', 0))
         visible_count = int(stats.get('visible_target_count', 0))
         bg_visible = max(0, visible_count - (1 if active_id is not None else 0))
+        self._last_target_count = target_count
+        self.next_target_btn.setEnabled(self._job_state == 'tracking' and target_count > 1)
 
         if active_id is not None:
             target_value = f'ID {active_id}'
@@ -1580,54 +1686,42 @@ class MainWindow(QMainWindow):
             target_value = 'Нет цели'
 
         operator_mode_map = {
-            'TRACK': 'Сопровождение',
+            'TRACK': 'Сопровождение (LOCK)' if lock_confirmed else 'Сопровождение (кандидат)',
             'LOST': 'Повторный захват',
             'SCAN': 'Сканирование',
         }
         operator_mode = operator_mode_map.get(tracker_mode, 'Сканирование')
 
         confidence_pct = int(round(display_confidence * 100.0))
-        continuity_pct = continuity_score * 100.0
-        active_presence_pct = active_presence_rate * 100.0
-        if gt_visible:
-            quality_main = f'IoU {gt_iou:.3f} | conf {confidence_pct}%'
+        if tracker_mode == 'TRACK' and lock_confirmed:
+            if self._lock_started_at_monotonic is None:
+                self._lock_started_at_monotonic = time.monotonic()
         else:
-            quality_main = f'conf {confidence_pct}% | cont {continuity_pct:.1f}%'
+            self._lock_started_at_monotonic = None
+        lock_elapsed = 0.0 if self._lock_started_at_monotonic is None else max(0.0, time.monotonic() - self._lock_started_at_monotonic)
+        lock_mm = int(lock_elapsed // 60)
+        lock_ss = int(lock_elapsed % 60)
 
-        perf_value = budget_frame_ms if budget_frame_ms > 0 else float(timings.get('global', 0.0) or 0.0)
-        self.console_status_label.setText(
-            f"$ {state_value.lower()} // {target_value.lower()} // {operator_mode.lower()}"
-        )
-
-        self.panel_runtime_summary = (
-            f"FPS: {fps:.1f}\n"
-            f"Состояние: {state_value}\n"
-            f"Режим: {operator_mode} | кадр {frame_index + 1}\n"
-            f"Budget L{budget_level} load={budget_load:.2f} frame={perf_value:.1f}ms\n"
-            f"Continuity {continuity_pct:.1f}% | Presence {active_presence_pct:.1f}%\n"
-            f"G {float(timings.get('global', 0.0) or 0.0):.1f} | "
-            f"L {float(timings.get('local', 0.0) or 0.0):.1f} | "
-            f"ROI {float(timings.get('roi', 0.0) or 0.0):.1f} | "
-            f"N {float(timings.get('night', 0.0) or 0.0):.1f}"
-        )
-        self.panel_monitoring_summary.setText(self.panel_runtime_summary)
-        self.panel_target_summary.setText(
-            f"Цель: {'ID ' + str(active_id) if active_id is not None else ('временная потеря' if target_present else 'не обнаружена')}\n"
-            f"Источник: {active_source}\n"
-            f"Lock score: {lock_score:.2f} | strategy: {scan_strategy}"
-        )
-        self.panel_quality_summary.setText(
-            f"{quality_main}\n"
-            f"sw/min {lock_switches_per_min:.2f} ({lock_switch_count}) | "
-            f"roi cand {roi_budget_candidates} | night skip {night_skip}\n"
-            f"видимые цели: {visible_count}, всего: {target_count}, фон: {bg_visible}"
-        )
+        state_card_main = 'LOCK' if (tracker_mode == 'TRACK' and lock_confirmed) else 'IDLE'
+        target_card_main = target_value if target_value else '—'
+        probability_main = f'{confidence_pct}%'
+        runtime_main = f'{lock_mm:02d}:{lock_ss:02d}'
+        fps_main = f'{fps:.1f}'
+        self._set_target_info_values(state_card_main, target_card_main, probability_main, runtime_main, fps_main)
 
         for event in stats.get('lock_events', []):
             self._log(f"[f{frame_index + 1}] {event}")
-            self.panel_events_view.appendPlainText(f"[f{frame_index + 1}] {event}")
 
         self._refresh_header_state()
+
+    def _set_target_info_values(self, state_text: str, target_text: str, confidence_text: str, lock_text: str, fps_text: str) -> None:
+        self.target_info_state.setText(state_text)
+        self.target_info_state.setProperty('state', 'lock' if state_text == 'LOCK' else 'idle')
+        self._refresh_widget_style(self.target_info_state)
+        self.target_info_id.setText(target_text)
+        self.target_info_confidence.setText(confidence_text)
+        self.target_info_lock_time.setText(lock_text)
+        self.target_info_fps.setText(fps_text)
 
     def _log(self, message: str):
         self.log_view.appendPlainText(message)
@@ -1639,6 +1733,7 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        self._apply_header_meta_text()
         if self._preview_pixmap is not None:
             self._render_preview_pixmap()
 
@@ -1652,7 +1747,7 @@ class MainWindow(QMainWindow):
         self.settings.setValue('ui/record_output', self.record_check.isChecked())
         self.settings.setValue('ui/output_path', self.output_edit.text())
         self.settings.setValue('ui/profile_json', json.dumps(self._collect_profile(), ensure_ascii=False))
-        self.settings.setValue('ui/inspector_visible', self.inspector_module.isVisible())
+        self.settings.setValue('ui/ui_v2_enabled', self.ui_v2_enabled)
         self.settings.sync()
 
     def _load_app_settings(self):
@@ -1685,6 +1780,9 @@ class MainWindow(QMainWindow):
                 sidx = self.scenario_combo.findData(scenario)
                 if sidx >= 0:
                     self.scenario_combo.setCurrentIndex(sidx)
+
+            ui_v2_value = self._to_bool(self.settings.value('ui/ui_v2_enabled', self.ui_v2_enabled), default=self.ui_v2_enabled)
+            self._set_ui_v2_enabled(ui_v2_value)
         finally:
             self._updating_controls = False
             self._refresh_record_controls()
@@ -1696,8 +1794,6 @@ class MainWindow(QMainWindow):
             if workspace_key not in self.workspace_indexes:
                 workspace_key = 'operator'
             self._on_workspace_selected(workspace_key)
-            inspector_visible = str(self.settings.value('ui/inspector_visible', 'false')).lower() == 'true'
-            self.inspector_module.setVisible(inspector_visible)
 
     def closeEvent(self, event):
         self._is_closing = True

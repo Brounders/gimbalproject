@@ -1,11 +1,19 @@
+# OS / Python artifacts
 .DS_Store
+**/.DS_Store
 __pycache__/
+**/__pycache__/
 *.pyc
+**/*.pyc
 tracker_env/
 datasets/
 runs/
 logs/
-ui_web/node_modules/
-ui_web/dist/
 models/*.pt
 models/*.hef
+models/*.zip
+models/checkpoints/
+test_videos/
+exports/
+imports/
+safety_snapshots/

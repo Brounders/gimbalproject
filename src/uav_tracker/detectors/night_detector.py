@@ -15,6 +15,9 @@ class NightSmallTargetDetector:
         self._candidates: dict[tuple, int] = {}
         self._prev_gray: Optional[np.ndarray] = None
         self._warmup = 0
+        self.last_noise_level: float = 0.0
+        self.last_motion_ratio: float = 0.0
+        self.last_contour_count: int = 0
 
     def detect(self, frame: np.ndarray) -> list[dict]:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -45,6 +48,15 @@ class NightSmallTargetDetector:
         contours, _ = cv2.findContours(
             thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
         )
+        motion_ratio = float(np.count_nonzero(thresh)) / float(max(1, thresh.size))
+        contour_count = int(len(contours))
+        candidate_count = int(len(self._candidates))
+        contour_component = min(1.0, contour_count / 140.0)
+        candidate_component = min(1.0, candidate_count / 80.0)
+        # Unified noise proxy for IR/night scenes: pixel-level motion + contour clutter.
+        self.last_motion_ratio = motion_ratio
+        self.last_contour_count = contour_count
+        self.last_noise_level = max(min(1.0, motion_ratio * 4.0), 0.55 * contour_component + 0.45 * candidate_component)
 
         detections = []
         current_keys = set()

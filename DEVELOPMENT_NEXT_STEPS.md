@@ -1,5 +1,30 @@
 # Drone Tracker: Next Steps (Mac M1 -> RPi5 + Hailo)
 
+## Обновление статуса (2026-03-09): GT quality-gate по IR-последовательностям
+
+Сделано:
+1. Добавлен отдельный GT-пак:
+   - `configs/regression_pack_ir_gt.csv`
+   - Содержит 6 последовательностей из `/Users/bround/Desktop/Обучение/train/` с `IR_label.json`.
+2. Выполнен baseline/candidate quality-gate:
+   - baseline report:
+     - `runs/evaluations/quality_gate/20260309_082509_irgt_baseline_quality_gate_night.json`
+     - `runs/evaluations/quality_gate/20260309_082509_irgt_baseline_quality_gate_night.csv`
+   - candidate report:
+     - `runs/evaluations/quality_gate/20260309_082509_irgt_candidate_quality_gate_night_rtx_candidate.json`
+     - `runs/evaluations/quality_gate/20260309_082509_irgt_candidate_quality_gate_night_rtx_candidate.csv`
+3. Решение:
+   - RTX-кандидат `rtx_drone_first_6h_v2_best.pt` в baseline НЕ принят (quality-gate fail).
+   - Baseline остается прежним до следующего цикла ретюна.
+
+Ключевая причина fail:
+- На части последовательностей вырос `active_id_changes_per_min` относительно baseline (регресс по стабильности lock-контура), несмотря на улучшение ряда других средних метрик.
+
+Следующий практический шаг:
+1. Короткий ретюн кандидата только на стабильность lock-поведения (без смены архитектуры модели):
+   - уменьшить агрессивность переключений по ID в пресете-кандидате,
+   - повторить gate на `configs/regression_pack_ir_gt.csv`.
+
 ## 1) Fine-tuning YOLO11n (Drone vs Bird)
 
 ### 1.1 Activate env

@@ -23,6 +23,8 @@ class EvaluationReport:
     false_alarm_frames: int
     false_lock_frames: int
     false_lock_rate: float
+    unverified_active_frames: int
+    unverified_active_rate: float
     hits_iou_01: int
     hits_iou_03: int
     hits_iou_05: int
@@ -54,6 +56,7 @@ class EvaluationReport:
         data["continuity"] = self.continuity_score
         data["active_presence"] = self.active_presence_rate
         data["id_changes"] = self.active_id_changes
+        data["unverified_active"] = self.unverified_active_rate
         return data
 
 
@@ -80,6 +83,7 @@ class Evaluator:
         visible_target_frames = 0
         false_alarm_frames = 0
         false_lock_frames = 0
+        unverified_active_frames = 0
         hits_iou_01 = 0
         hits_iou_03 = 0
         hits_iou_05 = 0
@@ -161,8 +165,10 @@ class Evaluator:
                     active_frames += 1
                     if time_to_first_active is None:
                         time_to_first_active = total_frames
-                    if (not gt_visible) or (gt_visible and result.gt_iou < 0.10):
+                    if gt_visible and result.gt_iou < 0.10:
                         false_lock_frames += 1
+                    elif not gt_visible:
+                        unverified_active_frames += 1
                 if result.mode in {'TRACK', 'LOCK-FOCUS'}:
                     lock_frames += 1
                     current_lock_streak += 1
@@ -181,7 +187,9 @@ class Evaluator:
 
         longest_lock_streak = max(longest_lock_streak, current_lock_streak)
         total_frames_safe = max(1, total_frames)
-        false_lock_rate = float(false_lock_frames) / float(total_frames_safe)
+        non_gt_frames = max(0, total_frames - gt_frames)
+        false_lock_rate = float(false_lock_frames) / float(max(1, gt_frames)) if gt_frames > 0 else 0.0
+        unverified_active_rate = float(unverified_active_frames) / float(max(1, non_gt_frames)) if non_gt_frames > 0 else 0.0
         if elapsed_video_sec < 5.0:
             active_id_changes_per_min = 0.0
         else:
@@ -198,6 +206,8 @@ class Evaluator:
             false_alarm_frames=false_alarm_frames,
             false_lock_frames=false_lock_frames,
             false_lock_rate=false_lock_rate,
+            unverified_active_frames=unverified_active_frames,
+            unverified_active_rate=unverified_active_rate,
             hits_iou_01=hits_iou_01,
             hits_iou_03=hits_iou_03,
             hits_iou_05=hits_iou_05,

@@ -1,0 +1,7 @@
+name: operator_standard
+display_box_alpha: 0.40
+display_box_adaptive: true
+display_box_alpha_min: 0.18
+display_box_alpha_max: 0.62
+display_box_speed_gain: 0.20
+display_box_size_gain: 0.15

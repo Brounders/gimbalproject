@@ -1,0 +1,7 @@
+name: fast
+display_box_alpha: 0.30
+display_box_adaptive: true
+display_box_alpha_min: 0.14
+display_box_alpha_max: 0.58
+display_box_speed_gain: 0.28
+display_box_size_gain: 0.20

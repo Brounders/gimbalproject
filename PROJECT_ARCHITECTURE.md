@@ -19,6 +19,17 @@ This is the shortest path to a stable tool for:
   - macOS: Ultralytics + Torch MPS
   - Raspberry Pi: Hailo runtime adapter
 
+## Current Layout (Core / Tools / Legacy)
+
+- Core runtime:
+  - `app/`, `src/`, `configs/`, `main_tracker.py`, `tracker_gui.py`
+- Tools:
+  - `python_scripts/` (training, dataset prep, benchmark, quality gate)
+- Legacy:
+  - `legacy/prototypes/` (historical scripts, non-production)
+- Data/artifacts:
+  - `datasets/`, `runs/`, `logs/`, `tracker_env/`
+
 ## Recommended Layout
 
 ```text

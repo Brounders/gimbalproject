@@ -79,6 +79,7 @@ def _resolve_source_path(raw_source: str) -> str:
 
 
 def _row_score(row: dict) -> float:
+    risk_rate = float(row.get("effective_false_lock_rate", row.get("false_lock_rate", 0.0)))
     return (
         40.0 * float(row.get("lock_rate", 0.0))
         + 15.0 * float(row.get("continuity_score", 0.0))
@@ -86,7 +87,7 @@ def _row_score(row: dict) -> float:
         + 20.0 * min(float(row.get("avg_fps", 0.0)) / 30.0, 1.0)
         - 6.0 * float(row.get("lock_switches_per_min", 0.0))
         - 8.0 * float(row.get("active_id_changes_per_min", 0.0))
-        - 18.0 * float(row.get("false_lock_rate", 0.0))
+        - 18.0 * risk_rate
     )
 
 
@@ -104,8 +105,12 @@ def _write_csv(path: Path, rows: list[dict]) -> None:
         "active_id_changes_per_min",
         "lost_events",
         "lock_switches_per_min",
+        "gt_frames",
         "false_lock_frames",
         "false_lock_rate",
+        "unverified_active_frames",
+        "unverified_active_rate",
+        "effective_false_lock_rate",
         "score",
     ]
     lines = [",".join(headers)]
@@ -153,6 +158,15 @@ def main() -> int:
         ).to_dict()
         total_frames = max(1, int(report.get("total_frames", 0)))
         false_lock_frames = int(report.get("false_lock_frames", 0))
+        gt_frames = int(report.get("gt_frames", 0))
+        unverified_active_frames = int(report.get("unverified_active_frames", 0))
+        unverified_active_rate = float(report.get("unverified_active_rate", 0.0))
+        false_lock_rate = float(report.get("false_lock_rate", 0.0))
+        if gt_frames > 0:
+            effective_false_lock_rate = false_lock_rate
+        else:
+            # On unlabelled clips use a softer proxy instead of GT-based false-lock metric.
+            effective_false_lock_rate = unverified_active_rate * 0.5
         row = {
             "source": str(source),
             "scene": scene,
@@ -166,8 +180,12 @@ def main() -> int:
             "active_id_changes_per_min": round(float(report.get("active_id_changes_per_min", 0.0)), 4),
             "lost_events": int(report.get("lock_event_counts", {}).get("lost", 0)),
             "lock_switches_per_min": round(float(report.get("lock_switches_per_min", 0.0)), 4),
+            "gt_frames": gt_frames,
             "false_lock_frames": false_lock_frames,
-            "false_lock_rate": round(float(report.get("false_lock_rate", 0.0)), 4),
+            "false_lock_rate": round(false_lock_rate, 4),
+            "unverified_active_frames": unverified_active_frames,
+            "unverified_active_rate": round(unverified_active_rate, 4),
+            "effective_false_lock_rate": round(effective_false_lock_rate, 4),
         }
         row["score"] = round(_row_score(row), 3)
         rows.append(row)
@@ -197,6 +215,8 @@ def main() -> int:
             "lost_events": round(sum(r["lost_events"] for r in rows) / max(1, len(rows)), 3),
             "lock_switches_per_min": round(sum(r["lock_switches_per_min"] for r in rows) / max(1, len(rows)), 4),
             "false_lock_rate": round(sum(r["false_lock_rate"] for r in rows) / max(1, len(rows)), 4),
+            "unverified_active_rate": round(sum(r["unverified_active_rate"] for r in rows) / max(1, len(rows)), 4),
+            "effective_false_lock_rate": round(sum(r["effective_false_lock_rate"] for r in rows) / max(1, len(rows)), 4),
             "score": round(sum(r["score"] for r in rows) / max(1, len(rows)), 3),
         },
         "report_files": generated_reports,

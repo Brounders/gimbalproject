@@ -5,4 +5,4 @@ test_videos/night_ground_large_drones.mp4,night
 test_videos/Demo_IR_DRONE_146.mp4,ir
 test_videos/IR_DRONE_001.mp4,ir
 test_videos/IR_BIRD_001.mp4,noise
-test_videos/night_ground_indicator_lights.mp4,noise
+test_videos/night_ground_indicator_lights.mp4,city_lights

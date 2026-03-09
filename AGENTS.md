@@ -18,7 +18,7 @@
 ## Validation Commands
 - `lint`: `python3 -m compileall -q python_scripts src app`
 - `test`: `bash -lc 'if command -v pytest >/dev/null 2>&1 && find . -type f \\( -name \"test_*.py\" -o -name \"*_test.py\" \\) | grep -q .; then pytest -q; else echo \"No pytest suite configured\"; fi'`
-- `build`: `bash -lc 'if [ -f ui_web/package.json ]; then cd ui_web && npm run build; else echo \"No ui_web build target\"; fi'`
+- `build`: `bash -lc 'echo \"No separate build target (desktop/python project)\"'`
 
 ## Response Format (Required)
 - Always answer in this order:

@@ -27,9 +27,12 @@ class FrameOutput:
     active_id: Optional[int]
     active_source: str
     active_bbox: Optional[tuple[int, int, int, int]]
+    active_cycle_index: int
+    active_cycle_total: int
     target_count: int
     visible_target_count: int
     mode: str
+    lock_confirmed: bool
     frame_index: int
     scan_strategy: str
     gt_visible: bool
@@ -49,6 +52,9 @@ class FrameOutput:
     budget_frame_ms: float
     roi_budget_candidates: int
     night_skip: int
+    ir_noise_level: float
+    ir_noise_gate_active: bool
+    lock_confirm_frames_effective: int
     timings_ms: dict[str, float]
 
 
@@ -204,6 +210,8 @@ class TrackerPipeline:
         self._confidence_last_update_sec = 0.0
         self._reticle_center: Optional[tuple[float, float]] = None
         self._reticle_missing_streak = 0
+        self._display_lock_box: Optional[tuple[float, float, float, float]] = None
+        self._display_lock_box_missing_streak = 0
         self._continuity_prev_active_id: Optional[int] = None
         self._continuity_transitions = 0
         self._continuity_same_id_transitions = 0
@@ -215,6 +223,7 @@ class TrackerPipeline:
         self._tracking_present_streak = 0
         self._tracking_missing_streak = 0
         self._tracking_had_target = False
+        self._manual_switch_requested = False
 
     def _update_video_time(self, source_fps: Optional[float]) -> None:
         if source_fps is not None and source_fps > 1.0:
@@ -232,7 +241,8 @@ class TrackerPipeline:
     def _instant_tracking_confidence(self, active: Optional[TrackedTarget], lock_score: float) -> float:
         if active is None:
             return 0.0
-        streak_norm = min(1.0, float(active.hit_streak) / max(1.0, float(self.cfg.LOCK_CONFIRM_FRAMES)))
+        confirm_frames = max(1.0, float(self.manager.lock_confirm_frames_effective()))
+        streak_norm = min(1.0, float(active.hit_streak) / confirm_frames)
         lock_norm = float(lock_score) if lock_score > 0.0 else float(active.conf)
         value = 0.45 * float(active.conf) + 0.35 * lock_norm + 0.20 * streak_norm
         if active.lost_frames > 0:
@@ -282,6 +292,52 @@ class TrackerPipeline:
         if self._reticle_center is None:
             return None
         return int(self._reticle_center[0]), int(self._reticle_center[1])
+
+    def _update_display_lock_box(self, active: Optional[TrackedTarget]) -> Optional[tuple[int, int, int, int]]:
+        if active is not None:
+            x1, y1, x2, y2 = active.bbox
+            current = (float(x1), float(y1), float(x2), float(y2))
+            # --- BEGIN vNext: adaptive box smoothness ---
+            alpha = float(self.cfg.DISPLAY_BOX_ALPHA)
+            if bool(self.cfg.DISPLAY_BOX_ADAPTIVE):
+                speed_norm = min(1.0, float(active.speed) / 22.0)
+                area_now = max(1.0, float(max(1, x2 - x1) * max(1, y2 - y1)))
+                if self._display_lock_box is None:
+                    size_delta = 0.0
+                else:
+                    ox1, oy1, ox2, oy2 = self._display_lock_box
+                    area_prev = max(1.0, float(max(1.0, ox2 - ox1) * max(1.0, oy2 - oy1)))
+                    size_delta = min(1.0, abs(area_now - area_prev) / area_prev)
+                alpha += float(self.cfg.DISPLAY_BOX_SPEED_GAIN) * speed_norm
+                alpha += float(self.cfg.DISPLAY_BOX_SIZE_GAIN) * size_delta
+            alpha = max(float(self.cfg.DISPLAY_BOX_ALPHA_MIN), min(float(self.cfg.DISPLAY_BOX_ALPHA_MAX), alpha))
+            # --- END vNext: adaptive box smoothness ---
+            if self._display_lock_box is None:
+                self._display_lock_box = current
+            else:
+                ox1, oy1, ox2, oy2 = self._display_lock_box
+                self._display_lock_box = (
+                    (1.0 - alpha) * ox1 + alpha * current[0],
+                    (1.0 - alpha) * oy1 + alpha * current[1],
+                    (1.0 - alpha) * ox2 + alpha * current[2],
+                    (1.0 - alpha) * oy2 + alpha * current[3],
+                )
+            self._display_lock_box_missing_streak = 0
+        elif self._display_lock_box is not None:
+            self._display_lock_box_missing_streak += 1
+            if self._display_lock_box_missing_streak > max(1, int(self.cfg.DISPLAY_BOX_HOLD_FRAMES)):
+                self._display_lock_box = None
+                self._display_lock_box_missing_streak = 0
+
+        if self._display_lock_box is None:
+            return None
+        bx1, by1, bx2, by2 = self._display_lock_box
+        ix1, iy1, ix2, iy2 = int(round(bx1)), int(round(by1)), int(round(bx2)), int(round(by2))
+        if ix2 <= ix1:
+            ix2 = ix1 + 1
+        if iy2 <= iy1:
+            iy2 = iy1 + 1
+        return ix1, iy1, ix2, iy2
 
     def _update_continuity_metrics(self, active_id: Optional[int]) -> None:
         if active_id is not None:
@@ -576,6 +632,9 @@ class TrackerPipeline:
             return 0.0
         return _iou(active.raw_bbox, gt_bbox)
 
+    def request_manual_target_switch(self) -> None:
+        self._manual_switch_requested = True
+
     def process_frame(
         self,
         frame: np.ndarray,
@@ -599,6 +658,7 @@ class TrackerPipeline:
         local_ids: set[int] = set()
         roi_ids: set[int] = set()
         night_ids: set[int] = set()
+        ir_noise_level = 0.0
 
         if run_global_scan:
             t0 = time.perf_counter()
@@ -680,10 +740,15 @@ class TrackerPipeline:
             night_dets = self.night.detect(frame)
             timings_ms['night'] = (time.perf_counter() - t0) * 1000.0
             night_ids = self.manager.update_from_night(night_dets, primary_seen_ids)
+            ir_noise_level = float(self.night.last_noise_level)
+        self.manager.update_ir_noise_context(bool(self.cfg.IR_MODE_ENABLED), ir_noise_level)
 
         all_seen = primary_seen_ids | night_ids
         self.manager.age_targets(all_seen)
         self.manager.select_active()
+        if self._manual_switch_requested:
+            self.manager.switch_target()
+            self._manual_switch_requested = False
         self.manager.update_focus_mode()
         lock_events = self._update_lock_events()
         self._sync_lock_tracker(frame)
@@ -699,11 +764,13 @@ class TrackerPipeline:
         active_bbox = active.raw_bbox if active is not None else None
         display_confidence = self._update_display_confidence(active, lock_score)
         reticle_center = self._update_reticle_center(active)
+        display_lock_box = self._update_display_lock_box(active)
         continuity_score = self._continuity_score()
         active_presence_rate = self._active_presence_rate()
         active_id_changes = int(self._continuity_id_changes)
         median_reacquire_frames = self._median_reacquire_frames()
         tracking_mode = self._update_tracking_state(active)
+        lock_confirmed = bool(self.manager.has_confirmed_drone_lock())
 
         rendered = None
         if render:
@@ -716,6 +783,7 @@ class TrackerPipeline:
                 frame_index=frame_index,
                 scan_strategy=scan_strategy,
                 tracking_mode=tracking_mode,
+                lock_confirmed=lock_confirmed,
                 gt_bbox=gt_bbox,
                 gt_iou=gt_iou,
                 timings_ms=timings_ms,
@@ -730,6 +798,7 @@ class TrackerPipeline:
                 roi_budget_candidates=self._last_roi_budget_candidates,
                 night_skip=self._last_night_skip,
                 reticle_center=reticle_center,
+                display_lock_box=display_lock_box,
             )
             timings_ms['draw'] = (time.perf_counter() - t0) * 1000.0
 
@@ -737,15 +806,19 @@ class TrackerPipeline:
 
         visible = len(self.manager.display_targets())
         active_source = active.source if active is not None else '-'
+        cycle_index, cycle_total = self.manager.cycle_position()
         return FrameOutput(
             frame=rendered,
             fps=fps,
             active_id=self.manager.active_id,
             active_source=active_source,
             active_bbox=active_bbox,
+            active_cycle_index=cycle_index,
+            active_cycle_total=cycle_total,
             target_count=len(self.manager.targets),
             visible_target_count=visible,
             mode=tracking_mode,
+            lock_confirmed=lock_confirmed,
             frame_index=frame_index,
             scan_strategy=scan_strategy,
             gt_visible=gt_bbox is not None,
@@ -765,6 +838,9 @@ class TrackerPipeline:
             budget_frame_ms=self._last_frame_budget_ms,
             roi_budget_candidates=self._last_roi_budget_candidates,
             night_skip=self._last_night_skip,
+            ir_noise_level=self.manager.ir_noise_level(),
+            ir_noise_gate_active=self.manager.ir_noise_gate_active(),
+            lock_confirm_frames_effective=self.manager.lock_confirm_frames_effective(),
             timings_ms=timings_ms,
         )
 
@@ -893,14 +969,50 @@ def _target_class_label(target: Optional[TrackedTarget], cfg: Config) -> str:
     return f'OBJ c{target.cls_id}'
 
 
-def _draw_active_reticle(frame: np.ndarray, center: tuple[int, int], cfg: Config) -> None:
-    cx, cy = center
-    half = max(20, int(cfg.RETICLE_HALF_SIZE))
+def _draw_active_lock_box(
+    frame: np.ndarray,
+    track_id: int,
+    bbox: tuple[int, int, int, int],
+    center: Optional[tuple[int, int]],
+) -> None:
+    x1, y1, x2, y2 = bbox
+    bw = max(8, int(x2 - x1))
+    bh = max(8, int(y2 - y1))
+
+    # Slightly larger than target bbox, while staying proportional to the object size.
+    pad_x = max(2, int(bw * 0.08))
+    pad_y = max(2, int(bh * 0.08))
+    box_w = bw + 2 * pad_x
+    box_h = bh + 2 * pad_y
+
+    if center is not None:
+        cx, cy = center
+    else:
+        cx = int((x1 + x2) * 0.5)
+        cy = int((y1 + y2) * 0.5)
+
+    fx1 = int(cx - box_w * 0.5)
+    fy1 = int(cy - box_h * 0.5)
+    fx2 = fx1 + box_w
+    fy2 = fy1 + box_h
+
+    h, w = frame.shape[:2]
+    fx1 = max(0, min(w - 2, fx1))
+    fy1 = max(0, min(h - 2, fy1))
+    fx2 = max(fx1 + 1, min(w - 1, fx2))
+    fy2 = max(fy1 + 1, min(h - 1, fy2))
+
     red = (0, 0, 255)
-    cv2.line(frame, (cx - half, cy), (cx + half, cy), red, 2)
-    cv2.line(frame, (cx, cy - half), (cx, cy + half), red, 2)
-    cv2.circle(frame, (cx, cy), max(2, int(cfg.RETICLE_DOT_RADIUS) + 2), red, 1)
-    cv2.circle(frame, (cx, cy), max(2, int(cfg.RETICLE_DOT_RADIUS)), red, -1)
+    cv2.rectangle(frame, (fx1, fy1), (fx2, fy2), red, 2)
+    cv2.putText(
+        frame,
+        f'ID={track_id}',
+        (fx1, max(14, fy1 - 8)),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.52,
+        red,
+        2,
+    )
 
 
 def draw_frame(
@@ -911,6 +1023,7 @@ def draw_frame(
     frame_index: int,
     scan_strategy: str,
     tracking_mode: str,
+    lock_confirmed: bool,
     gt_bbox: Optional[tuple[int, int, int, int]] = None,
     gt_iou: float = 0.0,
     timings_ms: Optional[dict[str, float]] = None,
@@ -925,6 +1038,7 @@ def draw_frame(
     roi_budget_candidates: int = 0,
     night_skip: int = 1,
     reticle_center: Optional[tuple[int, int]] = None,
+    display_lock_box: Optional[tuple[int, int, int, int]] = None,
 ):
     active = manager.get_active_target()
     compact_overlay = bool(cfg.OPERATOR_MINIMAL_OVERLAY and cfg.RUNTIME_MODE in {'operator', 'embedded'})
@@ -953,15 +1067,18 @@ def draw_frame(
         cv2.putText(frame, 'GT', (gx1, max(18, gy1 - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (80, 220, 255), 1)
 
     if use_reticle_overlay:
-        if reticle_center is not None:
-            _draw_active_reticle(frame, reticle_center, cfg)
+        if active is not None:
+            _draw_active_lock_box(frame, active.track_id, display_lock_box or active.bbox, reticle_center)
 
         background_targets = max(0, visible - (1 if active is not None else 0))
         background_total = max(0, len(manager.targets) - (1 if active is not None else 0))
         track_id = '-' if active is None else str(active.track_id)
         class_label = _target_class_label(active, cfg)
         reliability = int(round(max(0.0, min(1.0, float(display_confidence))) * 100.0))
-        tracking_state = tracking_mode
+        if tracking_mode == 'TRACK':
+            tracking_state = 'LOCK_CONFIRMED' if lock_confirmed else 'TRACK_CANDIDATE'
+        else:
+            tracking_state = tracking_mode
 
         cv2.putText(frame, f'FPS: {fps:.1f}', (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.62, (255, 255, 255), 2)
         cv2.putText(
@@ -1004,12 +1121,19 @@ def draw_frame(
     visible_now = len(visible_targets)
 
     if compact_overlay:
-        status = tracking_mode
+        if tracking_mode == 'TRACK':
+            status = 'LOCK' if lock_confirmed else 'TRACK*'
+        else:
+            status = tracking_mode
         active_text = '-' if manager.active_id is None else f'ID {manager.active_id}'
         cv2.putText(frame, f'FPS: {fps:.1f}  {status}  {active_text}', (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.62, (255, 255, 255), 2)
     else:
         cv2.putText(frame, f'FPS: {fps:.1f}  Frame: {frame_index + 1}', (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2)
-        cv2.putText(frame, f'Mode: {tracking_mode}  Plan: {scan_strategy}', (10, 49), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (220, 220, 220), 1)
+        if tracking_mode == 'TRACK':
+            mode_label = 'LOCK_CONFIRMED' if lock_confirmed else 'TRACK_CANDIDATE'
+        else:
+            mode_label = tracking_mode
+        cv2.putText(frame, f'Mode: {mode_label}  Plan: {scan_strategy}', (10, 49), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (220, 220, 220), 1)
         gt_text = f'GT IoU: {gt_iou:.3f}' if gt_bbox is not None else 'GT IoU: -'
         cv2.putText(
             frame,

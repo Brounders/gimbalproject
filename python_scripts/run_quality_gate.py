@@ -95,6 +95,7 @@ def _resolve_source_path(raw_source: str) -> str:
 
 
 def _score_row(row: dict[str, Any]) -> float:
+    risk_rate = float(row.get("effective_false_lock_rate", row.get("false_lock_rate", 0.0)))
     return (
         40.0 * float(row.get("lock_rate", 0.0))
         + 15.0 * float(row.get("continuity_score", 0.0))
@@ -102,7 +103,7 @@ def _score_row(row: dict[str, Any]) -> float:
         + 20.0 * min(float(row.get("avg_fps", 0.0)) / 30.0, 1.0)
         - 6.0 * float(row.get("lock_switches_per_min", 0.0))
         - 8.0 * float(row.get("active_id_changes_per_min", 0.0))
-        - 18.0 * float(row.get("false_lock_rate", 0.0))
+        - 18.0 * risk_rate
     )
 
 
@@ -118,8 +119,12 @@ def _csv_write(path: Path, rows: list[dict[str, Any]]) -> None:
         "active_id_changes",
         "active_id_changes_per_min",
         "lock_switches_per_min",
+        "gt_frames",
         "false_lock_frames",
         "false_lock_rate",
+        "unverified_active_frames",
+        "unverified_active_rate",
+        "effective_false_lock_rate",
         "score",
         "passed",
         "fail_reasons",
@@ -208,10 +213,17 @@ def main() -> int:
             "active_id_changes": int(report.get("active_id_changes", 0)),
             "active_id_changes_per_min": round(float(report.get("active_id_changes_per_min", 0.0)), 4),
             "lock_switches_per_min": round(float(report.get("lock_switches_per_min", 0.0)), 4),
+            "gt_frames": int(report.get("gt_frames", 0)),
             "false_lock_frames": int(report.get("false_lock_frames", 0)),
             "false_lock_rate": round(float(report.get("false_lock_rate", 0.0)), 4),
+            "unverified_active_frames": int(report.get("unverified_active_frames", 0)),
+            "unverified_active_rate": round(float(report.get("unverified_active_rate", 0.0)), 4),
             "mode_counts": report.get("mode_counts", {}),
         }
+        if int(row["gt_frames"]) > 0:
+            row["effective_false_lock_rate"] = row["false_lock_rate"]
+        else:
+            row["effective_false_lock_rate"] = round(float(row["unverified_active_rate"]) * 0.5, 4)
         row["score"] = round(_score_row(row), 3)
 
         row_failures: list[str] = []
@@ -222,10 +234,30 @@ def main() -> int:
         if float(row["active_id_changes_per_min"]) > float(args.max_id_changes_per_min):
             row_failures.append(f"idchg/min>{args.max_id_changes_per_min}")
 
-        is_noise = scene in {"noise", "noisy", "background"}
+        is_noise = scene in {"noise", "noisy", "background", "city_lights"}
+        is_city_lights = scene in {"city_lights", "urban_lights", "lights"}
         false_lock_limit = float(args.max_noise_false_lock_rate if is_noise else args.max_false_lock_rate)
-        if float(row["false_lock_rate"]) > false_lock_limit:
-            row_failures.append(f"false_lock_rate>{false_lock_limit}")
+        if int(row["gt_frames"]) > 0:
+            if float(row["false_lock_rate"]) > false_lock_limit:
+                row_failures.append(f"false_lock_rate>{false_lock_limit}")
+        else:
+            # For unlabelled clips hard-gate only noise scenes.
+            # In IR mode noise tolerance is stricter via cfg.IR_NOISE_UNVERIFIED_RATE.
+            if is_noise:
+                unverified_limit = false_lock_limit
+                if bool(cfg.IR_MODE_ENABLED):
+                    if is_city_lights:
+                        unverified_limit = min(unverified_limit, float(cfg.IR_NOISE_UNVERIFIED_RATE_CITY_LIGHTS))
+                    else:
+                        unverified_limit = min(unverified_limit, float(cfg.IR_NOISE_UNVERIFIED_RATE))
+                if float(row["unverified_active_rate"]) > unverified_limit:
+                    if bool(cfg.IR_MODE_ENABLED):
+                        if is_city_lights:
+                            row_failures.append(f"ir_city_lights_unverified_active_rate>{unverified_limit}")
+                        else:
+                            row_failures.append(f"ir_noise_unverified_active_rate>{unverified_limit}")
+                    else:
+                        row_failures.append(f"unverified_active_rate>{unverified_limit}")
 
         if not is_noise:
             if float(row["continuity_score"]) < float(args.min_continuity):
@@ -241,6 +273,8 @@ def main() -> int:
             base_idchg = float(baseline.get("active_id_changes_per_min", 0.0))
             base_swpm = float(baseline.get("lock_switches_per_min", 0.0))
             base_false_lock = float(baseline.get("false_lock_rate", 0.0))
+            base_unverified = float(baseline.get("unverified_active_rate", 0.0))
+            base_gt_frames = int(float(baseline.get("gt_frames", 0.0)))
 
             if float(row["avg_fps"]) < base_fps - float(args.allow_baseline_fps_drop):
                 row_failures.append("baseline_fps_regression")
@@ -252,8 +286,12 @@ def main() -> int:
                 row_failures.append("baseline_idchg_regression")
             if float(row["lock_switches_per_min"]) > base_swpm + float(args.allow_baseline_swpm_increase):
                 row_failures.append("baseline_swpm_regression")
-            if float(row["false_lock_rate"]) > base_false_lock + float(args.allow_baseline_false_lock_increase):
-                row_failures.append("baseline_false_lock_regression")
+            if int(row["gt_frames"]) > 0 and base_gt_frames > 0:
+                if float(row["false_lock_rate"]) > base_false_lock + float(args.allow_baseline_false_lock_increase):
+                    row_failures.append("baseline_false_lock_regression")
+            else:
+                if is_noise and float(row["unverified_active_rate"]) > base_unverified + float(args.allow_baseline_false_lock_increase):
+                    row_failures.append("baseline_unverified_active_regression")
 
         row["passed"] = len(row_failures) == 0
         row["fail_reasons"] = ";".join(row_failures)
@@ -275,6 +313,8 @@ def main() -> int:
         "active_id_changes_per_min": round(sum(float(r["active_id_changes_per_min"]) for r in rows) / max(1, len(rows)), 4),
         "lock_switches_per_min": round(sum(float(r["lock_switches_per_min"]) for r in rows) / max(1, len(rows)), 4),
         "false_lock_rate": round(sum(float(r["false_lock_rate"]) for r in rows) / max(1, len(rows)), 4),
+        "unverified_active_rate": round(sum(float(r["unverified_active_rate"]) for r in rows) / max(1, len(rows)), 4),
+        "effective_false_lock_rate": round(sum(float(r["effective_false_lock_rate"]) for r in rows) / max(1, len(rows)), 4),
         "score": round(sum(float(r["score"]) for r in rows) / max(1, len(rows)), 3),
     }
 
@@ -296,6 +336,8 @@ def main() -> int:
             "min_presence": args.min_presence,
             "max_false_lock_rate": args.max_false_lock_rate,
             "max_noise_false_lock_rate": args.max_noise_false_lock_rate,
+            "ir_noise_unverified_rate": cfg.IR_NOISE_UNVERIFIED_RATE,
+            "ir_noise_unverified_rate_city_lights": cfg.IR_NOISE_UNVERIFIED_RATE_CITY_LIGHTS,
         },
         "baseline": str(args.baseline) if args.baseline else "",
         "gate_passed": passed,

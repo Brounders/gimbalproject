@@ -1,0 +1,8 @@
+# source,scene
+# IR ground-truth pack from Anti-UAV style sequences (IR_label.json + image frames)
+/Users/bround/Desktop/Обучение/train/20190925_131530_1_4,ir
+/Users/bround/Desktop/Обучение/train/20190925_133630_1_5,ir
+/Users/bround/Desktop/Обучение/train/20190925_152412_1_1,ir
+/Users/bround/Desktop/Обучение/train/20190925_194211_1_5,ir
+/Users/bround/Desktop/Обучение/train/20190925_101846_1_1,noise
+/Users/bround/Desktop/Обучение/train/01_4485_1167-2666,noise

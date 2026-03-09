@@ -43,3 +43,9 @@ roi_assist_enabled: true
 roi_conf_thresh: 0.10
 night_mot_thresh: 14
 night_diff_thresh: 10
+display_box_alpha: 0.40
+ir_mode_enabled: true
+ir_noise_threshold: 0.018
+confirmation_frames_ir_noise: 8
+ir_noise_unverified_rate: 0.12
+ir_noise_unverified_rate_city_lights: 0.14

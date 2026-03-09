@@ -36,6 +36,11 @@ class TargetManager:
         self._focus_enter_streak = 0
         self._focus_exit_streak = 0
         self._active_switch_cooldown = 0
+        # --- BEGIN vNext: IR noise mini-gate ---
+        self._ir_noise_level_ema = 0.0
+        self._ir_noise_gate_active = False
+        self._effective_lock_confirm_frames = max(1, int(self.cfg.LOCK_CONFIRM_FRAMES))
+        # --- END vNext: IR noise mini-gate ---
 
     def _smooth_bbox(self, old_bbox, new_bbox, alpha):
         if old_bbox is None:
@@ -85,6 +90,9 @@ class TargetManager:
             return True
         if active.lost_frames > allow_if_lost:
             return True
+        if not self._is_primary_source(active.source):
+            # Keep auxiliary lock stable for cooldown window to reduce night-id jitter.
+            return False
         if not self._is_drone_like_target(active, self.cfg.DRONE_REACQUIRE_SCORE_MIN):
             return True
         return False
@@ -114,13 +122,44 @@ class TargetManager:
         _ = conf
         return cls_id == self.cfg.PREFER_CLASS_ID
 
+    # --- BEGIN vNext: IR noise mini-gate ---
+    def update_ir_noise_context(self, ir_mode_enabled: bool, noise_level: float) -> None:
+        if not bool(ir_mode_enabled):
+            self._ir_noise_level_ema = 0.0
+            self._ir_noise_gate_active = False
+            self._effective_lock_confirm_frames = max(1, int(self.cfg.LOCK_CONFIRM_FRAMES))
+            return
+
+        noise = max(0.0, min(1.0, float(noise_level)))
+        alpha = max(0.05, min(0.95, float(self.cfg.IR_NOISE_EMA_ALPHA)))
+        self._ir_noise_level_ema = (1.0 - alpha) * self._ir_noise_level_ema + alpha * noise
+        self._ir_noise_gate_active = self._ir_noise_level_ema >= float(self.cfg.IR_NOISE_THRESHOLD)
+        if self._ir_noise_gate_active:
+            self._effective_lock_confirm_frames = max(
+                int(self.cfg.LOCK_CONFIRM_FRAMES),
+                int(self.cfg.CONFIRMATION_FRAMES_IR_NOISE),
+            )
+        else:
+            self._effective_lock_confirm_frames = max(1, int(self.cfg.LOCK_CONFIRM_FRAMES))
+
+    def ir_noise_level(self) -> float:
+        return float(self._ir_noise_level_ema)
+
+    def ir_noise_gate_active(self) -> bool:
+        return bool(self._ir_noise_gate_active)
+
+    def lock_confirm_frames_effective(self) -> int:
+        return int(self._effective_lock_confirm_frames)
+
+    # --- END vNext: IR noise mini-gate ---
+
     def has_confirmed_drone_lock(self) -> bool:
         active = self.get_active_target()
         if active is None:
             return False
         if not self._is_primary_source(active.source):
             return False
-        if active.hit_streak < self.cfg.LOCK_CONFIRM_FRAMES:
+        if active.hit_streak < self._effective_lock_confirm_frames:
             return False
         if active.lost_frames > self.cfg.LOCK_LOST_GRACE:
             return False
@@ -346,6 +385,9 @@ class TargetManager:
         for det in roi_dets:
             if self._overlaps_any(det.bbox, primary_bboxes, iou_thresh=0.35):
                 continue
+            if det.cls_id >= 0 and det.cls_id != self.cfg.PREFER_CLASS_ID and det.conf < 0.55:
+                # Suppress weak non-drone ROI hits to cut noise on bird/background clips.
+                continue
 
             if focus_target is not None:
                 fpx, fpy = self._predict_center(focus_target)
@@ -357,7 +399,15 @@ class TargetManager:
                 if not is_reacquire_candidate:
                     continue
 
-            tid = self._find_nearby_track(det.cx, det.cy, max_dist=self.cfg.NIGHT_TRACK_DIST * 2, sources={'roi'})
+            tid = None
+            active = self.get_active_target()
+            if active is not None and active.source == 'roi':
+                rebind_dist = max(self.cfg.LOCK_REACQUIRE_DIST + 40, self.cfg.NIGHT_TRACK_DIST * 3)
+                if self._dist(det.cx, det.cy, active.cx, active.cy) <= rebind_dist:
+                    tid = active.track_id
+
+            if tid is None:
+                tid = self._find_nearby_track(det.cx, det.cy, max_dist=self.cfg.NIGHT_TRACK_DIST * 3, sources={'roi'})
             if tid is None:
                 tid = self._next_aux_id
                 self._next_aux_id += 1
@@ -426,29 +476,72 @@ class TargetManager:
 
     def select_active(self):
         if self.active_id and self.active_id in self.targets:
-            return
+            active = self.targets[self.active_id]
+            if self._is_primary_source(active.source):
+                return
+            has_primary = any(
+                self._is_primary_source(target.source)
+                for target in self.targets.values()
+            )
+            if not has_primary:
+                return
         if not self.targets:
             return
         if self.cfg.ACTIVE_STRICT_LOCK_SWITCH and self.is_focus_mode():
             return
 
-        def score(target: TrackedTarget) -> float:
+        def primary_score(target: TrackedTarget) -> float:
             score_value = float(target.speed)
-            score_value += target.conf * 1.2
-            score_value += min(4.0, target.hit_streak * 0.35)
-            score_value -= target.lost_frames * 0.8
-            if self._is_primary_source(target.source):
-                score_value += 2.8 * target.drone_score
-            else:
-                score_value -= 0.8
+            score_value += target.conf * 1.6
+            score_value += min(5.0, target.hit_streak * 0.45)
+            score_value += 3.2 * target.drone_score
+            score_value -= target.lost_frames * 1.0
+            if target.cls_id == self.cfg.PREFER_CLASS_ID:
+                score_value += 1.2
+            if target.source == 'lock':
+                score_value += 0.6
             return score_value
 
-        best = max(self.targets.values(), key=score)
-        if best.speed > 1.0 or self._is_drone_like_target(best, self.cfg.DRONE_REACQUIRE_SCORE_MIN):
-            self._set_active_id(best.track_id)
+        def aux_score(target: TrackedTarget) -> float:
+            score_value = float(target.speed) * 0.65
+            score_value += target.conf * 1.0
+            score_value += min(3.0, target.hit_streak * 0.30)
+            score_value -= target.lost_frames * 1.4
+            if target.source == 'night':
+                score_value -= 0.9
+            return score_value
+
+        primary_targets = [
+            target
+            for target in self.targets.values()
+            if self._is_primary_source(target.source)
+        ]
+        if primary_targets:
+            best_primary = max(primary_targets, key=primary_score)
+            if (
+                best_primary.speed > 0.5
+                or self._is_drone_like_target(best_primary, self.cfg.DRONE_REACQUIRE_SCORE_MIN)
+                or best_primary.hit_streak >= max(2, int(self._effective_lock_confirm_frames // 2))
+            ):
+                self._set_active_id(best_primary.track_id)
+            return
+
+        aux_targets = [
+            target
+            for target in self.targets.values()
+            if not self._is_primary_source(target.source)
+            and target.hit_streak >= max(3, int(self.cfg.NIGHT_CONFIRM))
+            and target.lost_frames == 0
+        ]
+        if not aux_targets:
+            return
+
+        best_aux = max(aux_targets, key=aux_score)
+        if best_aux.conf >= 0.30 or best_aux.speed > 1.2:
+            self._set_active_id(best_aux.track_id)
 
     def switch_target(self):
-        ids = list(self.targets.keys())
+        ids = self.cycle_ids()
         if not ids:
             return
         if self.active_id not in ids:
@@ -456,3 +549,18 @@ class TargetManager:
             return
         idx = ids.index(self.active_id)
         self._set_active_id(ids[(idx + 1) % len(ids)], force=True)
+
+    def cycle_ids(self) -> list[int]:
+        visible_ids = sorted({t.track_id for t in self.display_targets()})
+        if visible_ids:
+            return visible_ids
+        return sorted(self.targets.keys())
+
+    def cycle_position(self) -> tuple[int, int]:
+        ids = self.cycle_ids()
+        total = len(ids)
+        if total == 0:
+            return 0, 0
+        if self.active_id in ids:
+            return ids.index(self.active_id) + 1, total
+        return 0, total
