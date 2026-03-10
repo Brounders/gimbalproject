@@ -22,6 +22,19 @@ tracker_env\Scripts\python.exe python_scripts\train_yolo_from_yaml.py --help
   - `last.pt`
   - `results.csv`
 
+### 2.1) Очередь датасетов (без ручного перезапуска одного и того же run)
+- План очереди: `configs/training_curriculum.yaml`
+- Запуск:
+```bash
+cd C:\Users\PC\GimbalProject
+tracker_env\Scripts\python.exe python_scripts\run_training_curriculum.py --plan configs/training_curriculum.yaml
+```
+- Логика:
+  - берет следующий `datasets[*].enabled=true` шаг,
+  - стартует от последнего `best.pt` предыдущего шага,
+  - сохраняет прогресс в `runs/curriculum_state/*.json`,
+  - при следующем запуске продолжает с незавершенного шага.
+
 ## 3) Экспорт артефакта с RTX
 - Канонический цикл приема на Mac (одна команда):
 ```bash

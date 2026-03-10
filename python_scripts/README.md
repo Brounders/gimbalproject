@@ -3,6 +3,7 @@
 ## Training
 - `train_drone_bird.py` - Prepare/train/validate Drone-vs-Bird model from raw dataset layouts.
 - `train_yolo_from_yaml.py` - Generic YOLO training runner from `dataset.yaml`.
+- `run_training_curriculum.py` - Sequential dataset queue trainer (continues from previous `best.pt` and tracks progress in state JSON).
 - `run_six_hour_training_fast_trainonly.sh` - Fast 6h train loop on prepared datasets.
 - `run_six_hour_training_fast_full.sh` - Full 6h session with conversion/sanitize/mix/train.
 - `run_six_hour_training_session.sh` - Legacy 6h session launcher (kept for compatibility).

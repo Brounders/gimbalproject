@@ -1,0 +1,36 @@
+name: rtx_curriculum_v1
+run_prefix: rtx_curriculum
+project_dir: runs/detect/runs
+state_file: runs/curriculum_state/rtx_curriculum_v1.json
+
+# Start model for the first dataset in queue.
+base_model: models/checkpoints/rtx_latest_best.pt
+
+train:
+  device: cuda
+  imgsz: 640
+  batch: 6
+  workers: 4
+  epochs: 2000
+  time_hours: 12
+  patience: 120
+  cache: none
+  lr0: 0.0018
+  lrf: 0.01
+  max_det: 80
+  conf: 0.35
+  save_period: 1
+  val: false
+  plots: false
+
+# Queue order: each next dataset starts from previous step best.pt.
+datasets:
+  - id: mendeley_ir_mix
+    data: datasets/drone_bird_mendeley_ir_mix_v1/dataset.yaml
+    enabled: true
+  - id: antiuav_rgbt_mix
+    data: datasets/antiuav_rgbt_mix_v1/dataset.yaml
+    enabled: false
+  - id: visdrone_mix
+    data: datasets/visdrone_mix_v1/dataset.yaml
+    enabled: false
