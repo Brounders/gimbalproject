@@ -27,7 +27,7 @@
 4. Добавить короткий README в `tests/` (как запускать).
 
 ## Status
-Done — 2026-03-11. Report: orchestrator/reports/REPORT-20260311-002.md
+Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-002.md
 
 ## Acceptance Criteria
 - [x] Добавлены детерминированные unit-тесты для lock-policy.

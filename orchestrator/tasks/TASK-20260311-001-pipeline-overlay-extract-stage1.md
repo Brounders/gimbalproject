@@ -29,7 +29,7 @@
 4. Проверить, что запуск CLI/GUI не ломается.
 
 ## Status
-Done — 2026-03-11. Report: orchestrator/reports/REPORT-20260311-001.md
+Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-001.md
 
 ## Acceptance Criteria
 - [x] `pipeline.py` уменьшен, overlay-код вынесен в отдельный модуль.

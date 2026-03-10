@@ -18,18 +18,24 @@
 - Codex RTX: training/evaluation worker
 
 ## Control Loop Snapshot (2026-03-11)
-- Reviewed Claude reports: none (no files in `orchestrator/reports`).
-- Accepted tasks this loop: none.
-- Rejected tasks this loop: none.
-- New brief created: `BRIEF-20260311-001-stability-loop`.
-- New Claude tasks opened: 2.
-- New RTX training tasks opened: 1.
+- Reviewed Claude reports: 2
+  - REPORT-20260311-001 -> Accepted
+  - REPORT-20260311-002 -> Accepted
+- Accepted tasks this loop: 2
+  - TASK-20260311-001
+  - TASK-20260311-002
+- Rejected tasks this loop: none
+- New brief created: `BRIEF-20260311-002-testability-and-stability-hardening`.
+- New Claude tasks opened: 2
+  - TASK-20260311-003
+  - TASK-20260311-004
+- New RTX training tasks opened this loop: 0 (TRAIN-20260311-001 remains active)
 
 ## Active Baseline Policy
 - Candidate policy: promote only after quality-gate PASS.
 - RTX artifacts are ingested and evaluated on Mac before release.
 
 ## Current Risks
-- `pipeline.py` remains large; extraction must stay behavior-safe.
-- Test coverage for lock policy is still minimal until TASK-20260311-002 is done.
-- Training throughput depends on curriculum/state discipline on RTX side.
+- Package-level import coupling still needs hardening (TASK-20260311-003).
+- select_active regression coverage is still partial until TASK-20260311-004.
+- Training throughput depends on discipline of curriculum state updates on RTX side.
