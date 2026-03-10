@@ -27,7 +27,7 @@
 3. Добавить короткий regression test на package import boundary.
 
 ## Status
-Done — 2026-03-11. Report: orchestrator/reports/REPORT-20260311-003.md
+Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-003.md
 
 ## Acceptance Criteria
 - [x] Import boundary исправлен: package import не тянет runtime-зависимости без необходимости.

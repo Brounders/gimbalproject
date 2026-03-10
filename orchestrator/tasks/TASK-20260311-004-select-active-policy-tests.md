@@ -26,7 +26,7 @@
 3. Зафиксировать ожидания по switch/no-switch и счетчикам.
 
 ## Status
-Done — 2026-03-11. Report: orchestrator/reports/REPORT-20260311-004.md
+Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-004.md
 
 ## Acceptance Criteria
 - [x] Добавлены новые тесты по `select_active()` (4 теста).

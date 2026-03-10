@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-006
 Owner: Claude
 Priority: P2
-Status: Done — 2026-03-11. Report: orchestrator/reports/REPORT-20260311-006.md
+Status: Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-006.md
 
 ## Goal
 Добавить валидатор пресетов/профилей YAML, чтобы до запуска обнаруживать неверные ключи и значения, влияющие на стабильность операторского контура.
