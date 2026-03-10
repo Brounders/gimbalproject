@@ -25,10 +25,13 @@
 2. Проверить поведение `select_active()` при активной цели и конкуренте.
 3. Зафиксировать ожидания по switch/no-switch и счетчикам.
 
+## Status
+Done — 2026-03-11. Report: orchestrator/reports/REPORT-20260311-004.md
+
 ## Acceptance Criteria
-- [ ] Добавлены новые тесты по `select_active()` (минимум 2).
-- [ ] Полный тестовый набор проходит.
-- [ ] Изменений runtime-кода нет.
+- [x] Добавлены новые тесты по `select_active()` (4 теста).
+- [x] Полный тестовый набор проходит (15/15).
+- [x] Изменений runtime-кода нет.
 
 ## Validation
 - `PYTHONPATH=src ./tracker_env/bin/python -m unittest -q tests.test_target_manager_lock_policy`

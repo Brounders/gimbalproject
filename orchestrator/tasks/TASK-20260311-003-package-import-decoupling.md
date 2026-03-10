@@ -26,10 +26,13 @@
 2. Проверить, что `from uav_tracker.config import Config` работает независимо от cv2.
 3. Добавить короткий regression test на package import boundary.
 
+## Status
+Done — 2026-03-11. Report: orchestrator/reports/REPORT-20260311-003.md
+
 ## Acceptance Criteria
-- [ ] Import boundary исправлен: package import не тянет runtime-зависимости без необходимости.
-- [ ] Runtime entrypoints продолжают работать.
-- [ ] Проверки проходят: compile + unit tests.
+- [x] Import boundary исправлен: package import не тянет runtime-зависимости без необходимости.
+- [x] Runtime entrypoints продолжают работать.
+- [x] Проверки проходят: compile + unit tests (15/15).
 
 ## Validation
 - `python3 -m compileall -q python_scripts src app tests`
