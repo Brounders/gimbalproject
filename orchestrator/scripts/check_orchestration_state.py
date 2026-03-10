@@ -35,6 +35,21 @@ def _extract_section_ids(text: str, heading: str, pattern: re.Pattern[str]) -> s
     return _extract_ids("\n".join(section_lines), pattern)
 
 
+def _extract_section_text(text: str, heading: str) -> str:
+    lines = text.splitlines()
+    in_section = False
+    section_lines: list[str] = []
+    for line in lines:
+        if line.startswith("## "):
+            if in_section:
+                break
+            in_section = line.strip() == heading
+            continue
+        if in_section:
+            section_lines.append(line)
+    return "\n".join(section_lines).strip()
+
+
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[2]
     state_dir = repo_root / "orchestrator" / "state"
@@ -50,6 +65,7 @@ def main() -> int:
     active_train_ids = _extract_section_ids(
         active_plan, "## Active RTX Tasks (execution allowed now)", TRAIN_RE
     )
+    active_status_text = _extract_section_text(active_plan, "## Status").lower()
     open_task_ids = _extract_ids(open_tasks, TASK_RE)
     completed_task_ids = _extract_ids(completed_tasks, TASK_RE)
     open_train_ids = _extract_ids(open_training, TRAIN_RE)
@@ -67,6 +83,9 @@ def main() -> int:
             errors.append(
                 f"{train_id}: listed in active_plan but missing in open_training."
             )
+
+    if "active" in active_status_text and not (active_task_ids or active_train_ids):
+        errors.append("active_plan status is Active but no active Claude/RTX tasks are listed.")
 
     if errors:
         print("orchestrator_state_check=FAIL")

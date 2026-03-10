@@ -9,3 +9,10 @@ ui_web/node_modules/
 ui_web/dist/
 models/*.pt
 models/*.hef
+
+# Local large artifacts (not part of repo history)
+exports/
+imports/
+models/
+safety_snapshots/
+test_videos/

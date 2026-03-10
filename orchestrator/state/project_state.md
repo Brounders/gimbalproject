@@ -45,3 +45,9 @@
 - select_active regression coverage is still partial until TASK-20260311-004.
 - Training throughput depends on discipline of curriculum state updates on RTX side.
 - Potential state drift if `active_plan.md` is updated without `open_tasks.md`/`completed_tasks.md` sync.
+
+## Latest Control Loop
+- Date: 2026-03-11
+- New Claude reports found: none
+- Decision: keep TASK-20260311-003 and TASK-20260311-004 in Open.
+- Active plan: unchanged (tasks 003/004 + TRAIN-20260311-001).
