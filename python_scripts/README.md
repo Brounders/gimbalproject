@@ -27,6 +27,7 @@
 
 ## Lock Event Analysis
 - `analyze_lock_events.py` - Parse one or more `.jsonl` lock-event logs; print tabular summary (event counts, switches/min mean/max, frame span); optionally save JSON/CSV report.
+- `validate_profile_presets.py` - Validate `configs/*.yaml` preset files against the `profile_io.py` key mapping; detect unknown keys and type mismatches; exits non-zero on errors.
 
 ## Monitoring
 - `check_training_status.py` - Quick status from latest autosession log.
