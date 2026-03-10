@@ -11,6 +11,11 @@
 - Runtime code changes only via explicit task.
 - UI/business/runtime boundaries must remain isolated.
 
+## Active Context Pointer
+- Active execution context: `orchestrator/state/active_plan.md`
+- Backlog index: `orchestrator/state/open_tasks.md`
+- Rule: execution priority is always defined by `active_plan.md`.
+
 ## Agent Topology
 - Human: orchestrator
 - Codex Mac: architect/planner/reviewer

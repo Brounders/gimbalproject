@@ -3,6 +3,15 @@
 Этот слой управляет взаимодействием между агентами без изменения runtime-кода.
 Репозиторий GitHub — единственный источник состояния.
 
+## Active Plan Protocol
+
+1. Human задает направление через `План: ...`.
+2. Codex Mac интерпретирует направление и обновляет `orchestrator/state/active_plan.md`.
+3. `active_plan.md` — единственный источник активного контекста исполнения.
+4. Claude Mac выполняет только задачи, перечисленные в `active_plan.md`.
+5. Если в `active_plan.md` нет задач для Claude, Claude ничего не делает.
+6. `orchestrator/state/open_tasks.md` — backlog, не эквивалент active plan.
+
 ## Workflow
 
 1. **Codex Mac → анализ → задачи Claude**
@@ -25,6 +34,12 @@
 5. **Codex RTX → обучение и evaluation**
    - запуск training/eval;
    - выгрузка артефактов и статусов в репозиторный workflow.
+
+## Backlog vs Active Plan
+
+- `open_tasks.md`: полный пул доступных задач (backlog).
+- `active_plan.md`: подмножество задач из backlog, разрешенное к исполнению сейчас.
+- При конфликте источников приоритет всегда у `active_plan.md`.
 
 ## Структура
 
