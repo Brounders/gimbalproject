@@ -22,7 +22,7 @@
 - Claude Mac: implementation lead
 - Codex RTX: training/evaluation worker
 
-## Control Loop Snapshot (2026-03-11)
+## Control Loop Snapshot (2026-03-11, protocol aligned)
 - Reviewed Claude reports: 2
   - REPORT-20260311-001 -> Accepted
   - REPORT-20260311-002 -> Accepted
@@ -44,3 +44,4 @@
 - Package-level import coupling still needs hardening (TASK-20260311-003).
 - select_active regression coverage is still partial until TASK-20260311-004.
 - Training throughput depends on discipline of curriculum state updates on RTX side.
+- Potential state drift if `active_plan.md` is updated without `open_tasks.md`/`completed_tasks.md` sync.

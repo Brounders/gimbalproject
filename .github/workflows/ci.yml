@@ -57,3 +57,13 @@ jobs:
             npm install
           fi
           npm run build
+
+      - name: Orchestrator state consistency
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f "orchestrator/scripts/check_orchestration_state.py" ]; then
+            python orchestrator/scripts/check_orchestration_state.py
+          else
+            echo "No orchestrator consistency check script found; skipping."
+          fi
