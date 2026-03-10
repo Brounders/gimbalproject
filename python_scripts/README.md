@@ -25,6 +25,9 @@
 - `run_dataset_batch.py` - Batch dataset-level evaluation helper.
 - `summarize_batch_reports.py` - Aggregate dataset batch reports.
 
+## Lock Event Analysis
+- `analyze_lock_events.py` - Parse one or more `.jsonl` lock-event logs; print tabular summary (event counts, switches/min mean/max, frame span); optionally save JSON/CSV report.
+
 ## Monitoring
 - `check_training_status.py` - Quick status from latest autosession log.
 

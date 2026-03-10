@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-005
 Owner: Claude
 Priority: P2
-Status: Open
+Status: Done — 2026-03-11. Report: orchestrator/reports/REPORT-20260311-005.md
 
 ## Goal
 Добавить утилиту анализа lock-event логов, чтобы быстро выявлять всплески `switch/id-change/lost` между сессиями и прикладывать числовой summary к ревью.
