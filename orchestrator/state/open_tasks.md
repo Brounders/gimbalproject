@@ -1,3 +1,4 @@
 # Open Tasks
 
-<!-- No open Claude tasks as of 2026-03-11 -->
+TASK-20260311-003 | Claude Mac | P1 | Open | orchestrator/tasks/TASK-20260311-003-package-import-decoupling.md
+TASK-20260311-004 | Claude Mac | P1 | Open | orchestrator/tasks/TASK-20260311-004-select-active-policy-tests.md
