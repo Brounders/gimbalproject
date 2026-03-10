@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-011
 Owner: Claude Mac
 Priority: P2
-Status: Open
+Status: Done — 2026-03-11. Report: orchestrator/reports/REPORT-20260311-011.md
 
 ## Goal
 Устранить дублирование типовых правил в `validate_profile_presets.py`:

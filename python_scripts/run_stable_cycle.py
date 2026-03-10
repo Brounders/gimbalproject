@@ -11,6 +11,52 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PY = ROOT / "tracker_env" / "bin" / "python"
 
+# ---------------------------------------------------------------------------
+# Pre-flight: validate preset YAML before running benchmark
+# ---------------------------------------------------------------------------
+sys.path.insert(0, str(Path(__file__).parent))
+try:
+    from validate_profile_presets import extract_mapping_keys, build_type_rules, validate_file
+    _HAS_VALIDATOR = True
+except ImportError:
+    _HAS_VALIDATOR = False
+
+
+def _preflight_validate_preset(preset_name: str) -> bool:
+    """Validate the named preset YAML. Returns True if OK or validation not available."""
+    if not _HAS_VALIDATOR:
+        print('[preflight] WARNING: validate_profile_presets not available — skipping preset check.')
+        return True
+
+    preset_path = ROOT / 'configs' / f'{preset_name}.yaml'
+    if not preset_path.exists():
+        print(f'[preflight] ERROR: preset file not found: {preset_path}')
+        return False
+
+    profile_io = ROOT / 'src' / 'uav_tracker' / 'profile_io.py'
+    src_dir = ROOT / 'src'
+    known_keys = extract_mapping_keys(profile_io)
+    if not known_keys:
+        print(f'[preflight] WARNING: could not load key mapping from {profile_io} — skipping type checks.')
+        return True
+
+    type_rules = build_type_rules(profile_io, src_dir)
+    result = validate_file(preset_path, known_keys, type_rules)
+
+    if result.skipped:
+        print(f'[preflight] WARNING: preset validation skipped ({result.skipped}) — continuing.')
+        return True
+    if not result.ok:
+        print(f'[preflight] ERROR: preset "{preset_name}" has {result.issue_count} issue(s):')
+        for key in result.unknown:
+            print(f'  unknown key: {key}')
+        for te in result.type_errors:
+            print(te)
+        return False
+
+    print(f'[preflight] preset "{preset_name}" OK ({len(known_keys)} keys validated)')
+    return True
+
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Stable cycle orchestrator: RTX artifact -> benchmark -> quality gate -> release decision.")
@@ -44,6 +90,11 @@ def _latest_matching(path_glob: str) -> Path | None:
 def main() -> int:
     args = parse_args()
     args.out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Pre-flight: validate candidate preset before spending time on benchmark
+    if not _preflight_validate_preset(args.candidate_preset):
+        print(f'[stable_cycle] Aborted: preset "{args.candidate_preset}" failed pre-flight validation.')
+        return 2
 
     if not args.rtx_model.exists():
         print(f"[error] RTX model not found: {args.rtx_model}")

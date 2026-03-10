@@ -315,6 +315,56 @@ class TestSelectActivePolicy(unittest.TestCase):
 
         self.assertIsNone(mgr.active_id, 'weak aux target must not be activated')
 
+    def test_select_active_primary_vs_primary_higher_score_wins(self):
+        """When active_id=None and two primary targets compete, the one with higher
+        drone_score must become active (Phase-3 best-primary selection by primary_score).
+
+        primary_score formula: speed + conf*1.6 + min(5, hit_streak*0.45) + 3.2*drone_score - lost_frames
+        target A (drone_score=0.50): 0 + 0.80*1.6 + 3*0.45 + 3.2*0.50 = 0+1.28+1.35+1.60 = 4.23
+        target B (drone_score=0.75): 0 + 0.80*1.6 + 3*0.45 + 3.2*0.75 = 0+1.28+1.35+2.40 = 5.03
+        Both satisfy _is_drone_like_target (drone_score >= DRONE_REACQUIRE_SCORE_MIN=0.48),
+        so B should win.
+        """
+        cfg = _cfg(
+            DRONE_REACQUIRE_SCORE_MIN=0.48,
+            DRONE_LOCK_SCORE_MIN=0.62,
+            PREFER_CLASS_ID=0,
+            ACTIVE_STRICT_LOCK_SWITCH=False,
+            LOCK_FOCUS_ONLY=False,
+            NIGHT_CONFIRM=3,
+            ACTIVE_ID_SWITCH_COOLDOWN_FRAMES=0,
+        )
+        mgr = TargetManager(cfg)
+        _inject(mgr, 1, source='yolo', hit_streak=3, lost_frames=0, drone_score=0.50, conf=0.80)
+        _inject(mgr, 2, source='yolo', hit_streak=3, lost_frames=0, drone_score=0.75, conf=0.80, cx=200.0)
+        mgr.active_id = None
+
+        mgr.select_active()
+
+        self.assertEqual(mgr.active_id, 2, 'primary with higher drone_score must win free-switch competition')
+
+    def test_select_active_primary_vs_primary_speed_breaks_tie(self):
+        """When two primary targets have equal drone_score but one has higher speed,
+        the faster one wins (speed contributes directly to primary_score).
+        """
+        cfg = _cfg(
+            DRONE_REACQUIRE_SCORE_MIN=0.48,
+            PREFER_CLASS_ID=0,
+            ACTIVE_STRICT_LOCK_SWITCH=False,
+            LOCK_FOCUS_ONLY=False,
+            NIGHT_CONFIRM=3,
+            ACTIVE_ID_SWITCH_COOLDOWN_FRAMES=0,
+        )
+        mgr = TargetManager(cfg)
+        _inject(mgr, 1, source='yolo', hit_streak=3, lost_frames=0, drone_score=0.60, conf=0.80)
+        _inject(mgr, 2, source='yolo', hit_streak=3, lost_frames=0, drone_score=0.60, conf=0.80, cx=200.0)
+        mgr.targets[2].speed = 1.5   # same drone_score, but faster → higher primary_score
+        mgr.active_id = None
+
+        mgr.select_active()
+
+        self.assertEqual(mgr.active_id, 2, 'primary with higher speed must win when drone_score is equal')
+
 
 if __name__ == '__main__':
     unittest.main()

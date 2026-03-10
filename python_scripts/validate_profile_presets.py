@@ -5,16 +5,21 @@ Reads the YAML key-to-Config-attr mapping from src/uav_tracker/profile_io.py
 using stdlib ast (no import of the module itself), then checks each YAML file:
 
   - Unknown keys  : present in YAML, absent from mapping
-  - Invalid types : value type mismatches well-known bool/numeric/str fields
+  - Invalid types : value type mismatches derived from Config dataclass fields
   - Non-flat YAMLs: files with nested dict/list values are skipped (not presets)
 
-Exit code: 0 — all files pass, 1 — one or more issues found.
+Type rules are derived automatically from uav_tracker.config.Config via
+dataclasses.fields() when PYTHONPATH=src is available. Without PYTHONPATH
+the validator degrades gracefully: unknown-key checks still work, type checks
+are skipped with a warning.
+
+Exit code: 0 — all files pass, 1 — one or more issues found, 2 — critical error.
 
 Usage:
     ./tracker_env/bin/python python_scripts/validate_profile_presets.py
-    ./tracker_env/bin/python python_scripts/validate_profile_presets.py \\
+    PYTHONPATH=src ./tracker_env/bin/python python_scripts/validate_profile_presets.py \\
         --configs-dir configs --profile-io src/uav_tracker/profile_io.py
-    ./tracker_env/bin/python python_scripts/validate_profile_presets.py \\
+    PYTHONPATH=src ./tracker_env/bin/python python_scripts/validate_profile_presets.py \\
         configs/night.yaml configs/fast.yaml
 """
 
@@ -22,7 +27,9 @@ from __future__ import annotations
 
 import argparse
 import ast
+import dataclasses
 import sys
+import typing
 from pathlib import Path
 from typing import Any
 
@@ -49,120 +56,54 @@ PROFILE_ONLY_KEYS: frozenset[str] = frozenset({
 # Keys that are informational / non-preset but tolerated at the top level.
 INFORMATIONAL_KEYS: frozenset[str] = frozenset({'name'})
 
-# Known type constraints: key → expected Python type(s)
-_TYPE_RULES: dict[str, tuple[type, ...]] = {
-    # booleans
-    'small_target_mode': (bool,),
-    'night_enabled': (bool,),
-    'roi_assist_enabled': (bool,),
-    'budget_enabled': (bool,),
-    'adaptive_scan_enabled': (bool,),
-    'lock_tracker_enabled': (bool,),
-    'active_strict_lock_switch': (bool,),
-    'show_gt_overlay': (bool,),
-    'show_debug_timings': (bool,),
-    'show_focus_window': (bool,),
-    'show_lock_search_window': (bool,),
-    'lock_focus_only': (bool,),
-    'disable_night_on_lock': (bool,),
-    'reticle_overlay_enabled': (bool,),
-    'ir_mode_enabled': (bool,),
-    'night_run_when_primary_seen': (bool,),
-    'display_box_adaptive': (bool,),
-    'lock_event_log_enabled': (bool,),
-    'show_trails': (bool,),
-    'operator_minimal_overlay': (bool,),
-    # numeric (int or float accepted)
-    'imgsz': (int,),
-    'conf_thresh': (int, float),
-    'roi_conf_thresh': (int, float),
-    'budget_target_fps': (int, float),
-    'budget_high_load': (int, float),
-    'budget_low_load': (int, float),
-    'budget_level_max': (int,),
-    'budget_roi_min_candidates': (int,),
-    'budget_night_skip_level1': (int,),
-    'budget_night_skip_level2': (int,),
-    'budget_roi_skip_level2': (int,),
-    'budget_scan_interval_boost_per_level': (int, float),
-    'budget_local_validate_boost_per_level': (int, float),
-    'night_mot_thresh': (int,),
-    'night_diff_thresh': (int,),
-    'night_min_area': (int,),
-    'night_max_area': (int,),
-    'night_confirm': (int,),
-    'night_border': (int,),
-    'night_max_ar': (int, float),
-    'night_track_dist': (int, float),
-    'night_lost_max': (int,),
-    'yolo_lost_max': (int,),
-    'global_scan_interval': (int,),
-    'roi_max_candidates': (int,),
-    'local_track_img_size': (int,),
-    'local_track_conf': (int, float),
-    'local_validate_interval': (int,),
-    'local_small_box_area': (int,),
-    'local_small_box_ratio': (int, float),
-    'local_small_img_size': (int,),
-    'local_small_conf': (int, float),
-    'local_boost_lock_score_thresh': (int, float),
-    'lock_tracker_min_score': (int, float),
-    'lock_tracker_search_scale': (int, float),
-    'velocity_alpha': (int, float),
-    'lock_reacquire_predict_gain': (int, float),
-    'lock_reacquire_predict_horizon_max': (int,),
-    'lock_mode_acquire_frames': (int,),
-    'lock_mode_release_frames': (int,),
-    'lock_lost_grace': (int,),
-    'active_id_switch_cooldown_frames': (int,),
-    'active_id_switch_allow_if_lost_frames': (int,),
-    'track_state_acquire_frames': (int,),
-    'track_state_lost_frames': (int,),
-    'track_state_reset_frames': (int,),
-    'class_ema_alpha': (int, float),
-    'drone_lock_score_min': (int, float),
-    'drone_reacquire_score_min': (int, float),
-    'reticle_half_size': (int,),
-    'reticle_dot_radius': (int,),
-    'reticle_center_alpha': (int, float),
-    'reticle_hold_frames': (int,),
-    'display_box_alpha': (int, float),
-    'display_box_alpha_min': (int, float),
-    'display_box_alpha_max': (int, float),
-    'display_box_speed_gain': (int, float),
-    'display_box_size_gain': (int, float),
-    'display_box_hold_frames': (int,),
-    'ir_noise_threshold': (int, float),
-    'confirmation_frames_ir_noise': (int,),
-    'ir_noise_unverified_rate': (int, float),
-    'ir_noise_unverified_rate_city_lights': (int, float),
-    'ir_noise_ema_alpha': (int, float),
-    'confidence_ema_alpha': (int, float),
-    'confidence_display_update_sec': (int, float),
-    'night_primary_cooldown': (int,),
-    'display_min_hit_streak_primary': (int,),
-    'display_min_hit_streak_night': (int,),
-    'display_max_lost_frames': (int,),
-    # strings
-    'model_path': (str,),
-    'device': (str,),
-    'runtime_mode': (str,),
-    'lock_event_log_path': (str,),
-}
+# ---------------------------------------------------------------------------
+# Type rules: auto-derived from Config dataclass via dataclasses.fields()
+# ---------------------------------------------------------------------------
 
+def _annotation_to_yaml_types(ann: Any) -> tuple[type, ...] | None:
+    """Convert a Config field type annotation to allowed YAML Python types.
 
-def extract_mapping_keys(profile_io_path: Path) -> frozenset[str]:
-    """Parse profile_io.py with ast and return the preset key set.
-
-    Looks for the assignment ``mapping = {...}`` inside apply_overrides().
-    Falls back to an empty frozenset if parsing fails.
+    Rules:
+      bool        → (bool,)          YAML true/false only
+      int         → (int,)           YAML integers only
+      float       → (int, float)     YAML allows int literals for float fields
+      str         → (str,)
+      Union[...]  → union of above rules for each arg (skip Optional/None/list)
+      other       → None (skip; too complex to validate meaningfully)
     """
+    _SIMPLE: dict[type, tuple[type, ...]] = {
+        bool: (bool,),
+        int: (int,),
+        float: (int, float),   # YAML integer is a valid float value
+        str: (str,),
+    }
+    if ann in _SIMPLE:
+        return _SIMPLE[ann]
+
+    origin = typing.get_origin(ann)
+    if origin is typing.Union:
+        result: list[type] = []
+        for arg in typing.get_args(ann):
+            if arg is type(None):
+                continue
+            mapped = _SIMPLE.get(arg)
+            if mapped:
+                for t in mapped:
+                    if t not in result:
+                        result.append(t)
+        return tuple(result) if result else None
+
+    return None  # complex type (list, dict, etc.) — skip validation
+
+
+def extract_mapping_dict(profile_io_path: Path) -> dict[str, str]:
+    """Parse profile_io.py with ast and return {yaml_key: CONFIG_ATTR} mapping."""
     try:
         source = profile_io_path.read_text(encoding='utf-8')
         tree = ast.parse(source)
     except (OSError, SyntaxError) as exc:
         print(f'Warning: cannot parse {profile_io_path}: {exc}', file=sys.stderr)
-        return frozenset()
+        return {}
 
     for node in ast.walk(tree):
         if not isinstance(node, ast.Assign):
@@ -170,13 +111,70 @@ def extract_mapping_keys(profile_io_path: Path) -> frozenset[str]:
         for target in node.targets:
             if isinstance(target, ast.Name) and target.id == 'mapping':
                 if isinstance(node.value, ast.Dict):
-                    keys: set[str] = set()
-                    for k in node.value.keys:
-                        if isinstance(k, ast.Constant) and isinstance(k.value, str):
-                            keys.add(k.value)
-                    if keys:
-                        return frozenset(keys)
-    return frozenset()
+                    result: dict[str, str] = {}
+                    for k, v in zip(node.value.keys, node.value.values):
+                        if (isinstance(k, ast.Constant) and isinstance(k.value, str)
+                                and isinstance(v, ast.Constant) and isinstance(v.value, str)):
+                            result[k.value] = v.value
+                        elif (isinstance(k, ast.Constant) and isinstance(k.value, str)
+                              and isinstance(v, ast.Constant) and v.value is None):
+                            result[k.value] = ''   # None value means: key exists but no attr mapping
+                    if result:
+                        return result
+    return {}
+
+
+def build_type_rules(profile_io_path: Path, src_dir: Path | None = None) -> dict[str, tuple[type, ...]]:
+    """Build {yaml_key: allowed_types} by reading Config field annotations.
+
+    Uses dataclasses.fields() on uav_tracker.config.Config.
+    If Config cannot be imported (no PYTHONPATH), returns empty dict and
+    prints a warning — validation continues without type checks.
+    """
+    mapping = extract_mapping_dict(profile_io_path)
+    if not mapping:
+        return {}
+
+    # Try to import Config. Add src_dir to sys.path temporarily if given.
+    _added = False
+    if src_dir is not None:
+        src_str = str(src_dir.resolve())
+        if src_str not in sys.path:
+            sys.path.insert(0, src_str)
+            _added = True
+    try:
+        from uav_tracker.config import Config  # type: ignore[import]
+        cfg_fields: dict[str, Any] = {f.name: f.type for f in dataclasses.fields(Config)}
+    except ImportError:
+        print(
+            'Warning: cannot import uav_tracker.config.Config — type checks disabled.\n'
+            '  Run with PYTHONPATH=src to enable type validation.',
+            file=sys.stderr,
+        )
+        return {}
+    finally:
+        if _added and sys.path and sys.path[0] == src_str:
+            sys.path.pop(0)
+
+    rules: dict[str, tuple[type, ...]] = {}
+    for yaml_key, config_attr in mapping.items():
+        if not config_attr:
+            continue
+        ann = cfg_fields.get(config_attr)
+        if ann is None:
+            continue
+        allowed = _annotation_to_yaml_types(ann)
+        if allowed is not None:
+            rules[yaml_key] = allowed
+    return rules
+
+
+def extract_mapping_keys(profile_io_path: Path) -> frozenset[str]:
+    """Parse profile_io.py with ast and return the preset key set.
+
+    Thin wrapper around extract_mapping_dict() kept for backward compatibility.
+    """
+    return frozenset(extract_mapping_dict(profile_io_path).keys())
 
 
 # ---------------------------------------------------------------------------
@@ -204,7 +202,11 @@ def _is_flat(data: dict) -> bool:
     return all(not isinstance(v, (dict, list)) for v in data.values())
 
 
-def validate_file(path: Path, known_keys: frozenset[str]) -> FileResult:
+def validate_file(
+    path: Path,
+    known_keys: frozenset[str],
+    type_rules: dict[str, tuple[type, ...]] | None = None,
+) -> FileResult:
     result = FileResult(path)
     try:
         data = _load_yaml(path)
@@ -217,13 +219,14 @@ def validate_file(path: Path, known_keys: frozenset[str]) -> FileResult:
         return result
 
     all_valid = known_keys | PROFILE_ONLY_KEYS | INFORMATIONAL_KEYS
+    rules = type_rules or {}
 
     for key, value in data.items():
         if key not in all_valid:
             result.unknown.append(key)
             continue
-        if key in _TYPE_RULES and value is not None:
-            expected = _TYPE_RULES[key]
+        if key in rules and value is not None:
+            expected = rules[key]
             if not isinstance(value, expected):
                 result.type_errors.append(
                     f"  {key}: expected {'/'.join(t.__name__ for t in expected)}"
@@ -233,8 +236,12 @@ def validate_file(path: Path, known_keys: frozenset[str]) -> FileResult:
     return result
 
 
-def validate_files(paths: list[Path], known_keys: frozenset[str]) -> list[FileResult]:
-    return [validate_file(p, known_keys) for p in paths]
+def validate_files(
+    paths: list[Path],
+    known_keys: frozenset[str],
+    type_rules: dict[str, tuple[type, ...]] | None = None,
+) -> list[FileResult]:
+    return [validate_file(p, known_keys, type_rules) for p in paths]
 
 
 def print_results(results: list[FileResult]) -> None:
@@ -289,6 +296,12 @@ def build_parser() -> argparse.ArgumentParser:
         default='src/uav_tracker/profile_io.py',
         help='Path to profile_io.py to extract the key mapping from.',
     )
+    p.add_argument(
+        '--src-dir',
+        metavar='DIR',
+        default='src',
+        help='Path to src/ dir added to PYTHONPATH for Config import (default: src).',
+    )
     return p
 
 
@@ -302,6 +315,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f'Error: could not extract key mapping from {profile_io_path}', file=sys.stderr)
         return 2
     print(f'Loaded {len(known_keys)} known preset keys from {profile_io_path}')
+
+    src_dir = Path(args.src_dir) if args.src_dir else None
+    type_rules = build_type_rules(profile_io_path, src_dir)
+    if type_rules:
+        print(f'Auto-derived type rules for {len(type_rules)} keys from Config dataclass')
+    else:
+        print('Type rules unavailable — only unknown-key checks active', file=sys.stderr)
 
     if args.files:
         paths = [Path(f) for f in args.files]
@@ -321,7 +341,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     print(f'Validating {len(paths)} file(s):\n')
-    results = validate_files(paths, known_keys)
+    results = validate_files(paths, known_keys, type_rules)
     print_results(results)
 
     has_failures = any(not r.ok and not r.skipped for r in results)

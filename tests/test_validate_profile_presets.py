@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'python_scripts'))
 
 from validate_profile_presets import (
     FileResult,
+    build_type_rules,
     extract_mapping_keys,
     validate_file,
     validate_files,
@@ -26,6 +27,7 @@ from validate_profile_presets import (
 # ---------------------------------------------------------------------------
 
 _PROFILE_IO = Path(__file__).parent.parent / 'src' / 'uav_tracker' / 'profile_io.py'
+_SRC_DIR = Path(__file__).parent.parent / 'src'
 
 
 def _write_yaml(path: Path, content: str) -> None:
@@ -87,6 +89,7 @@ class TestValidateFile(unittest.TestCase):
         self._tmpdir = tempfile.TemporaryDirectory()
         self.tmp = Path(self._tmpdir.name)
         self.known = extract_mapping_keys(_PROFILE_IO)
+        self.type_rules = build_type_rules(_PROFILE_IO, _SRC_DIR)
 
     def tearDown(self):
         self._tmpdir.cleanup()
@@ -98,51 +101,51 @@ class TestValidateFile(unittest.TestCase):
 
     def test_valid_preset_is_ok(self):
         p = self._yaml('good.yaml', 'conf_thresh: 0.30\nnight_enabled: true\n')
-        result = validate_file(p, self.known)
+        result = validate_file(p, self.known, self.type_rules)
         self.assertTrue(result.ok)
         self.assertEqual(result.unknown, [])
         self.assertEqual(result.type_errors, [])
 
     def test_unknown_key_detected(self):
         p = self._yaml('bad.yaml', 'totally_fake_key: 99\n')
-        result = validate_file(p, self.known)
+        result = validate_file(p, self.known, self.type_rules)
         self.assertFalse(result.ok)
         self.assertIn('totally_fake_key', result.unknown)
 
     def test_informational_name_key_is_allowed(self):
         p = self._yaml('named.yaml', 'name: my_preset\nconf_thresh: 0.25\n')
-        result = validate_file(p, self.known)
+        result = validate_file(p, self.known, self.type_rules)
         self.assertTrue(result.ok)
         self.assertNotIn('name', result.unknown)
 
     def test_profile_only_key_is_allowed(self):
         p = self._yaml('profile.yaml', 'preset: night\nsource: /dev/video0\n')
-        result = validate_file(p, self.known)
+        result = validate_file(p, self.known, self.type_rules)
         self.assertTrue(result.ok)
 
     def test_type_error_bool_expected(self):
         # night_enabled must be bool; integer 1 should fail
         p = self._yaml('type_err.yaml', 'night_enabled: 1\n')
-        result = validate_file(p, self.known)
+        result = validate_file(p, self.known, self.type_rules)
         self.assertFalse(result.ok)
         self.assertTrue(any('night_enabled' in te for te in result.type_errors))
 
     def test_type_int_with_float_rejected_where_int_required(self):
         # lock_mode_acquire_frames must be int, float should fail
         p = self._yaml('float_for_int.yaml', 'lock_mode_acquire_frames: 3.5\n')
-        result = validate_file(p, self.known)
+        result = validate_file(p, self.known, self.type_rules)
         self.assertFalse(result.ok)
         self.assertTrue(any('lock_mode_acquire_frames' in te for te in result.type_errors))
 
     def test_non_flat_yaml_is_skipped(self):
         p = self._yaml('nested.yaml', 'train:\n  epochs: 100\n  batch: 8\n')
-        result = validate_file(p, self.known)
+        result = validate_file(p, self.known, self.type_rules)
         self.assertTrue(result.skipped)
         self.assertIn('non-flat', result.skipped)
 
     def test_empty_yaml_is_ok(self):
         p = self._yaml('empty.yaml', '')
-        result = validate_file(p, self.known)
+        result = validate_file(p, self.known, self.type_rules)
         self.assertTrue(result.ok)
 
 

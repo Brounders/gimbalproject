@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-010
 Owner: Claude Mac
 Priority: P2
-Status: Open
+Status: Done — 2026-03-11. Report: orchestrator/reports/REPORT-20260311-010.md
 
 ## Goal
 Добавить тест конкуренции двух primary-целей с различным `drone_score` в `TestSelectActivePolicy`,

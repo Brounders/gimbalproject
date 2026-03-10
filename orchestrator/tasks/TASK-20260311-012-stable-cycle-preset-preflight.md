@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-012
 Owner: Claude Mac
 Priority: P2
-Status: Open
+Status: Done — 2026-03-11. Report: orchestrator/reports/REPORT-20260311-012.md
 
 ## Goal
 Встроить `validate_profile_presets.py` как pre-flight шаг в `run_stable_cycle.py`,
