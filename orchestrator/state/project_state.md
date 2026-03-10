@@ -50,4 +50,4 @@
 - Date: 2026-03-11
 - New Claude reports found: none
 - Decision: keep TASK-20260311-003 and TASK-20260311-004 in Open.
-- Active plan: unchanged (tasks 003/004 + TRAIN-20260311-001).
+- Active plan: tasks 003/004 active, TRAIN-20260311-001 отмечен как `awaiting RTX status sync on Mac`.

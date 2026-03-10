@@ -16,6 +16,7 @@ REQUIRED_HEADINGS = [
     "## Active Claude Tasks (execution allowed now)",
     "## Active RTX Tasks (execution allowed now)",
 ]
+ALLOWED_STATUSES = {"active", "paused", "completed"}
 
 
 def _read(path: Path) -> str:
@@ -56,6 +57,17 @@ def _extract_section_text(text: str, heading: str) -> str:
     return "\n".join(section_lines).strip()
 
 
+def _extract_status_value(status_section: str) -> str:
+    for line in status_section.splitlines():
+        cleaned = line.strip()
+        if not cleaned:
+            continue
+        if cleaned.startswith("-"):
+            cleaned = cleaned[1:].strip()
+        return cleaned.lower()
+    return ""
+
+
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[2]
     state_dir = repo_root / "orchestrator" / "state"
@@ -71,7 +83,8 @@ def main() -> int:
     active_train_ids = _extract_section_ids(
         active_plan, "## Active RTX Tasks (execution allowed now)", TRAIN_RE
     )
-    active_status_text = _extract_section_text(active_plan, "## Status").lower()
+    active_status_section = _extract_section_text(active_plan, "## Status")
+    active_status_value = _extract_status_value(active_status_section)
     open_task_ids = _extract_ids(open_tasks, TASK_RE)
     completed_task_ids = _extract_ids(completed_tasks, TASK_RE)
     open_train_ids = _extract_ids(open_training, TRAIN_RE)
@@ -94,8 +107,21 @@ def main() -> int:
                 f"{train_id}: listed in active_plan but missing in open_training."
             )
 
-    if "active" in active_status_text and not (active_task_ids or active_train_ids):
+    if not active_status_value:
+        errors.append("active_plan format error: empty `## Status` section.")
+    elif active_status_value not in ALLOWED_STATUSES:
+        errors.append(
+            "active_plan format error: invalid status value "
+            f"`{active_status_value}`. Allowed: Active | Paused | Completed."
+        )
+
+    if active_status_value == "active" and not (active_task_ids or active_train_ids):
         errors.append("active_plan status is Active but no active Claude/RTX tasks are listed.")
+
+    if active_status_value == "completed" and (active_task_ids or active_train_ids):
+        errors.append(
+            "active_plan status is Completed but active Claude/RTX tasks are still listed."
+        )
 
     if errors:
         print("orchestrator_state_check=FAIL")

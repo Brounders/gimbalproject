@@ -17,11 +17,11 @@
 - TASK-20260311-004 | select-active-policy-tests | Open
 
 ## Active RTX Tasks (execution allowed now)
-- TRAIN-20260311-001 | mendeley_ir_mix (curriculum step1) | Open
+- TRAIN-20260311-001 | mendeley_ir_mix (curriculum step1) | Open (awaiting RTX status sync on Mac, 2026-03-11)
 
 ## Backlog Policy
 - Любые задачи вне списков выше считаются backlog и не исполняются.
 
 ## Exit Criteria
 - TASK-20260311-003 и TASK-20260311-004 переведены в Accepted или заменены новым планом.
-- Статус TRAIN-20260311-001 зафиксирован в `open_training.md` и синхронизирован с `active_plan.md`.
+- TRAIN-20260311-001 закрыт или обновлен до финального статуса после получения отчета RTX.

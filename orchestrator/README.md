@@ -56,3 +56,4 @@
 - `state/` — состояние проекта и индексы очередей.
 - `templates/` — шаблоны документов.
 - `scripts/` — проверки консистентности orchestration-слоя.
+- `templates/claude_active_plan_execution_prompt.md` — рабочий промт для Claude с active-plan дисциплиной.
