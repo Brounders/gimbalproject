@@ -10,6 +10,12 @@ from pathlib import Path
 
 TASK_RE = re.compile(r"\bTASK-\d{8}-\d{3}\b")
 TRAIN_RE = re.compile(r"\bTRAIN-\d{8}-\d{3}\b")
+REQUIRED_HEADINGS = [
+    "## Plan ID",
+    "## Status",
+    "## Active Claude Tasks (execution allowed now)",
+    "## Active RTX Tasks (execution allowed now)",
+]
 
 
 def _read(path: Path) -> str:
@@ -71,6 +77,10 @@ def main() -> int:
     open_train_ids = _extract_ids(open_training, TRAIN_RE)
 
     errors: list[str] = []
+
+    for heading in REQUIRED_HEADINGS:
+        if heading not in active_plan:
+            errors.append(f"active_plan format error: missing required heading `{heading}`.")
 
     for task_id in sorted(active_task_ids):
         if task_id in completed_task_ids:
