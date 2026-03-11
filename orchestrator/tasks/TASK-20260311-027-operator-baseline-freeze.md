@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-027
 Owner: Claude Mac
 Priority: P1
-Status: Review incomplete — 2026-03-11 (Codex Mac review). Follow-up required: `TASK-20260311-028-operator-baseline-consistency-fix.md`
+Status: Accepted — 2026-03-11 (Codex Mac direct fix). Baseline document reconciled with current preset YAML.
 
 ## Goal
 Зафиксировать текущий операторский baseline в одном коротком документе на основе реального smoke-прогона, чтобы дальнейшие изменения сравнивались с понятной опорной точкой.

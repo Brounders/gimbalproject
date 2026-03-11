@@ -23,9 +23,9 @@
 | Пресет | Файл | conf_thresh | imgsz | night_enabled |
 |--------|------|-------------|-------|---------------|
 | `default` | `configs/default.yaml` | 0.30 | 640 | True |
-| `night` | `configs/night.yaml` | 0.12 | 640 | True |
-| `antiuav_thermal` | `configs/antiuav_thermal.yaml` | ~0.10 | 640 | True |
-| `small_target` | `configs/small_target.yaml` | 0.25 | 960 | True |
+| `night` | `configs/night.yaml` | 0.12 | 960 | True |
+| `antiuav_thermal` | `configs/antiuav_thermal.yaml` | 0.12 | 960 | True |
+| `small_target` | `configs/small_target.yaml` | 0.15 | 960 | True |
 
 ---
 

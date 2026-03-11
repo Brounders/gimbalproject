@@ -18,4 +18,5 @@ TASK-20260311-022 | Claude Mac | Accepted | 2026-03-11 | closed after follow-up 
 TASK-20260311-025 | Claude Mac | Accepted | 2026-03-11 | orchestrator/reports/REPORT-20260311-025.md
 TASK-20260311-013 | Claude Mac | Accepted | 2026-03-11 | orchestrator/reports/REPORT-20260311-013.md
 TASK-20260311-026 | Claude Mac | Accepted | 2026-03-11 | orchestrator/reports/REPORT-20260311-026.md
-TASK-20260311-027 | Claude Mac | Review incomplete | 2026-03-11 | follow-up opened for operator baseline consistency fix
+TASK-20260311-027 | Claude Mac | Accepted | 2026-03-11 | reconciled by follow-up TASK-20260311-028
+TASK-20260311-028 | Codex Mac | Accepted | 2026-03-11 | direct fix in OPERATOR_BASELINE.md

@@ -51,15 +51,11 @@
 
 ## Latest Control Loop
 - Date: 2026-03-11
-- Reviewed Claude commit `ff22f88` for `AP-20260311-008`.
-- Accepted:
-  - `TASK-20260311-013`
-  - `TASK-20260311-026`
-- Review incomplete:
-  - `TASK-20260311-027`
-- Reason:
-  - `OPERATOR_BASELINE.md` contains factual mismatches against current preset files
-    (`configs/night.yaml`, `configs/antiuav_thermal.yaml`) for at least `imgsz`
-    and thermal `conf_thresh`.
-- Follow-up backlog task opened: `TASK-20260311-028`.
+- Directly closed `TASK-20260311-028` by reconciling `OPERATOR_BASELINE.md` with current preset YAML.
+- `TASK-20260311-027` is now fully accepted.
+- Corrected fields:
+  - `night.imgsz = 960`
+  - `antiuav_thermal.imgsz = 960`
+  - `antiuav_thermal.conf_thresh = 0.12`
+  - `small_target.conf_thresh = 0.15`
 - No open RTX training task in the current execution context.

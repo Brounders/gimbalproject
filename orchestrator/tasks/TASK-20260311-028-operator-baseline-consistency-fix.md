@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-028
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted — 2026-03-11 (Codex Mac direct fix). `OPERATOR_BASELINE.md` reconciled with preset YAML.
 
 ## Goal
 Довести `OPERATOR_BASELINE.md` до состояния фактического источника истины без расхождений с текущими preset-файлами и canonical operator mapping.
