@@ -29,7 +29,7 @@ def apply_runtime_mode(cfg: Config, mode: str) -> Config:
         cfg.SHOW_FOCUS_WINDOW = False
         cfg.SHOW_TRAILS = False
         cfg.OPERATOR_MINIMAL_OVERLAY = True
-        cfg.RETICLE_OVERLAY_ENABLED = True
+        cfg.RETICLE_OVERLAY_ENABLED = False  # operator: bbox+ID overlay, reticle is research-only
         cfg.ADAPTIVE_SCAN_ENABLED = True
         cfg.ROI_ASSIST_ENABLED = True
         cfg.NIGHT_ENABLED = True
@@ -41,7 +41,7 @@ def apply_runtime_mode(cfg: Config, mode: str) -> Config:
         cfg.SHOW_FOCUS_WINDOW = False
         cfg.SHOW_TRAILS = False
         cfg.OPERATOR_MINIMAL_OVERLAY = True
-        cfg.RETICLE_OVERLAY_ENABLED = True
+        cfg.RETICLE_OVERLAY_ENABLED = False  # embedded: bbox+ID overlay, reticle is research-only
         cfg.ADAPTIVE_SCAN_ENABLED = True
         cfg.ROI_ASSIST_ENABLED = False
         cfg.NIGHT_ENABLED = False

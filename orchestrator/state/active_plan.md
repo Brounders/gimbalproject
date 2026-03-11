@@ -8,15 +8,13 @@
 - Human confirmation for delivery: `Выгружай план клоду без редизайна`
 
 ## Status
-- Active
+- Completed
 
 ## Brief In Focus
 - BRIEF-20260311-008-tracking-hardening-no-redesign
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260311-019 | overlay-box-id-restore | Open
-- TASK-20260311-020 | auto-scene-detection-hardening | Open
-- TASK-20260311-021 | night-target-stability | Open
+- (none — all tasks completed by Claude Mac 2026-03-11)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)

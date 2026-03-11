@@ -118,3 +118,18 @@ class Config:
     CONFIDENCE_EMA_ALPHA: float = 0.12
     CONFIDENCE_DISPLAY_UPDATE_SEC: float = 5.0
     TRAIL_LEN: int = 30
+
+    # Auto scene detection (active when AUTO_SCENE_DETECT=True, e.g. in Auto operator mode).
+    AUTO_SCENE_DETECT: bool = False
+    AUTO_SCENE_NIGHT_BRIGHTNESS_MAX: int = 50   # mean Y < this → night scene
+    AUTO_SCENE_CONFIRM_FRAMES: int = 30         # consecutive frames required before scene switch
+    AUTO_SCENE_SAMPLE_INTERVAL: int = 10        # analyze every N frames (performance)
+    AUTO_SCENE_NIGHT_CONF: float = 0.12         # CONF_THRESH override in night scene
+    AUTO_SCENE_NIGHT_MOT_THRESH: int = 12       # NIGHT_MOT_THRESH override in night scene
+    AUTO_SCENE_NIGHT_DIFF_THRESH: int = 8       # NIGHT_DIFF_THRESH override in night scene
+
+    # Display bbox smoothing (reduces visual jitter on night/IR scenes).
+    SMOOTH_BBOX_ALPHA: float = 0.35             # EMA alpha for position (higher = more responsive)
+    SMOOTH_BBOX_SIZE_ALPHA: float = 0.20        # EMA alpha for width/height (softer)
+    SMOOTH_BBOX_HOLD_FRAMES: int = 4            # hold last bbox N frames after target dropout
+    DISPLAY_STATE_HOLD_FRAMES: int = 3          # hold display tracking state N frames on downgrade

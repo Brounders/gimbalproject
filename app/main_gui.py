@@ -430,6 +430,7 @@ class MainWindow(QMainWindow):
         self._target_present_latched = False
         self._target_missing_streak = 0
         self._had_target_in_session = False
+        self._auto_scene_detect_enabled = False
 
         self._session_history: list[str] = []
         self._recent_sources: list[str] = []
@@ -1170,6 +1171,7 @@ class MainWindow(QMainWindow):
                     self.night_check.setChecked(night_override)
             finally:
                 self._updating_controls = False
+        self._auto_scene_detect_enabled = (mode_key == 'auto')
         labels = {'auto': 'Авто', 'day': 'День', 'night': 'Ночь', 'ir': 'IR'}
         self._log(f'Режим оператора: {labels.get(mode_key, mode_key)}')
 
@@ -1351,6 +1353,7 @@ class MainWindow(QMainWindow):
             imgsz=int(self.imgsz_spin.value()),
             conf=float(self.conf_spin.value()),
         )
+        cfg.AUTO_SCENE_DETECT = bool(getattr(self, '_auto_scene_detect_enabled', False))
         output_path = self.output_edit.text().strip() if self.record_check.isChecked() else ''
 
         if source_type != 'camera':

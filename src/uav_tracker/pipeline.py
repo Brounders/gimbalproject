@@ -219,6 +219,18 @@ class TrackerPipeline:
         self._display_tracking_state = 'SCAN'
         self._display_state_hold = 0
 
+        # Auto scene detection state (TASK-020).
+        self._auto_scene_state = 'day'       # 'day' or 'night'
+        self._auto_scene_streak = 0          # consecutive frames in candidate state
+        self._auto_scene_orig_conf = float(cfg.CONF_THRESH)
+        self._auto_scene_orig_mot = int(cfg.NIGHT_MOT_THRESH)
+        self._auto_scene_orig_diff = int(cfg.NIGHT_DIFF_THRESH)
+        self._auto_scene_frame_tick = 0
+
+        # Display bbox smoothing state (TASK-021).
+        self._smooth_bbox: Optional[list[float]] = None   # [x1, y1, x2, y2] floats
+        self._smooth_bbox_missing = 0
+
     def _update_video_time(self, source_fps: Optional[float]) -> None:
         if source_fps is not None and source_fps > 1.0:
             self._video_elapsed_sec += 1.0 / float(source_fps)
@@ -369,6 +381,96 @@ class TrackerPipeline:
                 self._display_tracking_state = real_state
                 self._display_state_hold = 0
         return self._display_tracking_state
+
+    def _adapt_auto_scene(self, frame: np.ndarray) -> None:
+        """Brightness-based auto scene detection (TASK-020).
+
+        Runs every AUTO_SCENE_SAMPLE_INTERVAL frames.  Requires
+        AUTO_SCENE_CONFIRM_FRAMES consecutive detections before scene switch.
+        On night detection: lowers CONF_THRESH, tightens night detector thresholds.
+        On day detection: restores original values.
+        """
+        if not getattr(self.cfg, 'AUTO_SCENE_DETECT', False):
+            return
+        self._auto_scene_frame_tick += 1
+        interval = max(1, int(getattr(self.cfg, 'AUTO_SCENE_SAMPLE_INTERVAL', 10)))
+        if self._auto_scene_frame_tick % interval != 0:
+            return
+
+        # Sample frame center crop (avoid border vignetting effects)
+        h, w = frame.shape[:2]
+        y0, y1 = h // 4, 3 * h // 4
+        x0, x1 = w // 4, 3 * w // 4
+        crop = frame[y0:y1, x0:x1]
+        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if crop.ndim == 3 else crop
+        mean_brightness = float(np.mean(gray))
+
+        night_thresh = int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_BRIGHTNESS_MAX', 50))
+        candidate = 'night' if mean_brightness < night_thresh else 'day'
+        confirm = max(1, int(getattr(self.cfg, 'AUTO_SCENE_CONFIRM_FRAMES', 30)))
+
+        if candidate == self._auto_scene_state:
+            self._auto_scene_streak = 0
+            return
+
+        self._auto_scene_streak += 1
+        if self._auto_scene_streak < (confirm // interval):
+            return
+
+        # Scene confirmed — apply overrides
+        self._auto_scene_state = candidate
+        self._auto_scene_streak = 0
+        if candidate == 'night':
+            self.cfg.CONF_THRESH = float(getattr(self.cfg, 'AUTO_SCENE_NIGHT_CONF', 0.12))
+            self.cfg.NIGHT_MOT_THRESH = int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_MOT_THRESH', 12))
+            self.cfg.NIGHT_DIFF_THRESH = int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_DIFF_THRESH', 8))
+        else:
+            self.cfg.CONF_THRESH = self._auto_scene_orig_conf
+            self.cfg.NIGHT_MOT_THRESH = self._auto_scene_orig_mot
+            self.cfg.NIGHT_DIFF_THRESH = self._auto_scene_orig_diff
+
+    def _get_smooth_display_bbox(
+        self, active: Optional[TrackedTarget]
+    ) -> Optional[tuple[int, int, int, int]]:
+        """Return EMA-smoothed bbox for display (TASK-021).
+
+        Center position uses SMOOTH_BBOX_ALPHA.
+        Width/height use softer SMOOTH_BBOX_SIZE_ALPHA to damp size jitter.
+        Holds last bbox for SMOOTH_BBOX_HOLD_FRAMES when target is absent.
+        """
+        alpha_pos = max(0.05, min(0.95, float(getattr(self.cfg, 'SMOOTH_BBOX_ALPHA', 0.35))))
+        alpha_sz = max(0.05, min(0.95, float(getattr(self.cfg, 'SMOOTH_BBOX_SIZE_ALPHA', 0.20))))
+        hold = max(0, int(getattr(self.cfg, 'SMOOTH_BBOX_HOLD_FRAMES', 4)))
+
+        if active is not None:
+            x1, y1, x2, y2 = active.bbox
+            cx, cy = float((x1 + x2) * 0.5), float((y1 + y2) * 0.5)
+            w, h = float(x2 - x1), float(y2 - y1)
+            if self._smooth_bbox is None:
+                self._smooth_bbox = [cx, cy, w, h]
+            else:
+                scx, scy, sw, sh = self._smooth_bbox
+                self._smooth_bbox = [
+                    (1.0 - alpha_pos) * scx + alpha_pos * cx,
+                    (1.0 - alpha_pos) * scy + alpha_pos * cy,
+                    (1.0 - alpha_sz) * sw + alpha_sz * w,
+                    (1.0 - alpha_sz) * sh + alpha_sz * h,
+                ]
+            self._smooth_bbox_missing = 0
+        else:
+            self._smooth_bbox_missing += 1
+            if self._smooth_bbox_missing > hold:
+                self._smooth_bbox = None
+                return None
+
+        if self._smooth_bbox is None:
+            return None
+        scx, scy, sw, sh = self._smooth_bbox
+        sx1 = int(scx - sw * 0.5)
+        sy1 = int(scy - sh * 0.5)
+        sx2 = int(scx + sw * 0.5)
+        sy2 = int(scy + sh * 0.5)
+        return sx1, sy1, sx2, sy2
 
     def _effective_global_scan_interval(self) -> int:
         base = max(1, int(self.cfg.GLOBAL_SCAN_INTERVAL))
@@ -729,6 +831,8 @@ class TrackerPipeline:
         median_reacquire_frames = self._median_reacquire_frames()
         tracking_mode = self._update_tracking_state(active)
         display_tracking_mode = self._get_display_tracking_state(tracking_mode)
+        self._adapt_auto_scene(frame)
+        smooth_active_bbox = self._get_smooth_display_bbox(active)
 
         rendered = None
         if render:
@@ -755,6 +859,7 @@ class TrackerPipeline:
                 roi_budget_candidates=self._last_roi_budget_candidates,
                 night_skip=self._last_night_skip,
                 reticle_center=reticle_center,
+                smooth_active_bbox=smooth_active_bbox,
             )
             timings_ms['draw'] = (time.perf_counter() - t0) * 1000.0
 
@@ -950,6 +1055,7 @@ def draw_frame(
     roi_budget_candidates: int = 0,
     night_skip: int = 1,
     reticle_center: Optional[tuple[int, int]] = None,
+    smooth_active_bbox: Optional[tuple[int, int, int, int]] = None,
 ):
     active = manager.get_active_target()
     compact_overlay = bool(cfg.OPERATOR_MINIMAL_OVERLAY and cfg.RUNTIME_MODE in {'operator', 'embedded'})
@@ -1023,7 +1129,14 @@ def draw_frame(
         visible_targets = [active]
 
     for target in visible_targets:
-        _draw_target(frame, manager, target, cfg, compact=compact_overlay)
+        if compact_overlay and target is active and smooth_active_bbox is not None:
+            # Draw smoothed bbox for active target instead of raw bbox (TASK-021)
+            sx1, sy1, sx2, sy2 = smooth_active_bbox
+            cv2.rectangle(frame, (sx1, sy1), (sx2, sy2), (0, 70, 255), 2)
+            label = f'[LOCK] ID:{target.track_id}'
+            cv2.putText(frame, label, (sx1, max(18, sy1 - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 70, 255), 1)
+        else:
+            _draw_target(frame, manager, target, cfg, compact=compact_overlay)
 
     active_source = active.source if active is not None else '-'
     visible_now = len(visible_targets)
