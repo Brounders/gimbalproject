@@ -51,8 +51,8 @@
 
 ## Latest Control Loop
 - Date: 2026-03-11
-- Human approved a narrow follow-up fix for TASK-20260311-022.
-- New active plan: `AP-20260311-007`.
-- Active Claude task: TASK-20260311-025.
+- Reviewed Claude follow-up commit `c0609bc` for inspector/operator isolation.
+- Accepted TASK-20260311-025.
+- TASK-20260311-022 is now fully accepted because the persisted inspector visibility defect is closed.
 - Remaining backlog task outside active plan: TASK-20260311-013.
 - Open RTX training context remains pending status sync on Mac: TRAIN-20260311-001.

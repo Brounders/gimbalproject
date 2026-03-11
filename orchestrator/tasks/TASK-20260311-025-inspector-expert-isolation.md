@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-025
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-025.md
 
 ## Goal
 Полностью убрать `inspector_module` из operator-layer и гарантировать, что он не появляется повторно из сохраненных UI-настроек.
