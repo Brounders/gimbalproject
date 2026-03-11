@@ -5,7 +5,7 @@
 
 ## Current Phase
 - Phase: stabilization-first
-- Priority: lock stability + deterministic quality-gate
+- Priority: quick smoke + operator simplification + target/state stabilization
 
 ## Runtime Policy
 - Runtime code changes only via explicit task.
@@ -51,8 +51,8 @@
 
 ## Latest Control Loop
 - Date: 2026-03-11
-- New Claude reports found: REPORT-20260311-003, REPORT-20260311-004
-- Decision: tasks accepted, moved to completed.
-- Active plan switched temporarily to GitHub smoke test for Claude: TASK-20260311-016 only.
-- Previous tasks TASK-20260311-013/014/015 remain open in backlog and are temporarily paused.
-- TRAIN-20260311-001 remains open in training backlog and is not active in this smoke cycle.
+- Smoke test result: Claude GitHub acknowledgment accepted by Human as sufficient.
+- Active plan switched to evolution cycle v1.
+- Active Claude tasks: TASK-20260311-014, TASK-20260311-017, TASK-20260311-018, TASK-20260311-015.
+- Paused backlog task: TASK-20260311-013.
+- Active RTX tasks: none in this cycle.
