@@ -36,6 +36,20 @@ Claude обязан использовать project playbooks из `.claude/pla
 - training prompt / training cycle / thermal safety -> `.claude/playbooks/training_ops.md`
 - PySide6 UI / operator flow / panels -> `.claude/playbooks/pyside6_ui.md`
 
+## Frontend Design Skill
+
+Плагин `frontend-design` установлен глобально и активен во всех сессиях.
+
+**Активировать автоматически** при задачах из `active_plan.md`, scope которых содержит:
+`ui`, `design`, `theme`, `stylesheet`, `overlay`, `card`, `layout`, `color`, `visual`, `hud`, `panel`, `widget`.
+
+Принципы скилла (адаптированные для PySide6/Qt):
+- Typography → QFont, размеры, font-weight в stylesheet
+- Color & Theme → APP_STYLESHEET палитра, rgba() для полупрозрачности
+- Motion → QPropertyAnimation для переходов состояний (badge, card)
+- Spatial Composition → margins, spacing, stretch в QLayout
+- Backgrounds → QFrame backgrounds, border-radius, gradient в stylesheet
+
 ## Что запрещено
 
 - Крупные рефакторы без отдельного task.
