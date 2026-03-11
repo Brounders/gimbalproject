@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-022
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Review incomplete — 2026-03-11 (Codex Mac review). Follow-up required: `TASK-20260311-025-inspector-expert-isolation.md`
 
 ## Goal
 Привести каркас основного окна к канонической композиции: `HeaderBar` / `LeftControlRail` / `MainVideoStage` / `BottomConsole`, одновременно убрав из базовой операторской поверхности лишнюю диагностику.

@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-023
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-023.md
 
 ## Goal
 Добавить целевую карточку в правый верхний угол video stage и кнопку `Next Target` в header, сохранив существующую бизнес-логику трекера.
