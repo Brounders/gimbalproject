@@ -132,6 +132,10 @@ class Config:
     AUTO_SCENE_IR_CONF: float = 0.10            # CONF_THRESH override in IR scene
     AUTO_SCENE_IR_MOT_THRESH: int = 8           # NIGHT_MOT_THRESH override in IR scene
     AUTO_SCENE_IR_DIFF_THRESH: int = 6          # NIGHT_DIFF_THRESH override in IR scene
+    # Lock hardening for night/IR: more hits required before confirming lock,
+    # higher drone_score bar — reduces false_lock_rate on noisy scenes (TASK-029).
+    AUTO_SCENE_NIGHT_LOCK_CONFIRM: int = 8      # LOCK_CONFIRM_FRAMES override in night/IR scene (default 5)
+    AUTO_SCENE_NIGHT_DRONE_LOCK_SCORE: float = 0.75  # DRONE_LOCK_SCORE_MIN override in night/IR (default 0.62)
 
     # Display bbox smoothing (reduces visual jitter on night/IR scenes).
     SMOOTH_BBOX_ALPHA: float = 0.35             # EMA alpha for position (higher = more responsive)

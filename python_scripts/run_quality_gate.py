@@ -31,6 +31,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--conf", type=float, default=0.0, help="Optional conf override")
     p.add_argument("--small-target", type=str, default="auto", choices=["auto", "on", "off"])
     p.add_argument("--max-frames", type=int, default=0, help="Frame limit per source")
+    p.add_argument("--model", type=str, default="", help="Explicit model path override for candidate evaluation (bypasses preset model_path).")
     p.add_argument("--baseline", type=Path, default=None, help="Previous quality_gate JSON for regression comparison")
 
     p.add_argument("--min-avg-fps", type=float, default=8.0)
@@ -175,6 +176,8 @@ def main() -> int:
     imgsz = args.imgsz if args.imgsz > 0 else int(cfg.IMG_SIZE)
     conf = args.conf if args.conf > 0 else float(cfg.CONF_THRESH)
     cfg = apply_runtime_preset(cfg, small_target_mode=small_target, imgsz=imgsz, conf=conf)
+    if args.model:
+        cfg.MODEL_PATH = args.model
 
     baseline_rows = _load_baseline(args.baseline)
 

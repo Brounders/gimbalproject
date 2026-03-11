@@ -35,6 +35,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--conf", type=float, default=0.0, help="Optional conf override.")
     p.add_argument("--small-target", type=str, default="auto", choices=["auto", "on", "off"])
     p.add_argument("--max-frames", type=int, default=0, help="Frame limit per source (0 = all).")
+    p.add_argument("--model", type=str, default="", help="Explicit model path override for candidate evaluation (bypasses preset model_path).")
     p.add_argument("--out-dir", type=Path, default=Path("runs/evaluations/benchmark"))
     p.add_argument("--tag", type=str, default="")
     return p.parse_args()
@@ -134,6 +135,8 @@ def main() -> int:
     imgsz = args.imgsz if args.imgsz > 0 else int(cfg.IMG_SIZE)
     conf = args.conf if args.conf > 0 else float(cfg.CONF_THRESH)
     cfg = apply_runtime_preset(cfg, small_target_mode=small_target, imgsz=imgsz, conf=conf)
+    if args.model:
+        cfg.MODEL_PATH = args.model
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     rows: list[dict] = []

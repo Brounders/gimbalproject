@@ -225,6 +225,8 @@ class TrackerPipeline:
         self._auto_scene_orig_conf = float(cfg.CONF_THRESH)
         self._auto_scene_orig_mot = int(cfg.NIGHT_MOT_THRESH)
         self._auto_scene_orig_diff = int(cfg.NIGHT_DIFF_THRESH)
+        self._auto_scene_orig_lock_confirm = int(cfg.LOCK_CONFIRM_FRAMES)
+        self._auto_scene_orig_drone_lock_score = float(cfg.DRONE_LOCK_SCORE_MIN)
         self._auto_scene_frame_tick = 0
 
         # Display bbox smoothing state (TASK-021).
@@ -445,14 +447,20 @@ class TrackerPipeline:
             self.cfg.CONF_THRESH = float(getattr(self.cfg, 'AUTO_SCENE_NIGHT_CONF', 0.12))
             self.cfg.NIGHT_MOT_THRESH = int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_MOT_THRESH', 12))
             self.cfg.NIGHT_DIFF_THRESH = int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_DIFF_THRESH', 8))
+            self.cfg.LOCK_CONFIRM_FRAMES = int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_LOCK_CONFIRM', 8))
+            self.cfg.DRONE_LOCK_SCORE_MIN = float(getattr(self.cfg, 'AUTO_SCENE_NIGHT_DRONE_LOCK_SCORE', 0.75))
         elif candidate == 'ir':
             self.cfg.CONF_THRESH = float(getattr(self.cfg, 'AUTO_SCENE_IR_CONF', 0.10))
             self.cfg.NIGHT_MOT_THRESH = int(getattr(self.cfg, 'AUTO_SCENE_IR_MOT_THRESH', 8))
             self.cfg.NIGHT_DIFF_THRESH = int(getattr(self.cfg, 'AUTO_SCENE_IR_DIFF_THRESH', 6))
+            self.cfg.LOCK_CONFIRM_FRAMES = int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_LOCK_CONFIRM', 8))
+            self.cfg.DRONE_LOCK_SCORE_MIN = float(getattr(self.cfg, 'AUTO_SCENE_NIGHT_DRONE_LOCK_SCORE', 0.75))
         else:  # day — restore originals
             self.cfg.CONF_THRESH = self._auto_scene_orig_conf
             self.cfg.NIGHT_MOT_THRESH = self._auto_scene_orig_mot
             self.cfg.NIGHT_DIFF_THRESH = self._auto_scene_orig_diff
+            self.cfg.LOCK_CONFIRM_FRAMES = self._auto_scene_orig_lock_confirm
+            self.cfg.DRONE_LOCK_SCORE_MIN = self._auto_scene_orig_drone_lock_score
 
     def _get_smooth_display_bbox(
         self, active: Optional[TrackedTarget]

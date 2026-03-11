@@ -11,15 +11,13 @@
   - retune and reevaluate the same model before any promotion decision.
 
 ## Status
-- Active
+- Completed
 
 ## Brief In Focus
 - BRIEF-20260311-012-epoch142-retune-cycle
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260311-029 | false-lock suppression hardening | Open
-- TASK-20260311-030 | candidate model eval override | Open
-- TASK-20260311-031 | epoch142 retune gate | Open
+(none — all tasks completed)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
