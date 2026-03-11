@@ -1,5 +1,13 @@
 # TRAINING TASK: TRAIN-20260311-001-rtx-curriculum-step1
 
+## Status
+- Closed on Mac intake: `hold_and_tune` (2026-03-11)
+- Evidence:
+  - `runs/evaluations/stable_cycle/rtx_drone_stability_12h_v1_epoch176_20260309_194838_stable_20260310_202025_stable_cycle_decision.json`
+  - `quality_gate_passed=false`
+  - `release_decision=hold_and_tune`
+  - `next_action=retune ir-noise thresholds / lock confirm`
+
 ## Goal
 Запустить на RTX очередной этап curriculum-обучения (step1) от текущего `rtx_latest_best.pt`, чтобы не перезапускать один и тот же run вручную и получить воспроизводимый артефакт для intake на Mac.
 

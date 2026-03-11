@@ -51,8 +51,18 @@
 
 ## Latest Control Loop
 - Date: 2026-03-11
-- Reviewed Claude follow-up commit `c0609bc` for inspector/operator isolation.
-- Accepted TASK-20260311-025.
-- TASK-20260311-022 is now fully accepted because the persisted inspector visibility defect is closed.
-- Remaining backlog task outside active plan: TASK-20260311-013.
-- Open RTX training context remains pending status sync on Mac: TRAIN-20260311-001.
+- Closed Mac-side intake for `TRAIN-20260311-001`: `hold_and_tune`.
+- Evidence: stable-cycle decision shows `quality_gate_passed=false`, `release_decision=hold_and_tune`.
+- Fresh operator smoke saved to:
+  - `orchestrator/state/operator_smoke_20260311.md`
+- Current operator smoke aggregate:
+  - `avg_fps=85.2`
+  - `active_id_changes_per_min=14.68`
+  - `false_lock_rate=0.724`
+- Weakest current scenes:
+  - `night_ground_large_drones`
+  - `Demo_IR_DRONE_146`
+  - `IR_BIRD_001`
+- New active plan: `AP-20260311-008`.
+- Active Claude tasks: `TASK-013`, `TASK-026`, `TASK-027`.
+- No open RTX training task in the current execution context.
