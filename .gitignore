@@ -16,3 +16,6 @@ imports/
 models/
 safety_snapshots/
 test_videos/
+
+# Automation ephemeral state
+automation/state/next_training_chunk.json

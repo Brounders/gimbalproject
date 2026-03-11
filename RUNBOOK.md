@@ -125,6 +125,19 @@ python python_scripts/monitor_six_hour_session.py       # мониторинг 6
 python python_scripts/summarize_batch_reports.py        # сводка по batch-репортам
 ```
 
+### Codex Automations conveyor
+
+> Контур для RTX training chunks и Mac intake через Codex app Automations и GitHub manifests.
+> Подробности: `automation/README.md`
+
+```bash
+./tracker_env/bin/python python_scripts/training_conveyor.py init --state-dir automation/state
+./tracker_env/bin/python python_scripts/training_conveyor.py scan --dataset-root "<dataset_root>" --state-dir automation/state
+./tracker_env/bin/python python_scripts/training_conveyor.py next-chunk --state-dir automation/state --base-checkpoint "<checkpoint>" --chunk-epochs 12 --write-plan automation/state/next_training_chunk.json --claim
+./tracker_env/bin/python python_scripts/publish_training_artifact.py --help
+./tracker_env/bin/python python_scripts/fetch_training_artifact.py --help
+```
+
 ---
 
 ## Orchestration

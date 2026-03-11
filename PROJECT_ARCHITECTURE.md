@@ -17,6 +17,7 @@ This is the shortest path to a stable tool for:
 - GUI: PySide6
 - Config: YAML
 - Logging and runs: plain files under `runs/`
+- Automation control plane: Codex app Automations + GitHub manifests/releases
 - Model runtime:
   - macOS: Ultralytics + Torch MPS
   - Raspberry Pi: Hailo runtime adapter
@@ -163,6 +164,19 @@ This makes it easy to switch between:
 - GUI can be added cleanly,
 - Raspberry Pi backend can replace only the inference layer,
 - testing becomes easier because pipeline and UI are separated.
+
+## Automation Control Plane
+
+Long-running recurring training work should not rely on ad hoc chat memory or temporary local HTTP servers.
+
+Recommended control plane:
+
+- `automation/state/dataset_registry.json` — what datasets exist on RTX
+- `automation/state/training_ledger.json` — what has already been trained and how far
+- `automation/state/artifact_manifest.json` — published artifacts and download URLs
+- `automation/state/decision_log.json` — Mac-side decisions after benchmark / quality-gate
+
+GitHub is the shared state layer. Binary artifacts stay out of `main` and are published through GitHub Releases or a dedicated artifact channel.
 
 ## Next Practical Step
 
