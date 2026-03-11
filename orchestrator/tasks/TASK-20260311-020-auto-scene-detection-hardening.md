@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-020
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-020.md
 
 ## Goal
 Сделать `Auto` режим реально scene-aware: надежнее распознавать night/IR/day сцену и не оставаться в дневном поведении на очевидно ночном видео.

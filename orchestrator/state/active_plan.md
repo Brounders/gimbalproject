@@ -14,14 +14,14 @@
 - BRIEF-20260311-008-tracking-hardening-no-redesign
 
 ## Active Claude Tasks (execution allowed now)
-- (none — all tasks completed by Claude Mac 2026-03-11)
+- (none)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
 
 ## Backlog Policy
 - Любые задачи вне списков выше считаются backlog и не исполняются.
-- TASK-20260311-013 остается backlog-task и не относится к текущему hardening cycle.
+- TASK-20260311-013 остается backlog-task и не относится к завершенному hardening cycle.
 - Большой редизайн UI в этот active plan сознательно не включен.
 
 ## Exit Criteria

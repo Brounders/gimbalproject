@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-021
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-021.md
 
 ## Goal
 Снизить дрожание рамки и улучшить плавность/точность сопровождения цели в ночных условиях через локальную стабилизацию bbox/center presentation без переписывания decision loop.

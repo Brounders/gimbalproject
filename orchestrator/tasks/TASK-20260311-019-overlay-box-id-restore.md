@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-019
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-019.md
 
 ## Goal
 Вернуть базовый операторский overlay к виду: аккуратная рамка вокруг активной цели + `ID` цели у верхнего левого угла рамки. Прицел/reticle не должен быть базовым отображением.
