@@ -76,3 +76,15 @@
   - direct candidate gate failed and remained `hold_and_tune`;
   - targeted local sweep showed that simple stricter thresholds do not reliably recover operator-critical stability;
   - next cycle focuses on runtime false-lock suppression, clean candidate-eval override, and fresh post-retune gate.
+
+## Latest Approved Direction
+- Date: 2026-03-12
+- Human approved a full 4-hour audit cycle across architecture, execution, and filesystem structure.
+- Locked constraints:
+  - analysis-only; no runtime or UI implementation in this cycle;
+  - Claude may use commands and tools without asking Human between steps;
+  - full access applies to analysis commands, but git remains non-destructive;
+  - deliverable is one evidence-based audit report plus a prioritized roadmap.
+- Active audit context:
+  - `BRIEF-20260312-013-project-audit-4h`
+  - `TASK-20260312-032`

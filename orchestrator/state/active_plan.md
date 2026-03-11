@@ -1,23 +1,21 @@
 # Active Plan
 
 ## Plan ID
-- AP-20260311-009
+- AP-20260312-010
 
 ## Source Direction
-- Human direction: apply the next rational steps after the `epoch142` intake result:
-  - do not relaunch training immediately;
-  - run a short code cycle around the imported `epoch142` candidate;
-  - suppress false locks and ID churn on the weakest night/noise scenes;
-  - retune and reevaluate the same model before any promotion decision.
+- Human direction: run a full project audit from idea to implementation across architecture, execution, and filesystem structure.
+- Time budget: up to 4 hours of analysis.
+- This cycle is analysis-only and must end with a prioritized evolution plan.
 
 ## Status
-- Completed
+- Active
 
 ## Brief In Focus
-- BRIEF-20260311-012-epoch142-retune-cycle
+- BRIEF-20260312-013-project-audit-4h
 
 ## Active Claude Tasks (execution allowed now)
-(none — all tasks completed)
+- TASK-20260312-032 | full project audit and roadmap | Open
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
@@ -26,6 +24,6 @@
 - Любые задачи вне списков выше считаются backlog и не исполняются.
 
 ## Exit Criteria
-- A short runtime hardening pass is applied around `epoch142`.
-- Candidate model evaluation no longer depends on ad hoc temporary presets.
-- `epoch142` receives a fresh benchmark/gate decision after retune.
+- One primary audit report exists with evidence-based findings.
+- The report covers architecture, execution workflows, and filesystem structure.
+- Findings are prioritized and converted into a practical roadmap.
