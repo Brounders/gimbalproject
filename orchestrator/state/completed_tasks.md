@@ -15,3 +15,4 @@ TASK-20260311-021 | Claude Mac | Accepted | 2026-03-11 | orchestrator/reports/RE
 TASK-20260311-023 | Claude Mac | Accepted | 2026-03-11 | orchestrator/reports/REPORT-20260311-023.md
 TASK-20260311-024 | Claude Mac | Accepted | 2026-03-11 | orchestrator/reports/REPORT-20260311-024.md
 TASK-20260311-022 | Claude Mac | Review incomplete | 2026-03-11 | follow-up opened in backlog for inspector expert isolation
+TASK-20260311-025 | Claude Mac | Accepted | 2026-03-11 | orchestrator/reports/REPORT-20260311-025.md

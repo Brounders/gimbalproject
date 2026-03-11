@@ -8,13 +8,13 @@
 - Human confirmation for delivery: `Принимаю`
 
 ## Status
-- Active
+- Completed
 
 ## Brief In Focus
 - BRIEF-20260311-010-inspector-operator-isolation
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260311-025 | inspector expert isolation | Open
+- (none — all tasks completed by Claude Mac 2026-03-11)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)

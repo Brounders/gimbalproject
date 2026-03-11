@@ -1802,7 +1802,6 @@ class MainWindow(QMainWindow):
         self.settings.setValue('ui/record_output', self.record_check.isChecked())
         self.settings.setValue('ui/output_path', self.output_edit.text())
         self.settings.setValue('ui/profile_json', json.dumps(self._collect_profile(), ensure_ascii=False))
-        self.settings.setValue('ui/inspector_visible', self.inspector_module.isVisible())
         self.settings.sync()
 
     def _load_app_settings(self):
@@ -1846,8 +1845,7 @@ class MainWindow(QMainWindow):
             if workspace_key not in self.workspace_indexes:
                 workspace_key = 'operator'
             self._on_workspace_selected(workspace_key)
-            inspector_visible = str(self.settings.value('ui/inspector_visible', 'false')).lower() == 'true'
-            self.inspector_module.setVisible(inspector_visible)
+            self.inspector_module.setVisible(False)  # always hidden in operator layer
 
     def closeEvent(self, event):
         self._is_closing = True
