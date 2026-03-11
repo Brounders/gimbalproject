@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-031
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-031.md
 
 ## Goal
 После runtime-hardening и candidate-eval cleanup повторно прогнать `epoch142` через benchmark + quality-gate и зафиксировать явное решение по модели.

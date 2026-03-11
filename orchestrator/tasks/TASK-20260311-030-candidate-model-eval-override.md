@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-030
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-030.md
 
 ## Goal
 Убрать ручной и грязный путь оценки candidate-модели через временные preset-файлы и дать benchmark/gate скриптам явный способ подставлять отдельный `model_path`.

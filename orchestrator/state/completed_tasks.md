@@ -20,6 +20,6 @@ TASK-20260311-013 | Claude Mac | Accepted | 2026-03-11 | orchestrator/reports/RE
 TASK-20260311-026 | Claude Mac | Accepted | 2026-03-11 | orchestrator/reports/REPORT-20260311-026.md
 TASK-20260311-027 | Claude Mac | Accepted | 2026-03-11 | reconciled by follow-up TASK-20260311-028
 TASK-20260311-028 | Codex Mac | Accepted | 2026-03-11 | direct fix in OPERATOR_BASELINE.md
-TASK-20260311-029 | Claude Mac | Done | 2026-03-11 | orchestrator/reports/REPORT-20260311-029.md
-TASK-20260311-030 | Claude Mac | Done | 2026-03-11 | orchestrator/reports/REPORT-20260311-030.md
-TASK-20260311-031 | Claude Mac | Done | 2026-03-11 | orchestrator/reports/REPORT-20260311-031.md
+TASK-20260311-029 | Claude Mac | Accepted | 2026-03-11 | orchestrator/reports/REPORT-20260311-029.md
+TASK-20260311-030 | Claude Mac | Accepted | 2026-03-11 | orchestrator/reports/REPORT-20260311-030.md
+TASK-20260311-031 | Claude Mac | Accepted | 2026-03-11 | orchestrator/reports/REPORT-20260311-031.md

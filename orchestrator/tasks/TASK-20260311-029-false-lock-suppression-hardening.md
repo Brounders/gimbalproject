@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-029
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-029.md
 
 ## Goal
 Точечно снизить `false_lock_rate` и `active_id_changes_per_min` на night/IR/noise сценах для текущего runtime-контура без нового обучения.

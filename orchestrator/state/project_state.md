@@ -51,14 +51,22 @@
 
 ## Latest Control Loop
 - Date: 2026-03-11
-- Directly closed `TASK-20260311-028` by reconciling `OPERATOR_BASELINE.md` with current preset YAML.
-- `TASK-20260311-027` is now fully accepted.
-- Corrected fields:
-  - `night.imgsz = 960`
-  - `antiuav_thermal.imgsz = 960`
-  - `antiuav_thermal.conf_thresh = 0.12`
-  - `small_target.conf_thresh = 0.15`
-- No open RTX training task in the current execution context.
+- Reviewed Claude reports:
+  - `REPORT-20260311-029` -> Accepted
+  - `REPORT-20260311-030` -> Accepted
+  - `REPORT-20260311-031` -> Accepted
+- Accepted tasks this loop:
+  - `TASK-20260311-029`
+  - `TASK-20260311-030`
+  - `TASK-20260311-031`
+- Runtime hardening around `epoch142` is complete:
+  - auto-scene night/IR lock confirmation is stricter;
+  - benchmark and quality-gate scripts now support `--model` override;
+  - fresh candidate evaluation was completed without temporary committed presets.
+- Final model decision:
+  - imported RTX candidate `epoch142` remains `reject` / `hold_and_tune`
+  - reason: persistent false-lock and ID-churn regressions on night/noise clips even after the short retune cycle
+- No open Claude or RTX tasks remain in the current execution context.
 
 ## Latest Approved Direction
 - Date: 2026-03-11
