@@ -1,5 +1,7 @@
 # Project Architecture
 
+> Для канонических команд запуска см. **[RUNBOOK.md](RUNBOOK.md)**.
+
 ## Goal
 
 Build the tracker as a reusable backend first, then place a desktop GUI on top of it.

@@ -12,15 +12,13 @@
   - close the canonical runbook/entrypoint task.
 
 ## Status
-- Active
+- Completed
 
 ## Brief In Focus
 - BRIEF-20260311-011-baseline-and-auto-hardening
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260311-013 | entrypoint contract and runbook | Open
-- TASK-20260311-026 | auto ir scene hardening | Open
-- TASK-20260311-027 | operator baseline freeze | Open
+- (none — all tasks completed by Claude Mac 2026-03-11)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)

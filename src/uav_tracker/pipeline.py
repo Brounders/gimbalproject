@@ -383,12 +383,17 @@ class TrackerPipeline:
         return self._display_tracking_state
 
     def _adapt_auto_scene(self, frame: np.ndarray) -> None:
-        """Brightness-based auto scene detection (TASK-020).
+        """Auto scene detection: Day / Night / IR (TASK-020 + TASK-026).
 
         Runs every AUTO_SCENE_SAMPLE_INTERVAL frames.  Requires
-        AUTO_SCENE_CONFIRM_FRAMES consecutive detections before scene switch.
-        On night detection: lowers CONF_THRESH, tightens night detector thresholds.
-        On day detection: restores original values.
+        AUTO_SCENE_CONFIRM_FRAMES / SAMPLE_INTERVAL consecutive samples before switch.
+
+        Scene classification (priority order):
+          1. mean Y < NIGHT_BRIGHTNESS_MAX  → 'night'   (dark scene)
+          2. mean HSV-S < IR_SAT_MAX        → 'ir'      (desaturated/thermal, any brightness)
+          3. else                           → 'day'
+
+        On switch: applies config overrides; on revert to 'day': restores originals.
         """
         if not getattr(self.cfg, 'AUTO_SCENE_DETECT', False):
             return
@@ -402,19 +407,35 @@ class TrackerPipeline:
         y0, y1 = h // 4, 3 * h // 4
         x0, x1 = w // 4, 3 * w // 4
         crop = frame[y0:y1, x0:x1]
-        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if crop.ndim == 3 else crop
+
+        if crop.ndim == 3:
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+            mean_sat = float(np.mean(hsv[:, :, 1]))
+        else:
+            gray = crop
+            mean_sat = 0.0  # grayscale input — treat as potentially IR
+
         mean_brightness = float(np.mean(gray))
 
         night_thresh = int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_BRIGHTNESS_MAX', 50))
-        candidate = 'night' if mean_brightness < night_thresh else 'day'
+        ir_sat_max = int(getattr(self.cfg, 'AUTO_SCENE_IR_SAT_MAX', 25))
         confirm = max(1, int(getattr(self.cfg, 'AUTO_SCENE_CONFIRM_FRAMES', 30)))
+
+        # Priority: dark → night; desaturated (any brightness) → ir; else → day
+        if mean_brightness < night_thresh:
+            candidate = 'night'
+        elif mean_sat < ir_sat_max:
+            candidate = 'ir'
+        else:
+            candidate = 'day'
 
         if candidate == self._auto_scene_state:
             self._auto_scene_streak = 0
             return
 
         self._auto_scene_streak += 1
-        if self._auto_scene_streak < (confirm // interval):
+        if self._auto_scene_streak < max(1, confirm // interval):
             return
 
         # Scene confirmed — apply overrides
@@ -424,7 +445,11 @@ class TrackerPipeline:
             self.cfg.CONF_THRESH = float(getattr(self.cfg, 'AUTO_SCENE_NIGHT_CONF', 0.12))
             self.cfg.NIGHT_MOT_THRESH = int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_MOT_THRESH', 12))
             self.cfg.NIGHT_DIFF_THRESH = int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_DIFF_THRESH', 8))
-        else:
+        elif candidate == 'ir':
+            self.cfg.CONF_THRESH = float(getattr(self.cfg, 'AUTO_SCENE_IR_CONF', 0.10))
+            self.cfg.NIGHT_MOT_THRESH = int(getattr(self.cfg, 'AUTO_SCENE_IR_MOT_THRESH', 8))
+            self.cfg.NIGHT_DIFF_THRESH = int(getattr(self.cfg, 'AUTO_SCENE_IR_DIFF_THRESH', 6))
+        else:  # day — restore originals
             self.cfg.CONF_THRESH = self._auto_scene_orig_conf
             self.cfg.NIGHT_MOT_THRESH = self._auto_scene_orig_mot
             self.cfg.NIGHT_DIFF_THRESH = self._auto_scene_orig_diff

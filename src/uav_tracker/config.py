@@ -127,6 +127,11 @@ class Config:
     AUTO_SCENE_NIGHT_CONF: float = 0.12         # CONF_THRESH override in night scene
     AUTO_SCENE_NIGHT_MOT_THRESH: int = 12       # NIGHT_MOT_THRESH override in night scene
     AUTO_SCENE_NIGHT_DIFF_THRESH: int = 8       # NIGHT_DIFF_THRESH override in night scene
+    # IR/thermal detection: low-saturation heuristic (HSV S channel).
+    AUTO_SCENE_IR_SAT_MAX: int = 25             # mean HSV-S < this → IR candidate
+    AUTO_SCENE_IR_CONF: float = 0.10            # CONF_THRESH override in IR scene
+    AUTO_SCENE_IR_MOT_THRESH: int = 8           # NIGHT_MOT_THRESH override in IR scene
+    AUTO_SCENE_IR_DIFF_THRESH: int = 6          # NIGHT_DIFF_THRESH override in IR scene
 
     # Display bbox smoothing (reduces visual jitter on night/IR scenes).
     SMOOTH_BBOX_ALPHA: float = 0.35             # EMA alpha for position (higher = more responsive)
