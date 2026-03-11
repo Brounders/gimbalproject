@@ -8,15 +8,13 @@
 - Human confirmation for delivery: `Одобряю`
 
 ## Status
-- Active
+- Completed
 
 ## Brief In Focus
 - BRIEF-20260311-009-desktop-ui-design-cycle-v1
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260311-022 | operator-shell-layout-cleanup | Open
-- TASK-20260311-023 | target-card-and-next-target | Open
-- TASK-20260311-024 | ui-theme-translucent-pass | Open
+- (none — all tasks completed by Claude Mac 2026-03-11)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)

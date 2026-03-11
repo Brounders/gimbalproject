@@ -242,6 +242,33 @@ QLabel#InspectorValue {
     color: #E6EBEF;
     font-size: 13px;
 }
+
+QFrame#TargetInfoCard {
+    background: rgba(35, 39, 43, 210);
+    border: 1px solid rgba(62, 71, 79, 180);
+    border-radius: 8px;
+}
+QLabel#TargetCardRow {
+    color: #E6EBEF;
+    font-size: 12px;
+}
+QLabel#TargetCardState {
+    color: #E6EBEF;
+    font-size: 12px;
+    font-weight: 700;
+}
+QLabel#TargetCardState[state="lock"] { color: #7FBFAA; }
+QLabel#TargetCardState[state="lost"] { color: #CFA85A; }
+QLabel#TargetCardState[state="idle"] { color: #AAB4BE; }
+
+QPushButton[active="true"] {
+    background: #3F5A4C;
+    border-color: #4A7A62;
+    color: #E6EBEF;
+}
+QPushButton[active="true"]:hover {
+    background: #4A6B5A;
+}
 """
 
 # Canonical operator modes: shown as quick-access buttons in the left rail.
@@ -279,9 +306,13 @@ class TrackerWorker(QThread):
         self.small_target_mode = small_target_mode
         self.lock_log_path = lock_log_path.strip()
         self._stop_requested = False
+        self._switch_target_requested = False
 
     def stop(self):
         self._stop_requested = True
+
+    def request_switch_target(self):
+        self._switch_target_requested = True
 
     def run(self):
         reason = 'stopped'
@@ -307,6 +338,9 @@ class TrackerWorker(QThread):
                 if self._stop_requested:
                     reason = 'stopped'
                     break
+                if self._switch_target_requested:
+                    self._switch_target_requested = False
+                    pipeline.manager.switch_target()
                 ret, frame, meta = session.read()
                 if not ret:
                     reason = 'eof'
@@ -431,6 +465,7 @@ class MainWindow(QMainWindow):
         self._target_missing_streak = 0
         self._had_target_in_session = False
         self._auto_scene_detect_enabled = False
+        self._target_lock_start: float | None = None
 
         self._session_history: list[str] = []
         self._recent_sources: list[str] = []
@@ -518,9 +553,11 @@ class MainWindow(QMainWindow):
         self.record_indicator_label.setProperty('recording', False)
         layout.addWidget(self.record_indicator_label)
 
-        self.diagnostics_btn = QPushButton('Диагностика')
-        self.diagnostics_btn.setProperty('variant', 'ghost')
-        layout.addWidget(self.diagnostics_btn)
+        self.next_target_btn = QPushButton('Следующая цель')
+        self.next_target_btn.setProperty('variant', 'ghost')
+        self.next_target_btn.setToolTip('Переключить на следующую доступную цель')
+        self.next_target_btn.setEnabled(False)
+        layout.addWidget(self.next_target_btn)
 
         self.expert_btn = QPushButton('Эксперт')
         self.expert_btn.setProperty('variant', 'ghost')
@@ -632,7 +669,41 @@ class MainWindow(QMainWindow):
     def build_video_stage(self) -> QWidget:
         self.video_stage = VideoStage()
         self.video_label = self.video_stage.surface
+        self.target_info_card = self._build_target_info_card()
+        self.video_stage.add_overlay_top_right(self.target_info_card)
         return self.video_stage
+
+    def _build_target_info_card(self) -> QFrame:
+        from PySide6.QtWidgets import QGridLayout
+        card = QFrame()
+        card.setObjectName('TargetInfoCard')
+        card.setMinimumWidth(170)
+        grid = QGridLayout(card)
+        grid.setContentsMargins(10, 8, 10, 8)
+        grid.setSpacing(3)
+
+        def _row(label_text: str):
+            lbl = QLabel(label_text)
+            lbl.setObjectName('TargetCardRow')
+            val = QLabel('—')
+            val.setObjectName('TargetCardRow')
+            return lbl, val
+
+        lbl_id, self._tc_id = _row('Цель')
+        lbl_conf, self._tc_conf = _row('Уверенность')
+        lbl_fps, self._tc_fps = _row('FPS')
+        lbl_time, self._tc_time = _row('На цели')
+
+        self._tc_state = QLabel('IDLE')
+        self._tc_state.setObjectName('TargetCardState')
+        self._tc_state.setProperty('state', 'idle')
+
+        for row_i, (lbl, val) in enumerate([(lbl_id, self._tc_id), (lbl_conf, self._tc_conf),
+                                             (lbl_fps, self._tc_fps), (lbl_time, self._tc_time)]):
+            grid.addWidget(lbl, row_i, 0)
+            grid.addWidget(val, row_i, 1)
+        grid.addWidget(self._tc_state, 4, 0, 1, 2)
+        return card
 
     def build_bottom_console(self) -> QFrame:
         bar = QFrame()
@@ -878,9 +949,7 @@ class MainWindow(QMainWindow):
         self.camera_index_spin.valueChanged.connect(self._refresh_header_state)
         self.source_path_edit.textChanged.connect(self._refresh_header_state)
 
-        self.diagnostics_btn.clicked.connect(
-            lambda: self.inspector_module.setVisible(not self.inspector_module.isVisible())
-        )
+        self.next_target_btn.clicked.connect(self._request_next_target)
         self.expert_btn.clicked.connect(self._toggle_expert_mode)
         self.fullscreen_btn.clicked.connect(self._toggle_fullscreen)
         self.model_browse_btn.clicked.connect(self._browse_model)
@@ -927,14 +996,13 @@ class MainWindow(QMainWindow):
             'Справка',
             'Быстрый сценарий:\n'
             '1) Выберите источник (камера/видео/поток).\n'
-            '2) Выберите режим камеры (День/Ночь/IR).\n'
+            '2) Выберите режим камеры (Авто/День/Ночь/IR).\n'
             '3) Нажмите Старт.\n\n'
-            'Диагностика раскрывается модулем в левом блоке.\n'
             'Экспертные настройки открываются отдельным окном.',
         )
 
     def _open_command_palette(self):
-        items = ['Старт', 'Стоп', 'Оценка', 'Диагностика', 'Экспертные настройки']
+        items = ['Старт', 'Стоп', 'Оценка', 'Экспертные настройки']
         selected, ok = QInputDialog.getItem(self, 'Командная палитра', 'Выберите действие', items, 0, False)
         if not ok or not selected:
             return
@@ -947,9 +1015,6 @@ class MainWindow(QMainWindow):
             return
         if selected == 'Оценка':
             self._evaluate()
-            return
-        if selected == 'Диагностика':
-            self.inspector_module.setVisible(not self.inspector_module.isVisible())
             return
         if selected == 'Экспертные настройки':
             self._toggle_expert_mode()
@@ -1128,6 +1193,10 @@ class MainWindow(QMainWindow):
         self.expert_btn.setProperty('variant', 'primary')
         self._refresh_widget_style(self.expert_btn)
 
+    def _request_next_target(self) -> None:
+        if self.worker is not None and self._job_state == 'tracking':
+            self.worker.request_switch_target()
+
     def _on_scenario_changed(self):
         if self._updating_controls:
             self._refresh_header_state()
@@ -1174,6 +1243,14 @@ class MainWindow(QMainWindow):
         self._auto_scene_detect_enabled = (mode_key == 'auto')
         labels = {'auto': 'Авто', 'day': 'День', 'night': 'Ночь', 'ir': 'IR'}
         self._log(f'Режим оператора: {labels.get(mode_key, mode_key)}')
+        # Highlight active mode button (TASK-024)
+        mode_btns = {
+            'auto': self.quick_auto_btn, 'day': self.quick_day_btn,
+            'night': self.quick_night_btn, 'ir': self.quick_ir_btn,
+        }
+        for key, btn in mode_btns.items():
+            btn.setProperty('active', key == mode_key)
+            self._refresh_widget_style(btn)
 
     def _apply_scenario_preset(self, preset_key: str):
         cfg, data = load_preset(preset_key, Config())
@@ -1675,6 +1752,30 @@ class MainWindow(QMainWindow):
         for event in stats.get('lock_events', []):
             self._log(f"[f{frame_index + 1}] {event}")
             self.panel_events_view.appendPlainText(f"[f{frame_index + 1}] {event}")
+
+        # Update target info card overlay (TASK-023)
+        if tracker_mode == 'TRACK' and active_id is not None:
+            if self._target_lock_start is None:
+                self._target_lock_start = time.perf_counter()
+            elapsed = time.perf_counter() - self._target_lock_start
+            elapsed_str = f'{int(elapsed // 60):02d}:{int(elapsed % 60):02d}'
+            card_state, card_state_key = 'LOCK', 'lock'
+        elif tracker_mode == 'LOST':
+            elapsed_str = '—'
+            card_state, card_state_key = 'ПОТЕРЯ', 'lost'
+        else:
+            self._target_lock_start = None
+            elapsed_str = '—'
+            card_state, card_state_key = 'IDLE', 'idle'
+        self._tc_id.setText(f'ID {active_id}' if active_id is not None else '—')
+        self._tc_conf.setText(f'{confidence_pct}%')
+        self._tc_fps.setText(f'{fps:.1f}')
+        self._tc_time.setText(elapsed_str)
+        self._tc_state.setText(card_state)
+        self._tc_state.setProperty('state', card_state_key)
+        self._refresh_widget_style(self._tc_state)
+        # Enable/disable Next Target button
+        self.next_target_btn.setEnabled(self._job_state == 'tracking' and target_count > 1)
 
         self._refresh_header_state()
 

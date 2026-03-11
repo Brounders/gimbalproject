@@ -25,3 +25,23 @@ class VideoStage(QFrame):
         self.surface.setMinimumSize(860, 600)
         self.surface.setWordWrap(True)
         layout.addWidget(self.surface)
+
+        self._overlays_top_right: list[QWidget] = []
+
+    def add_overlay_top_right(self, widget: 'QWidget') -> None:
+        widget.setParent(self)
+        self._overlays_top_right.append(widget)
+        self._reposition_overlays()
+        widget.show()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._reposition_overlays()
+
+    def _reposition_overlays(self) -> None:
+        margin = 8
+        y = margin
+        for w in self._overlays_top_right:
+            w.adjustSize()
+            x = self.width() - w.width() - margin
+            w.move(x, y)
