@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-013
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-013.md
 
 ## Goal
 Устранить неоднозначность запусков проекта: зафиксировать канонические entrypoints и команды в одном runbook без изменения runtime-логики.

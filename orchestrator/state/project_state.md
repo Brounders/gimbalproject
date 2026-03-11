@@ -51,18 +51,15 @@
 
 ## Latest Control Loop
 - Date: 2026-03-11
-- Closed Mac-side intake for `TRAIN-20260311-001`: `hold_and_tune`.
-- Evidence: stable-cycle decision shows `quality_gate_passed=false`, `release_decision=hold_and_tune`.
-- Fresh operator smoke saved to:
-  - `orchestrator/state/operator_smoke_20260311.md`
-- Current operator smoke aggregate:
-  - `avg_fps=85.2`
-  - `active_id_changes_per_min=14.68`
-  - `false_lock_rate=0.724`
-- Weakest current scenes:
-  - `night_ground_large_drones`
-  - `Demo_IR_DRONE_146`
-  - `IR_BIRD_001`
-- New active plan: `AP-20260311-008`.
-- Active Claude tasks: `TASK-013`, `TASK-026`, `TASK-027`.
+- Reviewed Claude commit `ff22f88` for `AP-20260311-008`.
+- Accepted:
+  - `TASK-20260311-013`
+  - `TASK-20260311-026`
+- Review incomplete:
+  - `TASK-20260311-027`
+- Reason:
+  - `OPERATOR_BASELINE.md` contains factual mismatches against current preset files
+    (`configs/night.yaml`, `configs/antiuav_thermal.yaml`) for at least `imgsz`
+    and thermal `conf_thresh`.
+- Follow-up backlog task opened: `TASK-20260311-028`.
 - No open RTX training task in the current execution context.
