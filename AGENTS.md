@@ -15,6 +15,11 @@
 - Do not modify `tracker_env/`, `datasets/`, or `runs/` unless the task explicitly requires it.
 - Do not add dependencies unless needed for the requested change.
 
+## Human Plan Approval Gate (Mandatory)
+- If Human provides direction as `План: ...`, Codex must first produce a detailed plan presentation (expanded scope, steps, validation, risks, priorities).
+- Codex must wait for explicit Human confirmation before any delivery to `main`.
+- Until confirmation, no `git push origin main` and no implicit merge-to-main actions are allowed.
+
 ## Validation Commands
 - `lint`: `python3 -m compileall -q python_scripts src app`
 - `test`: `bash -lc 'if command -v pytest >/dev/null 2>&1 && find . -type f \\( -name \"test_*.py\" -o -name \"*_test.py\" \\) | grep -q .; then pytest -q; else echo \"No pytest suite configured\"; fi'`

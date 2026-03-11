@@ -6,16 +6,17 @@
 ## Active Plan Protocol
 
 1. Human задает направление через `План: ...`.
-2. Codex Mac интерпретирует направление и обновляет `orchestrator/state/active_plan.md`.
-3. `active_plan.md` — единственный источник активного контекста исполнения.
-4. Claude Mac выполняет только задачи, перечисленные в `active_plan.md`.
-5. Если в `active_plan.md` нет задач для Claude, Claude ничего не делает.
-6. `orchestrator/state/open_tasks.md` — backlog, не эквивалент active plan.
-7. При каждом обновлении `active_plan.md` Codex обязан синхронно обновить:
+2. Codex Mac сначала выдает Human подробную презентацию плана (scope, этапы, валидация, риски, приоритеты).
+3. Только после явного подтверждения Human Codex Mac обновляет `orchestrator/state/active_plan.md` и выносит изменения в `main`.
+4. `active_plan.md` — единственный источник активного контекста исполнения.
+5. Claude Mac выполняет только задачи, перечисленные в `active_plan.md`.
+6. Если в `active_plan.md` нет задач для Claude, Claude ничего не делает.
+7. `orchestrator/state/open_tasks.md` — backlog, не эквивалент active plan.
+8. При каждом обновлении `active_plan.md` Codex обязан синхронно обновить:
    - `orchestrator/state/open_tasks.md`
    - `orchestrator/state/completed_tasks.md`
    - `orchestrator/state/open_training.md` (если изменился training-контекст)
-8. Любая рассинхронизация `active_plan` и state-индексов считается orchestration bug.
+9. Любая рассинхронизация `active_plan` и state-индексов считается orchestration bug.
 
 ## Workflow
 
