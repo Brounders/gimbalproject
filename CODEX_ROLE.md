@@ -37,6 +37,50 @@ Codex Mac выполняет функции архитектора и диспе
 6. При необходимости создать training task в `orchestrator/training` для RTX.
 7. Обновить состояние проекта и индексы.
 
+## Правила формулировки планов и задач
+
+- При создании brief/task/active-plan записей использовать точные слова-триггеры, если задача связана с библиотеками, документацией, API, зависимостями, интеграциями или UI.
+- Не заменять триггеры синонимами, если нужен автоподхват Claude skills/plugins.
+
+### Context7 trigger vocabulary
+
+- Для RU-формулировок использовать именно:
+  - `как использовать`
+  - `документация`
+  - `пример кода`
+  - `API`
+  - `версия`
+- Для EN-формулировок использовать именно:
+  - `how to use`
+  - `docs`
+  - `latest API`
+  - `library reference`
+  - `sdk`
+- Для scope задач в `active_plan.md` и `orchestrator/tasks/*` использовать точные слова:
+  - `library`
+  - `dependency`
+  - `docs`
+  - `api`
+  - `integration`
+
+### Frontend-design trigger vocabulary
+
+- Для UI-задач в `active_plan.md`, brief и task использовать точные слова:
+  - `ui`
+  - `design`
+  - `theme`
+  - `stylesheet`
+  - `overlay`
+  - `card`
+  - `layout`
+  - `color`
+  - `visual`
+  - `hud`
+
+### Примечание
+
+- Эти правила относятся только к формулировке планов, задач и ответов, чтобы Claude корректно активировал `context7` и `frontend-design`.
+
 ## Ограничения
 
 - Не переписывать систему целиком, если проблема решается локально.

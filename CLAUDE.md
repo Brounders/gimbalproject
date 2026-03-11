@@ -40,12 +40,20 @@ Claude обязан использовать project playbooks из `.claude/pla
 
 Плагин `context7@claude-plugins-official` установлен глобально. **Аутентификация не нужна.**
 
+- Авторизация — не требуется.
+- Настройка — не требуется.
+- Сервер запускается автоматически через `npx`.
+- Для работы нужен доступ в интернет к `context7.com`.
+
 **Активировать** при задачах из `active_plan.md` или вопросах, содержащих:
-- RU: «как использовать», «документация», «пример кода», «API», «зависимость», «версия»
-- EN: «how to use», «docs», «latest API», «library reference», «sdk», «integration»
+- RU: `как использовать`, `документация`, `пример кода`, `API`, `версия`
+- EN: `how to use`, `docs`, `latest API`, `library reference`, `sdk`
+- Scope-слова в `active_plan.md`: `library`, `dependency`, `docs`, `api`, `integration`
+
+**Правило формулировки:** если нужен Context7, использовать именно эти триггеры, а не их синонимы.
 
 **Паттерн**: `resolve-library-id` → `query-docs`.
-Применять при работе с: `PySide6`, `ultralytics`, `numpy`, `opencv`, `torch`, `hailo`.
+Применять при работе с: `PySide6`, `ultralytics`, `numpy`, `opencv-python`, `torch`, `hailo`.
 
 ## Frontend Design Skill
 
@@ -53,6 +61,9 @@ Claude обязан использовать project playbooks из `.claude/pla
 
 **Активировать автоматически** при задачах из `active_plan.md`, scope которых содержит:
 `ui`, `design`, `theme`, `stylesheet`, `overlay`, `card`, `layout`, `color`, `visual`, `hud`, `panel`, `widget`.
+
+**Правило формулировки:** если нужен `frontend-design`, использовать точные trigger-слова:
+`ui`, `design`, `theme`, `stylesheet`, `overlay`, `card`, `layout`, `color`, `visual`, `hud`.
 
 Принципы скилла (адаптированные для PySide6/Qt):
 - Typography → QFont, размеры, font-weight в stylesheet
