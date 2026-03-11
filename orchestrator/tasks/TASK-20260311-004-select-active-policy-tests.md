@@ -1,5 +1,8 @@
 # TASK: TASK-20260311-004-select-active-policy-tests
 
+## Status
+Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-004.md
+
 ## Goal
 Расширить unit-тесты lock-policy сценариями выбора active target (`select_active`) между конкурирующими целями, чтобы снизить риск регрессий `active_id_changes_per_min` в night/IR.
 
@@ -26,9 +29,9 @@
 3. Зафиксировать ожидания по switch/no-switch и счетчикам.
 
 ## Acceptance Criteria
-- [ ] Добавлены новые тесты по `select_active()` (минимум 2).
-- [ ] Полный тестовый набор проходит.
-- [ ] Изменений runtime-кода нет.
+- [x] Добавлены новые тесты по `select_active()` (минимум 2).
+- [x] Полный тестовый набор проходит.
+- [x] Изменений runtime-кода нет.
 
 ## Validation
 - `PYTHONPATH=src ./tracker_env/bin/python -m unittest -q tests.test_target_manager_lock_policy`

@@ -1,5 +1,8 @@
 # TASK: TASK-20260311-003-package-import-decoupling
 
+## Status
+Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-003.md
+
 ## Goal
 Снизить связанность package-level import в `src/uav_tracker/__init__.py`, чтобы unit-тесты могли импортировать `uav_tracker.config` и `uav_tracker.tracking.*` без обязательной загрузки тяжёлого runtime (cv2/YOLO pipeline).
 
@@ -27,9 +30,9 @@
 3. Добавить короткий regression test на package import boundary.
 
 ## Acceptance Criteria
-- [ ] Import boundary исправлен: package import не тянет runtime-зависимости без необходимости.
-- [ ] Runtime entrypoints продолжают работать.
-- [ ] Проверки проходят: compile + unit tests.
+- [x] Import boundary исправлен: package import не тянет runtime-зависимости без необходимости.
+- [x] Runtime entrypoints продолжают работать.
+- [x] Проверки проходят: compile + unit tests.
 
 ## Validation
 - `python3 -m compileall -q python_scripts src app tests`
