@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-015
 Owner: Claude Mac
 Priority: P2
-Status: Open
+Status: Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-015.md
 
 ## Goal
 Подготовить stage-0 карту безопасной декомпозиции монолитов `app/main_gui.py` и `src/uav_tracker/pipeline.py` без фактического рефактора в этой задаче.

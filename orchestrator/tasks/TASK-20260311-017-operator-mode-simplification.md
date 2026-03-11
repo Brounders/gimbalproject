@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-017
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-017.md
 
 ## Goal
 Свести операторский выбор режимов к четырем каноническим сценариям: `Auto`, `Day`, `Night`, `IR`, при этом скрыв лишние профили из базового UI и сохранив экспертный доступ к тонким настройкам.

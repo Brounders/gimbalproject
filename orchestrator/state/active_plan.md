@@ -13,14 +13,14 @@
 - BRIEF-20260311-007-evolution-cycle-v1
 
 ## Active Claude Tasks (execution allowed now)
-- (none — all tasks completed by Claude Mac 2026-03-11)
+- (none)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
 
 ## Backlog Policy
 - Любые задачи вне списков выше считаются backlog и не исполняются.
-- TASK-20260311-013 остается в backlog и не должен исполняться в этом цикле.
+- TASK-20260311-013 остается открытым backlog-task и не относится к завершенному cycle v1.
 
 ## Exit Criteria
 - Quick KPI smoke exists and produces comparable summary output.

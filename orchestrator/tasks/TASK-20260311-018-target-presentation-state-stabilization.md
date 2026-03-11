@@ -3,7 +3,7 @@
 Task ID: TASK-20260311-018
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted — 2026-03-11 (Codex Mac review). Report: orchestrator/reports/REPORT-20260311-018.md
 
 ## Goal
 Снизить визуальную дерготню и остаточные несоответствия в отображении target presentation и state transitions (`SCAN/TRACK/LOST`) без широкого изменения decision loop.
