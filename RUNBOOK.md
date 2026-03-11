@@ -131,11 +131,14 @@ python python_scripts/summarize_batch_reports.py        # сводка по batc
 > Подробности: `automation/README.md`
 
 ```bash
-./tracker_env/bin/python python_scripts/training_conveyor.py init --state-dir automation/state
-./tracker_env/bin/python python_scripts/training_conveyor.py scan --dataset-root "<dataset_root>" --state-dir automation/state
-./tracker_env/bin/python python_scripts/training_conveyor.py next-chunk --state-dir automation/state --base-checkpoint "<checkpoint>" --chunk-epochs 12 --write-plan automation/state/next_training_chunk.json --claim
-./tracker_env/bin/python python_scripts/publish_training_artifact.py --help
-./tracker_env/bin/python python_scripts/fetch_training_artifact.py --help
+# RTX (Windows / Codex App Automation in background worktree)
+C:/Users/PC/GimbalProject/tracker_env/Scripts/python.exe python_scripts/training_conveyor.py init --state-dir automation/state
+C:/Users/PC/GimbalProject/tracker_env/Scripts/python.exe python_scripts/training_conveyor.py scan --dataset-root "<dataset_root>" --state-dir automation/state
+C:/Users/PC/GimbalProject/tracker_env/Scripts/python.exe python_scripts/training_conveyor.py next-chunk --state-dir automation/state --base-checkpoint "<absolute_checkpoint>" --chunk-epochs 12 --write-plan automation/state/next_training_chunk.json --claim
+C:/Users/PC/GimbalProject/tracker_env/Scripts/python.exe python_scripts/publish_training_artifact.py --help
+
+# Mac intake
+/Users/bround/Documents/Projects/GimbalProject/tracker_env/bin/python python_scripts/fetch_training_artifact.py --help
 ```
 
 ---

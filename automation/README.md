@@ -32,16 +32,25 @@
 1. Открыть проект `GimbalProject` в Codex app на RTX.
 2. Убедиться, что Codex app на RTX залогинен и может делать `git pull` / `git push`.
 3. Установить GitHub CLI `gh` и выполнить `gh auth login`.
-4. Инициализировать state:
+4. Подготовить абсолютные пути, которые будут использоваться в automation prompt:
+   - `RTX_PYTHON` = `C:/Users/PC/GimbalProject/tracker_env/Scripts/python.exe`
+   - `DATASET_ROOT` = путь к папке с датасетами, например `C:/Users/PC/Desktop/Обучение`
+   - `BASE_CHECKPOINT` = путь к стартовому checkpoint, например `C:/Users/PC/GimbalProject/runs/detect/runs/rtx_drone_stability_12h_v1/weights/best.pt`
+   - `CHUNK_EPOCHS` = размер одного training chunk, например `12`
+5. Почему абсолютные пути обязательны:
+   - Codex app `Automations` для Git-репозиториев запускаются в отдельном background worktree.
+   - В этом worktree нет гарантии, что локальный `tracker_env/` или старые `runs/` из основного checkout будут доступны по относительным путям.
+   - Поэтому для Python-интерпретатора, dataset root и base checkpoint нужно использовать абсолютные пути.
+6. Инициализировать state:
 
 ```bash
-./tracker_env/bin/python python_scripts/training_conveyor.py init --state-dir automation/state
+C:/Users/PC/GimbalProject/tracker_env/Scripts/python.exe python_scripts/training_conveyor.py init --state-dir automation/state
 ```
 
-5. Просканировать папку с датасетами:
+7. Просканировать папку с датасетами:
 
 ```bash
-./tracker_env/bin/python python_scripts/training_conveyor.py scan \
+C:/Users/PC/GimbalProject/tracker_env/Scripts/python.exe python_scripts/training_conveyor.py scan \
   --dataset-root "C:/Users/PC/Desktop/Обучение" \
   --state-dir automation/state
 ```
@@ -57,6 +66,7 @@
    - работы `gh`
 5. Открыть `automation/prompts/rtx_training_chunk.md`.
 6. Перед вставкой в automation prompt вручную заменить:
+   - `{{PYTHON_CMD}}`
    - `{{DATASET_ROOT}}`
    - `{{BASE_CHECKPOINT}}`
    - `{{CHUNK_EPOCHS}}`
@@ -69,9 +79,9 @@
 ## Шаг 2. Выбор следующего dataset chunk
 
 ```bash
-./tracker_env/bin/python python_scripts/training_conveyor.py next-chunk \
+C:/Users/PC/GimbalProject/tracker_env/Scripts/python.exe python_scripts/training_conveyor.py next-chunk \
   --state-dir automation/state \
-  --base-checkpoint "runs/detect/runs/rtx_drone_stability_12h_v1/weights/best.pt" \
+  --base-checkpoint "C:/Users/PC/GimbalProject/runs/detect/runs/rtx_drone_stability_12h_v1/weights/best.pt" \
   --chunk-epochs 12 \
   --write-plan automation/state/next_training_chunk.json \
   --claim
@@ -101,7 +111,7 @@ Automation на RTX должна использовать `automation/state/next
 После завершения chunk:
 
 ```bash
-./tracker_env/bin/python python_scripts/publish_training_artifact.py \
+C:/Users/PC/GimbalProject/tracker_env/Scripts/python.exe python_scripts/publish_training_artifact.py \
   --zip "exports/<artifact>.zip" \
   --repo "Brounders/gimbalproject" \
   --artifact-id "<artifact_id>" \
@@ -119,7 +129,7 @@ Automation на RTX должна использовать `automation/state/next
 ## Шаг 5. Фиксация progress по dataset
 
 ```bash
-./tracker_env/bin/python python_scripts/training_conveyor.py record-run \
+C:/Users/PC/GimbalProject/tracker_env/Scripts/python.exe python_scripts/training_conveyor.py record-run \
   --state-dir automation/state \
   --dataset-id "<dataset_id>" \
   --run-name "<run_name>" \
@@ -133,7 +143,7 @@ Automation на RTX должна использовать `automation/state/next
 Сначала скачать последний published artifact:
 
 ```bash
-./tracker_env/bin/python python_scripts/fetch_training_artifact.py \
+/Users/bround/Documents/Projects/GimbalProject/tracker_env/bin/python python_scripts/fetch_training_artifact.py \
   --manifest automation/state/artifact_manifest.json \
   --output-dir imports
 ```
@@ -143,7 +153,7 @@ Automation на RTX должна использовать `automation/state/next
 После решения записать verdict:
 
 ```bash
-./tracker_env/bin/python python_scripts/training_conveyor.py record-decision \
+/Users/bround/Documents/Projects/GimbalProject/tracker_env/bin/python python_scripts/training_conveyor.py record-decision \
   --state-dir automation/state \
   --artifact-id "<artifact_id>" \
   --decision hold_and_tune \
