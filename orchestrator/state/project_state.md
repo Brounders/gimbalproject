@@ -51,8 +51,8 @@
 
 ## Latest Control Loop
 - Date: 2026-03-11
-- New Claude commit reviewed: `a5d16e7`
-- Accepted tasks: TASK-20260311-014, TASK-20260311-015, TASK-20260311-017, TASK-20260311-018
-- Evolution cycle v1 marked completed after Codex review.
-- Remaining open backlog task: TASK-20260311-013.
+- Human opened a new hardening cycle after review of evolution cycle v1.
+- New active Claude tasks: TASK-20260311-019, TASK-20260311-020, TASK-20260311-021.
+- UI redesign was explicitly excluded from this cycle by Human.
+- Remaining backlog task: TASK-20260311-013.
 - Open RTX training context remains pending status sync on Mac: TRAIN-20260311-001.
