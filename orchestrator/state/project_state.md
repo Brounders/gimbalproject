@@ -52,5 +52,7 @@
 ## Latest Control Loop
 - Date: 2026-03-11
 - New Claude reports found: REPORT-20260311-003, REPORT-20260311-004
-- Decision: tasks accepted, moved to completed, next audit-driven batch activated.
-- Active plan: TASK-20260311-013/014/015 active + TRAIN-20260311-001 awaiting status sync.
+- Decision: tasks accepted, moved to completed.
+- Active plan switched temporarily to GitHub smoke test for Claude: TASK-20260311-016 only.
+- Previous tasks TASK-20260311-013/014/015 remain open in backlog and are temporarily paused.
+- TRAIN-20260311-001 remains open in training backlog and is not active in this smoke cycle.
