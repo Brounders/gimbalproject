@@ -59,3 +59,12 @@
   - `antiuav_thermal.conf_thresh = 0.12`
   - `small_target.conf_thresh = 0.15`
 - No open RTX training task in the current execution context.
+
+## Latest Approved Direction
+- Date: 2026-03-11
+- Human approved a short retune cycle around imported RTX candidate `epoch142`.
+- Locked facts:
+  - training run `rtx_drone_stability_12h_v1` completed and artifact was ingested on Mac;
+  - direct candidate gate failed and remained `hold_and_tune`;
+  - targeted local sweep showed that simple stricter thresholds do not reliably recover operator-critical stability;
+  - next cycle focuses on runtime false-lock suppression, clean candidate-eval override, and fresh post-retune gate.
