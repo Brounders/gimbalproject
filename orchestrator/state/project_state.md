@@ -51,8 +51,8 @@
 
 ## Latest Control Loop
 - Date: 2026-03-11
-- New Claude commit reviewed: `5ac2674`
-- Accepted tasks: TASK-20260311-019, TASK-20260311-020, TASK-20260311-021
-- Hardening cycle without redesign marked completed after Codex review.
+- Human approved a dedicated desktop UI design cycle for the PySide6 app.
+- New active Claude tasks: TASK-20260311-022, TASK-20260311-023, TASK-20260311-024.
+- UI redesign is scoped to desktop shell/layout/theme only; runtime rewrite is excluded.
 - Remaining open backlog task: TASK-20260311-013.
 - Open RTX training context remains pending status sync on Mac: TRAIN-20260311-001.

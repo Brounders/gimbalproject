@@ -1,30 +1,31 @@
 # Active Plan
 
 ## Plan ID
-- AP-20260311-005
+- AP-20260311-006
 
 ## Source Direction
-- Human direction: `План: По какой то причине опять появился прицел в место рамки - вернуть рамку с ID цели. Режим авто не распознал ночную сцену, проверить алгоритмы распознования , предпринять меры исправления/устранения недостатков. Все еще сильное дрожание при трекинге цели, требую более точного/плавного распознования и ведения цели в ночное время , обдумать методы реализации и предложить. Подготовиться к большому изменению графической части интерфейса, предложить современные методы для достижения желаемого интерфейса, возможно я дам готовое приложение для изучения либо изображение желаемого.`
-- Human confirmation for delivery: `Выгружай план клоду без редизайна`
+- Human direction: `План: Разрабатываем дизайн приложения ...`
+- Human confirmation for delivery: `Одобряю`
 
 ## Status
-- Completed
+- Active
 
 ## Brief In Focus
-- BRIEF-20260311-008-tracking-hardening-no-redesign
+- BRIEF-20260311-009-desktop-ui-design-cycle-v1
 
 ## Active Claude Tasks (execution allowed now)
-- (none)
+- TASK-20260311-022 | operator-shell-layout-cleanup | Open
+- TASK-20260311-023 | target-card-and-next-target | Open
+- TASK-20260311-024 | ui-theme-translucent-pass | Open
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
 
 ## Backlog Policy
 - Любые задачи вне списков выше считаются backlog и не исполняются.
-- TASK-20260311-013 остается backlog-task и не относится к завершенному hardening cycle.
-- Большой редизайн UI в этот active plan сознательно не включен.
+- TASK-20260311-013 остается backlog-task и не относится к текущему UI design cycle.
 
 ## Exit Criteria
-- Default operator overlay is box + target ID.
-- Auto mode handles obvious night scene selection more reliably.
-- Night target following is visibly less jittery without broad decision-loop rewrite.
+- Operator shell matches the requested composition.
+- Target info card and Next Target are present and wired safely.
+- UI theme follows the requested palette and translucency constraints.
