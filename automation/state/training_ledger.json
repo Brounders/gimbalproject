@@ -1,5 +1,23 @@
 {
   "version": 1,
-  "updated_at": "2026-03-11T19:13:06Z",
-  "entries": []
+  "updated_at": "2026-03-11T22:22:40Z",
+  "entries": [
+    {
+      "dataset_id": "drone-bird-yolo",
+      "dataset_path": "C:\\Users\\PC\\TrainingDatasets\\drone_bird_yolo",
+      "fingerprint": "e910f8e96d22ef73cfa99b8a",
+      "scene_profile": "ir",
+      "class_profile": "drone_bird",
+      "epoch_budget_total": 156,
+      "epochs_done_total": 12,
+      "base_checkpoint": "C:/Users/PC/GimbalProject/runs/detect/runs/rtx_drone_stability_12h_v1/weights/best.pt",
+      "last_checkpoint": "C:/Users/PC/GimbalProject/runs/detect/runs/curriculum_drone-bird-yolo/weights/best.pt",
+      "last_run_name": "curriculum_drone-bird-yolo",
+      "last_artifact_id": "curriculum_drone-bird-yolo_20260312_012112",
+      "status": "published",
+      "last_decision": null,
+      "updated_at": "2026-03-11T22:22:40Z",
+      "notes": ""
+    }
+  ]
 }
