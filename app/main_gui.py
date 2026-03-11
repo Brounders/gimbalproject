@@ -244,6 +244,16 @@ QLabel#InspectorValue {
 }
 """
 
+# Canonical operator modes: shown as quick-access buttons in the left rail.
+# Mapping: label → (preset_key, night_enabled_override)
+# None override means "keep preset default".
+CANONICAL_OPERATOR_MODES: dict[str, tuple[str, bool | None]] = {
+    'auto':  ('default', None),   # full adaptive detection (night on per default.yaml)
+    'day':   ('default', False),  # explicit day-only (night detector disabled)
+    'night': ('night', None),     # night preset (force operator display mode)
+    'ir':    ('antiuav_thermal', None),  # thermal / anti-UAV preset
+}
+
 SCENARIO_LABELS = {
     'default': 'Дневной (базовый)',
     'small_target': 'Малые цели',
@@ -550,19 +560,23 @@ class MainWindow(QMainWindow):
         title.setObjectName('RailSectionTitle')
         layout.addWidget(title)
 
+        self.quick_auto_btn = QPushButton('Авто')
+        self.quick_auto_btn.setProperty('variant', 'ghost')
         self.quick_day_btn = QPushButton('День')
         self.quick_day_btn.setProperty('variant', 'ghost')
         self.quick_night_btn = QPushButton('Ночь')
         self.quick_night_btn.setProperty('variant', 'ghost')
         self.quick_ir_btn = QPushButton('IR')
         self.quick_ir_btn.setProperty('variant', 'ghost')
-        self.quick_day_btn.setToolTip('Быстро применить дневной preset')
-        self.quick_night_btn.setToolTip('Быстро применить ночной preset')
-        self.quick_ir_btn.setToolTip('Быстро применить thermal/IR preset')
+        self.quick_auto_btn.setToolTip('Авто: адаптивный день/ночь (default preset, ночной детектор вкл.)')
+        self.quick_day_btn.setToolTip('День: только дневной режим (ночной детектор выкл.)')
+        self.quick_night_btn.setToolTip('Ночь: ночной preset в операторском режиме')
+        self.quick_ir_btn.setToolTip('IR: thermal / Anti-UAV preset')
 
         quick_row = QHBoxLayout()
         quick_row.setContentsMargins(0, 0, 0, 0)
-        quick_row.setSpacing(6)
+        quick_row.setSpacing(4)
+        quick_row.addWidget(self.quick_auto_btn)
         quick_row.addWidget(self.quick_day_btn)
         quick_row.addWidget(self.quick_night_btn)
         quick_row.addWidget(self.quick_ir_btn)
@@ -871,9 +885,10 @@ class MainWindow(QMainWindow):
         self.model_browse_btn.clicked.connect(self._browse_model)
 
         self.scenario_combo.currentIndexChanged.connect(self._on_scenario_changed)
-        self.quick_day_btn.clicked.connect(lambda: self._apply_quick_profile('default'))
-        self.quick_night_btn.clicked.connect(lambda: self._apply_quick_profile('night'))
-        self.quick_ir_btn.clicked.connect(lambda: self._apply_quick_profile('antiuav_thermal'))
+        self.quick_auto_btn.clicked.connect(lambda: self._apply_canonical_operator_mode('auto'))
+        self.quick_day_btn.clicked.connect(lambda: self._apply_canonical_operator_mode('day'))
+        self.quick_night_btn.clicked.connect(lambda: self._apply_canonical_operator_mode('night'))
+        self.quick_ir_btn.clicked.connect(lambda: self._apply_canonical_operator_mode('ir'))
         self.mode_combo.currentTextChanged.connect(self._apply_runtime_mode_controls)
         self.apply_preset_btn.clicked.connect(self._apply_selected_preset)
         self.profile_load_btn.clicked.connect(self._load_profile_from_disk)
@@ -1129,6 +1144,34 @@ class MainWindow(QMainWindow):
             self.scenario_combo.setCurrentIndex(idx)
             return
         self._log(f'Preset недоступен: {preset_key}')
+
+    def _apply_canonical_operator_mode(self, mode_key: str) -> None:
+        """Apply one of the 4 canonical operator modes: auto/day/night/ir.
+
+        Each mode loads the mapped preset and applies operator-safe display
+        overrides so that operator buttons never activate research-mode HUD.
+        """
+        entry = CANONICAL_OPERATOR_MODES.get(mode_key)
+        if entry is None:
+            self._log(f'Неизвестный канонический режим: {mode_key}')
+            return
+        preset_key, night_override = entry
+        self._apply_scenario_preset(preset_key)
+        # Force operator display settings (suppress research-only overlays)
+        if not self._updating_controls:
+            self._updating_controls = True
+            try:
+                if self.mode_combo.findText('operator') >= 0:
+                    self.mode_combo.setCurrentText('operator')
+                self.show_gt_check.setChecked(False)
+                self.timing_check.setChecked(False)
+                self.show_trails_check.setChecked(False)
+                if night_override is not None:
+                    self.night_check.setChecked(night_override)
+            finally:
+                self._updating_controls = False
+        labels = {'auto': 'Авто', 'day': 'День', 'night': 'Ночь', 'ir': 'IR'}
+        self._log(f'Режим оператора: {labels.get(mode_key, mode_key)}')
 
     def _apply_scenario_preset(self, preset_key: str):
         cfg, data = load_preset(preset_key, Config())
@@ -1547,6 +1590,9 @@ class MainWindow(QMainWindow):
                 self._state_machine.set(UIState.LOCK)
             elif tracker_mode == 'LOST':
                 self._state_machine.set(UIState.LOST)
+            elif self._target_present_latched and self._target_missing_streak < 3:
+                # Brief SCAN while recently latched: hold LOCK badge to avoid flicker.
+                self._state_machine.set(UIState.LOCK)
             else:
                 self._state_machine.set(UIState.RUNNING)
         elif self._job_state == 'evaluating':

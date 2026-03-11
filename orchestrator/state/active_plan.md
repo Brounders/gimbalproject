@@ -7,16 +7,13 @@
 - Human direction: `План: quick KPI smoke операторский режим Auto/Day/Night/IR точечная стабилизация target presentation и state transitions stage-0 подготовка декомпозиции GUI/pipeline`
 
 ## Status
-- Active
+- Completed
 
 ## Brief In Focus
 - BRIEF-20260311-007-evolution-cycle-v1
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260311-014 | quick-kpi-smoke | Open
-- TASK-20260311-017 | operator-mode-simplification | Open
-- TASK-20260311-018 | target-presentation-state-stabilization | Open
-- TASK-20260311-015 | monolith-slicing-stage0 | Open
+- (none — all tasks completed by Claude Mac 2026-03-11)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)

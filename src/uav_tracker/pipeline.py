@@ -215,6 +215,9 @@ class TrackerPipeline:
         self._tracking_present_streak = 0
         self._tracking_missing_streak = 0
         self._tracking_had_target = False
+        # Display-only state: lags behind real state to avoid visual flicker.
+        self._display_tracking_state = 'SCAN'
+        self._display_state_hold = 0
 
     def _update_video_time(self, source_fps: Optional[float]) -> None:
         if source_fps is not None and source_fps > 1.0:
@@ -345,6 +348,27 @@ class TrackerPipeline:
         if self._tracking_state == 'LOST' and present and self._tracking_present_streak >= acquire_frames:
             self._tracking_state = 'TRACK'
         return self._tracking_state
+
+    def _get_display_tracking_state(self, real_state: str) -> str:
+        """Return a display-smoothed tracking state.
+
+        Upgrades (e.g. SCAN→TRACK) are applied immediately.
+        Downgrades (e.g. TRACK→SCAN) are held for DISPLAY_STATE_HOLD_FRAMES
+        frames to suppress momentary visual flicker without affecting metrics.
+        """
+        _ORDER = {'SCAN': 0, 'LOST': 1, 'TRACK': 2}
+        hold = max(1, int(getattr(self.cfg, 'DISPLAY_STATE_HOLD_FRAMES', 3)))
+        real_level = _ORDER.get(real_state, 0)
+        disp_level = _ORDER.get(self._display_tracking_state, 0)
+        if real_level >= disp_level:
+            self._display_tracking_state = real_state
+            self._display_state_hold = 0
+        else:
+            self._display_state_hold += 1
+            if self._display_state_hold >= hold:
+                self._display_tracking_state = real_state
+                self._display_state_hold = 0
+        return self._display_tracking_state
 
     def _effective_global_scan_interval(self) -> int:
         base = max(1, int(self.cfg.GLOBAL_SCAN_INTERVAL))
@@ -704,6 +728,7 @@ class TrackerPipeline:
         active_id_changes = int(self._continuity_id_changes)
         median_reacquire_frames = self._median_reacquire_frames()
         tracking_mode = self._update_tracking_state(active)
+        display_tracking_mode = self._get_display_tracking_state(tracking_mode)
 
         rendered = None
         if render:
@@ -715,7 +740,7 @@ class TrackerPipeline:
                 self.cfg,
                 frame_index=frame_index,
                 scan_strategy=scan_strategy,
-                tracking_mode=tracking_mode,
+                tracking_mode=display_tracking_mode,
                 gt_bbox=gt_bbox,
                 gt_iou=gt_iou,
                 timings_ms=timings_ms,
