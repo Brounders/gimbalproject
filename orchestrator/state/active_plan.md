@@ -13,8 +13,7 @@
 - BRIEF-20260311-002-testability-and-stability-hardening
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260311-003 | package-import-decoupling | Open
-- TASK-20260311-004 | select-active-policy-tests | Open
+<!-- All Claude tasks completed. Awaiting Codex Mac review. -->
 
 ## Active RTX Tasks (execution allowed now)
 - TRAIN-20260311-001 | mendeley_ir_mix (curriculum step1) | Open (awaiting RTX status sync on Mac, 2026-03-11)
