@@ -36,6 +36,17 @@ Claude обязан использовать project playbooks из `.claude/pla
 - training prompt / training cycle / thermal safety -> `.claude/playbooks/training_ops.md`
 - PySide6 UI / operator flow / panels -> `.claude/playbooks/pyside6_ui.md`
 
+## Context7 MCP — Документация библиотек
+
+Плагин `context7@claude-plugins-official` установлен глобально. **Аутентификация не нужна.**
+
+**Активировать** при задачах из `active_plan.md` или вопросах, содержащих:
+- RU: «как использовать», «документация», «пример кода», «API», «зависимость», «версия»
+- EN: «how to use», «docs», «latest API», «library reference», «sdk», «integration»
+
+**Паттерн**: `resolve-library-id` → `query-docs`.
+Применять при работе с: `PySide6`, `ultralytics`, `numpy`, `opencv`, `torch`, `hailo`.
+
 ## Frontend Design Skill
 
 Плагин `frontend-design` установлен глобально и активен во всех сессиях.
