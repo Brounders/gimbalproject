@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-03-11T22:22:40Z",
+  "updated_at": "2026-03-12T05:57:23Z",
   "dataset_root": "C:\\Users\\PC\\TrainingDatasets",
   "datasets": [
     {
@@ -14,15 +14,15 @@
       "class_profile": "drone_bird",
       "priority": 120,
       "status": "queued",
-      "ready_for_training": true,
+      "ready_for_training": false,
       "total_files": 4,
       "image_files": 0,
       "video_files": 0,
       "label_files": 3,
       "total_bytes": 4711768,
       "latest_mtime": "2026-03-08T16:37:49Z",
-      "epoch_budget_total": 36,
-      "last_seen_at": "2026-03-11T21:13:51Z",
+      "epoch_budget_total": 0,
+      "last_seen_at": "2026-03-12T04:59:09Z",
       "notes": ""
     },
     {
@@ -32,9 +32,9 @@
       "dataset_type": "directory",
       "dataset_yaml_path": "C:\\Users\\PC\\TrainingDatasets\\drone_bird_yolo\\dataset.yaml",
       "fingerprint": "e910f8e96d22ef73cfa99b8a",
-      "scene_profile": "ir",
+      "scene_profile": "mixed",
       "class_profile": "drone_bird",
-      "priority": 120,
+      "priority": 80,
       "status": "queued",
       "ready_for_training": true,
       "total_files": 83026,
@@ -43,8 +43,8 @@
       "label_files": 33204,
       "total_bytes": 11136112056,
       "latest_mtime": "2026-03-11T04:11:54Z",
-      "epoch_budget_total": 156,
-      "last_seen_at": "2026-03-11T21:14:02Z",
+      "epoch_budget_total": 144,
+      "last_seen_at": "2026-03-12T04:59:27Z",
       "notes": ""
     }
   ]
