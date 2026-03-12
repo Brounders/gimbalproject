@@ -301,3 +301,17 @@
   - `main_gui.py` stage-0 split cycle is closed;
   - no active Claude or RTX tasks remain;
   - the next cycle can move to deeper GUI refactor, tighter local quality enforcement, or another explicitly approved audit follow-up.
+
+## Latest Approved Direction
+- Date: 2026-03-12
+- Human approved the next implementation cycle after `main_gui.py` stage-0 split.
+- Locked scope:
+  - local quality enforcement only;
+  - no new training cycle;
+  - no deeper architecture refactor in this cycle;
+  - keep local desktop product as the center of the decision flow.
+- Active context:
+  - `BRIEF-20260312-020-local-quality-enforcement-v1`
+  - `TASK-20260312-058`
+  - `TASK-20260312-059`
+  - `TASK-20260312-060`

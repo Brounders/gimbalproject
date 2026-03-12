@@ -1,20 +1,22 @@
 # Active Plan
 
 ## Plan ID
-- AP-20260312-016
+- AP-20260312-017
 
 ## Source Direction
-- Human direction: move to the next stage after `pipeline.py` stage-1 split.
-- Scope: `app/main_gui.py` stage-0 split only — extract theme/style wiring, display-card/HUD helpers, and thin non-worker UI plumbing so the main window becomes orchestration-first.
+- Human direction: move to the next stage after `main_gui.py` stage-0 split.
+- Scope: local quality enforcement only — make preset-specific gate usage explicit, harden local baseline/candidate decision flow, and normalize local benchmark/quality summary artifacts.
 
 ## Status
-- Completed
+- Active
 
 ## Brief In Focus
-- BRIEF-20260312-019-main-gui-stage0-split-v1
+- BRIEF-20260312-020-local-quality-enforcement-v1
 
 ## Active Claude Tasks (execution allowed now)
-- (none)
+- TASK-20260312-058 | preset gate enforcement | Open
+- TASK-20260312-059 | baseline candidate decision hardening | Open
+- TASK-20260312-060 | quality report normalization | Open
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
@@ -23,6 +25,6 @@
 - Любые задачи вне списков выше считаются backlog и не исполняются.
 
 ## Exit Criteria
-- [x] theme/style-related helper code is extracted out of `app/main_gui.py`.
-- [x] display-card/HUD helper code is extracted out of `app/main_gui.py`.
-- [x] `app/main_gui.py` is smaller and orchestration-first without changing operator behavior.
+- [ ] preset-specific gate contexts for `day`, `night`, and `ir` are explicit in the local quality flow
+- [ ] local baseline/candidate decision flow is tied to preset-specific evidence and install traceability
+- [ ] benchmark and quality-gate outputs converge on one canonical local summary artifact contract
