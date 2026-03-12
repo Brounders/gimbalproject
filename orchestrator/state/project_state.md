@@ -372,3 +372,17 @@
   - runtime-quality hardening cycle is closed;
   - no active Claude or RTX tasks remain;
   - the next cycle can move either to deeper runtime hardening or to the next explicitly approved product phase.
+
+## Latest Approved Direction
+- Date: 2026-03-12
+- Human approved the next implementation cycle after the first runtime-quality hardening pass.
+- Locked scope:
+  - runtime hardening stage-2 only;
+  - no new training cycle;
+  - no deeper architecture refactor in this cycle;
+  - keep the local desktop product and operator usefulness as the center of the work.
+- Active context:
+  - `BRIEF-20260312-022-runtime-hardening-stage2-v1`
+  - `TASK-20260312-064`
+  - `TASK-20260312-065`
+  - `TASK-20260312-066`
