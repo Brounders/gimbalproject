@@ -63,13 +63,17 @@ def compute_fingerprint(root: Path, files: list[Path]) -> str:
     return digest.hexdigest()[:24]
 
 
+def _scene_tokens(name: str) -> set:
+    return set(re.split(r"[-_\s]+", name.lower()))
+
+
 def infer_scene_profile(name: str) -> str:
-    lower = name.lower()
-    if any(token in lower for token in ("ir", "thermal", "rgbt")):
+    tokens = _scene_tokens(name)
+    if tokens & {"ir", "thermal", "rgbt"}:
         return "ir"
-    if any(token in lower for token in ("night", "dark", "noct")):
+    if tokens & {"night", "dark", "noct"}:
         return "night"
-    if any(token in lower for token in ("day", "visdrone", "visible")):
+    if tokens & {"day", "visdrone", "visible"}:
         return "day"
     return "mixed"
 
@@ -236,8 +240,13 @@ def analyze_dataset(entry: Path) -> DatasetSummary:
     total_bytes = sum(path.stat().st_size for path in files)
     latest_mtime_ts = max((path.stat().st_mtime for path in files), default=entry.stat().st_mtime)
     dataset_yaml = find_dataset_yaml(entry)
-    ready = dataset_yaml is not None
-    status = "queued" if ready else "blocked_no_dataset_yaml"
+    has_content = image_files > 0 or video_files > 0
+    if dataset_yaml is None:
+        ready, status = False, "blocked_no_dataset_yaml"
+    elif not has_content:
+        ready, status = False, "blocked_no_images"
+    else:
+        ready, status = True, "queued"
     return DatasetSummary(
         dataset_id=dataset_id,
         dataset_name=dataset_name,

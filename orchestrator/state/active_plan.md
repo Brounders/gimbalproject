@@ -8,15 +8,13 @@
 - Scope: fix conveyor metadata defects and restore reliable aggregate quality-gate before enabling scheduled automation.
 
 ## Status
-- Active
+- Completed
 
 ## Brief In Focus
 - BRIEF-20260312-014-conveyor-hardening-after-smoke
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260312-033 | dataset scene profile fix | Open
-- TASK-20260312-034 | broken dataset blocking | Open
-- TASK-20260312-035 | quality-gate aggregate fix | Open
+- (none)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)

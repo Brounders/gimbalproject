@@ -191,13 +191,28 @@ def main() -> int:
         source_name = Path(str(source)).stem if isinstance(source, str) else f"camera_{source}"
         report_path = args.out_dir / f"{args.tag}{source_name}_{args.preset}.json"
 
-        report = evaluate_source(
-            cfg,
-            source=source,
-            small_target_mode=small_target,
-            max_frames=max(0, int(args.max_frames)),
-            report_path=str(report_path),
-        ).to_dict()
+        try:
+            report = evaluate_source(
+                cfg,
+                source=source,
+                small_target_mode=small_target,
+                max_frames=max(0, int(args.max_frames)),
+                report_path=str(report_path),
+            ).to_dict()
+        except Exception as exc:
+            print(f"[error] {source_name}: {exc}")
+            failed_row: dict[str, Any] = {
+                "source": str(source), "scene": scene, "frames": 0,
+                "avg_fps": 0.0, "lock_rate": 0.0, "continuity_score": 0.0,
+                "active_presence_rate": 0.0, "active_id_changes": 0,
+                "active_id_changes_per_min": 0.0, "lock_switches_per_min": 0.0,
+                "false_lock_frames": 0, "false_lock_rate": 0.0, "mode_counts": {},
+                "score": 0.0, "passed": False,
+                "fail_reasons": f"evaluate_error:{type(exc).__name__}",
+            }
+            rows.append(failed_row)
+            failures.append(f"{source}: evaluate_error:{type(exc).__name__}")
+            continue
 
         total_frames = max(1, int(report.get("total_frames", 0)))
         row = {
