@@ -233,3 +233,16 @@
 - Outcome:
   - local baseline governance cycle is closed;
   - no active Claude or RTX tasks remain.
+
+## Latest Approved Direction
+- Date: 2026-03-12
+- Human approved the next implementation cycle after local baseline governance.
+- Locked scope:
+  - architecture repair starts with `src/uav_tracker/pipeline.py` only;
+  - no `main_gui.py` refactor in this cycle;
+  - no training/automation expansion or embedded migration in this cycle.
+- Active context:
+  - `BRIEF-20260312-018-pipeline-stage1-split-v1`
+  - `TASK-20260312-052`
+  - `TASK-20260312-053`
+  - `TASK-20260312-054`

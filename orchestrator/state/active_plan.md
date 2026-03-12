@@ -1,20 +1,22 @@
 # Active Plan
 
 ## Plan ID
-- AP-20260312-014
+- AP-20260312-015
 
 ## Source Direction
-- Human direction: continue implementing the audit roadmap, but keep the local desktop product as the architectural center.
-- Scope: local baseline governance only — baseline/candidate decision contract, accepted-model install flow, and standardized quality decision artifacts.
+- Human direction: move to the next audit-driven stage after local baseline governance and focus on the most rational architecture repair first.
+- Scope: `pipeline.py` stage-1 split only — extract `FrameOutput`, extract overlay/draw helpers, and thin `pipeline.py` into an orchestration-first module.
 
 ## Status
-- Completed
+- Active
 
 ## Brief In Focus
-- BRIEF-20260312-017-local-baseline-governance-v1
+- BRIEF-20260312-018-pipeline-stage1-split-v1
 
 ## Active Claude Tasks (execution allowed now)
-- (none)
+- TASK-20260312-052 | pipeline frameoutput extract | Open
+- TASK-20260312-053 | pipeline overlay extract | Open
+- TASK-20260312-054 | pipeline orchestrator thinning | Open
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
@@ -23,6 +25,6 @@
 - Любые задачи вне списков выше считаются backlog и не исполняются.
 
 ## Exit Criteria
-- [x] Baseline/candidate/hold/reject states are defined by one local governance contract. (`models/README.md`)
-- [x] Accepted model can be installed into `models/baseline.pt` by a canonical local flow with metadata/traceability. (`install_baseline.py` + `baseline_manifest.json`)
-- [x] Quality decisions have one explicit local artifact format and path contract. (RUNBOOK decision artifact standard)
+- [ ] `FrameOutput` no longer lives in `src/uav_tracker/pipeline.py`.
+- [ ] overlay/draw helpers are extracted from `src/uav_tracker/pipeline.py`.
+- [ ] `pipeline.py` is smaller and orchestration-first without changing runtime semantics.
