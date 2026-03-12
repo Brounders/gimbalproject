@@ -72,13 +72,31 @@ PYTHONPATH=src python python_scripts/run_quick_kpi_smoke.py \
 
 ### Quality gate (regression)
 
+**Regression pack-файлы по сценариям:**
+
+| Pack-файл | Пресет | Клипы |
+|-----------|--------|-------|
+| `configs/regression_pack.csv` | любой | все сценарии (полный set) |
+| `configs/regression_pack_day.csv` | `default` | только дневные клипы |
+| `configs/regression_pack_night.csv` | `night` | ночные + noise клипы |
+| `configs/regression_pack_ir.csv` | `antiuav_thermal` | IR/thermal клипы |
+
 ```bash
 source tracker_env/bin/activate
+
+# Полный gate (все сценарии)
 PYTHONPATH=src python python_scripts/run_quality_gate.py
+
+# Per-scenario
+PYTHONPATH=src python python_scripts/run_quality_gate.py \
+    --pack-file configs/regression_pack_day.csv --preset default
+PYTHONPATH=src python python_scripts/run_quality_gate.py \
+    --pack-file configs/regression_pack_night.csv --preset night
+PYTHONPATH=src python python_scripts/run_quality_gate.py \
+    --pack-file configs/regression_pack_ir.csv --preset antiuav_thermal
 ```
 
 Exit code: `0` = PASS, `1` = FAIL, `2` = config error.
-Использует `configs/regression_pack.csv` как baseline.
 
 ### Offline benchmark
 
@@ -93,6 +111,40 @@ PYTHONPATH=src python python_scripts/run_offline_benchmark.py --help
 source tracker_env/bin/activate
 PYTHONPATH=src python python_scripts/run_scenario_sweep.py --help
 ```
+
+---
+
+## Локальный quality-gate flow (baseline/candidate decision)
+
+Канонический порядок для принятия решений о модели на Mac:
+
+| Шаг | Команда | Что проверяет | PASS |
+|-----|---------|---------------|------|
+| **1. Quick smoke** | `run_quick_kpi_smoke.py` | FPS, id_changes, false_lock_rate на 1-2 клипах | FPS > 8, без краша |
+| **2. Benchmark** | `run_offline_benchmark.py` | Полная прогонка по сценарию | Метрики в пределах baseline |
+| **3. Quality gate** | `run_quality_gate.py` | Deterministic pack, exit code | Exit 0 |
+| **4. Decision** | ручное сравнение | Сравнить с `OPERATOR_BASELINE.md` | Нет регресса по ключевым KPI |
+
+```bash
+source tracker_env/bin/activate
+
+# Шаг 1: Quick smoke (ночной пресет, 180 кадров)
+PYTHONPATH=src python python_scripts/run_quick_kpi_smoke.py \
+    --sources test_videos/night_ground_large_drones.mp4 \
+    --preset night --max-frames 180
+
+# Шаг 2: Offline benchmark (ночной сценарий)
+PYTHONPATH=src python python_scripts/run_offline_benchmark.py \
+    --source-list configs/regression_pack_night.csv --preset night
+
+# Шаг 3: Quality gate (полный pack)
+PYTHONPATH=src python python_scripts/run_quality_gate.py
+
+# Шаг 4: Сравнить результат с OPERATOR_BASELINE.md
+```
+
+> Для candidate-модели добавить `--model <path>` в шаги 1-3.
+> Threshold'ы baseline: см. [OPERATOR_BASELINE.md](OPERATOR_BASELINE.md).
 
 ---
 
@@ -230,10 +282,24 @@ models/baseline.pt
 
 ---
 
-## Требования к окружению
+## Bootstrap (первый запуск / новая машина)
 
 ```bash
-python --version   # 3.11
+# 1. Создать venv
+python3.11 -m venv tracker_env
+
+# 2. Установить зависимости
 source tracker_env/bin/activate
+pip install -r requirements.txt
+
+# 3. Поместить baseline-модель
+cp <принятый_кандидат.pt> models/baseline.pt   # см. секцию "Baseline model"
+
+# 4. Smoke-проверка
 PYTHONPATH=src python -c "from uav_tracker.pipeline import TrackerPipeline; print('OK')"
+PYTHONPATH=src python main_tracker.py --help
 ```
+
+Зависимости: `requirements.txt` в корне репозитория.
+Полный список: `torch`, `ultralytics`, `opencv-python`, `PySide6`, `numpy`, `PyYAML`, `lapx`, `scipy`, `requests`.
+Training-specific зависимости (`wandb` и др.) — не обязательны для desktop runtime.

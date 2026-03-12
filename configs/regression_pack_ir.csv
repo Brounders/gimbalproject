@@ -1,0 +1,7 @@
+# source,scene
+# IR/thermal scenario regression pack — use with --preset antiuav_thermal
+# Run: PYTHONPATH=src ./tracker_env/bin/python python_scripts/run_quality_gate.py \
+#        --pack-file configs/regression_pack_ir.csv --preset antiuav_thermal
+test_videos/Demo_IR_DRONE_146.mp4,ir
+test_videos/IR_DRONE_001.mp4,ir
+test_videos/IR_BIRD_001.mp4,noise

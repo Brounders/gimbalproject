@@ -1,0 +1,5 @@
+# source,scene
+# Day scenario regression pack — use with --preset default
+# Run: PYTHONPATH=src ./tracker_env/bin/python python_scripts/run_quality_gate.py \
+#        --pack-file configs/regression_pack_day.csv --preset default
+test_videos/drone_closeup_mixkit_44644_360.mp4,day

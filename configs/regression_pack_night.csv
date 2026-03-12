@@ -1,0 +1,6 @@
+# source,scene
+# Night scenario regression pack — use with --preset night
+# Run: PYTHONPATH=src ./tracker_env/bin/python python_scripts/run_quality_gate.py \
+#        --pack-file configs/regression_pack_night.csv --preset night
+test_videos/night_ground_large_drones.mp4,night
+test_videos/night_ground_indicator_lights.mp4,noise
