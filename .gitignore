@@ -7,13 +7,18 @@ runs/
 logs/
 ui_web/node_modules/
 ui_web/dist/
+# Model binaries — not tracked in git
 models/*.pt
 models/*.hef
+models/*.zip
+models/checkpoints/
 
 # Local large artifacts (not part of repo history)
 exports/
 imports/
-models/
+safety_snapshots/
+
+# models/README.md and models/baseline_manifest.json ARE tracked
 safety_snapshots/
 test_videos/
 

@@ -146,6 +146,34 @@ PYTHONPATH=src python python_scripts/run_quality_gate.py
 > Для candidate-модели добавить `--model <path>` в шаги 1-3.
 > Threshold'ы baseline: см. [OPERATOR_BASELINE.md](OPERATOR_BASELINE.md).
 
+### Decision artifact standard
+
+**Canonical output:** `runs/evaluations/quality_gate/<tag>_quality_gate_<preset>.json`
+
+Задать тег через `--tag` при запуске gate:
+```bash
+# Именование: baseline_YYYYMMDD или candidate_vN
+PYTHONPATH=src python python_scripts/run_quality_gate.py \
+    --preset night --tag candidate_v1_20260312
+```
+
+**Ключевые поля JSON:**
+
+| Поле | Тип | Значение |
+|------|-----|----------|
+| `gate_passed` | bool | `true` = PASS (accept), `false` = FAIL |
+| `failures` | list[str] | Список источник: fail_reasons |
+| `mean` | dict | Агрегированные метрики по всем клипам |
+| `rows[].passed` | bool | Результат по каждому клипу |
+| `rows[].fail_reasons` | str | Конкретные нарушения threshold |
+
+**Правило принятия решения:**
+- `gate_passed = true` → candidate принята → install via `install_baseline.py --gate-report <json>`
+- `gate_passed = false`, нарушения tunable → `hold_and_tune`
+- `gate_passed = false`, регресс за границы tolerance → `reject`
+
+States и governance: [models/README.md](models/README.md)
+
 ---
 
 ## Training
@@ -252,14 +280,21 @@ models/baseline.pt
 ### Как обновить baseline
 
 1. Принять candidate-модель (после прохождения quality gate).
-2. Скопировать принятый `.pt` в стабильный path:
+2. Установить через canonical install flow:
    ```bash
-   cp <path_to_accepted_candidate.pt> models/baseline.pt
+   source tracker_env/bin/activate
+   PYTHONPATH=src python python_scripts/install_baseline.py \
+       --source <path_to_accepted.pt> \
+       --notes "Accepted YYYYMMDD: <описание>" \
+       --gate-report runs/evaluations/quality_gate/<tag>_quality_gate_<preset>.json
    ```
-3. Закоммитить обновление (или задокументировать hash) в orchestrator-отчёт.
+   Скрипт копирует `.pt` в `models/baseline.pt` и пишет `models/baseline_manifest.json`
+   с sha256, датой, ссылкой на gate report.
+3. Закоммитить `models/baseline_manifest.json` в репозиторий (только манифест, не `.pt`).
 
-> `models/baseline.pt` — не создаётся автоматически при клонировании репозитория.
-> При первом развёртывании скопируйте актуальную принятую модель вручную.
+> `models/baseline.pt` — бинарный файл, не хранится в git.
+> При первом развёртывании запустите `install_baseline.py --source <pt>`.
+> Governance contract: [models/README.md](models/README.md)
 
 ---
 
