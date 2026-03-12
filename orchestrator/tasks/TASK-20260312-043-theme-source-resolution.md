@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-043
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Сделать источник темы UI явным и поддерживаемым: устранить ситуацию, в которой `app/ui/theme.py` отсутствует как исходник, а фактическая тема живет неофициально в `app/main_gui.py`.

@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-044
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Зафиксировать стабильный локальный baseline model path для desktop-программы и убрать зависимость operator preset-конфигов от эфемерных путей внутри `runs/`.

@@ -145,3 +145,24 @@
   - `TASK-20260312-043`
   - `TASK-20260312-044`
   - `TASK-20260312-045`
+
+## Latest Control Loop
+- Date: 2026-03-12
+- Reviewed Claude reports:
+  - `REPORT-20260312-043` -> Accepted
+  - `REPORT-20260312-044` -> Accepted
+  - `REPORT-20260312-045` -> Accepted
+- Accepted tasks this loop:
+  - `TASK-20260312-043`
+  - `TASK-20260312-044`
+  - `TASK-20260312-045`
+- Reviewer validation summary:
+  - `APP_STYLESHEET` now has an explicit maintained source in `app/ui/theme.py`
+  - canonical operator presets now point to the stable local contract `models/baseline.pt`
+  - legacy root scripts moved under `legacy/`, while `main_tracker.py` and `tracker_gui.py` remain canonical entrypoints
+- Reviewer caveat:
+  - `models/baseline.pt` is a local contract, not a tracked repository artifact; first-run setup still requires manually placing an accepted model there
+- Outcome:
+  - local product integrity cycle is closed;
+  - no active Claude or RTX tasks remain;
+  - next cycle can move to either dependency/reproducibility work or deeper architecture refactor.

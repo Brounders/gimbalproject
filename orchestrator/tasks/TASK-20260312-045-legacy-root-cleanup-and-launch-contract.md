@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-045
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Сделать корень проекта и локальные entrypoints понятными для desktop-продукта: сохранить канонические точки запуска, а legacy-root scripts безопасно вывести из основного operator/developer workflow.
