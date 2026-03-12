@@ -135,6 +135,37 @@ PYTHONPATH=src python python_scripts/run_quality_gate.py \
     --preset antiuav_thermal
 ```
 
+### Problem-pack mini-gate (threshold contract)
+
+Явный threshold contract для hard clips. Более lenient, чем основной gate.
+Threshold values определены в `configs/problem_pack_gate_contract.json`.
+
+```bash
+# Night clips (night_ground_large_drones + night_ground_indicator_lights)
+PYTHONPATH=src python python_scripts/run_quality_gate.py \
+    --pack-file configs/regression_pack_problem.csv \
+    --preset night \
+    --max-id-changes-per-min 25 \
+    --min-continuity 0.30 \
+    --min-presence 0.05 \
+    --max-false-lock-rate 0.65 \
+    --max-noise-false-lock-rate 0.40 \
+    --max-noise-id-changes-per-min 15
+
+# IR clips (IR_DRONE_001 + Demo_IR_DRONE_146)
+PYTHONPATH=src python python_scripts/run_quality_gate.py \
+    --pack-file configs/regression_pack_problem.csv \
+    --preset antiuav_thermal \
+    --max-id-changes-per-min 25 \
+    --min-continuity 0.30 \
+    --min-presence 0.05 \
+    --max-false-lock-rate 0.65 \
+    --max-noise-false-lock-rate 0.40 \
+    --max-noise-id-changes-per-min 15
+```
+
+Contract: `configs/problem_pack_gate_contract.json` — версионированный файл с rationale и canonical invocations.
+
 ### A/B evidence loop (problem clips)
 
 Канонический before/after workflow для измерения эффекта runtime tuning на problem clips.

@@ -1,0 +1,27 @@
+{
+  "description": "Threshold contract for regression_pack_problem.csv — hard scene mini-gate.",
+  "note": "More lenient than main gate defaults. These are aspirational targets for known-hard clips after AP-018..020 hardening.",
+  "night_clips_preset": "night",
+  "ir_clips_preset": "antiuav_thermal",
+  "thresholds": {
+    "min_avg_fps": 8.0,
+    "max_lock_switches_per_min": 6.0,
+    "max_id_changes_per_min": 25.0,
+    "min_continuity": 0.30,
+    "min_presence": 0.05,
+    "max_false_lock_rate": 0.65,
+    "max_noise_false_lock_rate": 0.40,
+    "max_noise_id_changes_per_min": 15.0
+  },
+  "rationale": {
+    "max_id_changes_per_min": "25 vs default 8: night_ground_large_drones is a known-hard clip; target is below 25 after hardening",
+    "max_false_lock_rate": "0.65 vs default 0.35: indicator-light and large-drone night clips have inherently higher false_lock",
+    "max_noise_false_lock_rate": "0.40 vs default 0.18: noise clips without GT have structurally high false_lock",
+    "min_continuity": "0.30 vs default 0.45: hard clips may have fragmented tracks",
+    "min_presence": "0.05 vs default 0.08: noise/background clips have near-zero real presence"
+  },
+  "canonical_invocations": {
+    "night": "PYTHONPATH=src python python_scripts/run_quality_gate.py --pack-file configs/regression_pack_problem.csv --preset night --max-id-changes-per-min 25 --min-continuity 0.30 --min-presence 0.05 --max-false-lock-rate 0.65 --max-noise-false-lock-rate 0.40 --max-noise-id-changes-per-min 15",
+    "ir": "PYTHONPATH=src python python_scripts/run_quality_gate.py --pack-file configs/regression_pack_problem.csv --preset antiuav_thermal --max-id-changes-per-min 25 --min-continuity 0.30 --min-presence 0.05 --max-false-lock-rate 0.65 --max-noise-false-lock-rate 0.40 --max-noise-id-changes-per-min 15"
+  }
+}

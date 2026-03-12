@@ -126,6 +126,19 @@ test_videos/IR_BIRD_001.mp4 \
 
 ---
 
+## Runtime Hardening Changes (AP-020)
+
+Третий слой hardening: снижение ID-нестабильности на ночных сценах с крупными дронами.
+
+| Параметр | Файл | Было | Стало | Цель |
+|----------|------|------|-------|------|
+| `active_id_switch_cooldown_frames` | `night.yaml` | 30 (default) | **60** | Двойной cooldown между ID-switches |
+| `class_ema_alpha` | `night.yaml` | 0.22 | **0.15** | Медленнее EMA, стабильнее drone_score |
+
+> Оба параметра уже доступны через YAML mapping (AP-019 и ранее).
+
+---
+
 ## Preset Runtime Tuning Contract
 
 Ключевые runtime knobs для каждого контекста. Источник: YAML конфиги + `profile_io.py::apply_overrides` mapping.
@@ -147,6 +160,8 @@ test_videos/IR_BIRD_001.mp4 \
 | `night_diff_thresh` | 12 (default) | 10 | 10 | Night diff threshold |
 | `display_min_hit_streak_night` | 3 (default) | 4 | 4 | Min hits before display |
 | `display_max_lost_frames` | 2 (default) | 1 | 1 | Max frames lost before drop |
+| `active_id_switch_cooldown_frames` | 30 (default) | **60** | 30 (default) | Cooldown frames between ID switches |
+| `class_ema_alpha` | 0.18 (default) | **0.15** | 0.24 | Drone score EMA alpha |
 | `budget_target_fps` | 24.0 (default) | 22.0 | 20.0 | Budget FPS target |
 | `velocity_alpha` | 0.55 (default) | 0.68 | 0.72 | Motion smoothing |
 
