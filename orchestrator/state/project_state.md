@@ -350,3 +350,25 @@
   - `TASK-20260312-061`
   - `TASK-20260312-062`
   - `TASK-20260312-063`
+
+## Latest Control Loop
+- Date: 2026-03-12
+- Reviewed Claude reports:
+  - `REPORT-20260312-061` -> Accepted with caveat
+  - `REPORT-20260312-062` -> Accepted
+  - `REPORT-20260312-063` -> Accepted
+- Accepted tasks this loop:
+  - `TASK-20260312-061`
+  - `TASK-20260312-062`
+  - `TASK-20260312-063`
+- Reviewer validation summary:
+  - `lock_confirm_frames` is now configurable through preset YAML via `profile_io.py`
+  - `night.yaml` and `antiuav_thermal.yaml` now use stricter lock/reacquire thresholds and higher `lock_confirm_frames`
+  - `OPERATOR_BASELINE.md` now documents one explicit runtime tuning contract for `day`, `night`, and `ir`
+  - `configs/regression_pack_problem.csv` and `RUNBOOK.md` now define one canonical short problem-clip loop for runtime hardening
+- Reviewer caveat:
+  - runtime hardening improved or bounded some problem-clip behavior, but it is not yet a full resolution of the false-lock problem on `night` / noise scenes
+- Outcome:
+  - runtime-quality hardening cycle is closed;
+  - no active Claude or RTX tasks remain;
+  - the next cycle can move either to deeper runtime hardening or to the next explicitly approved product phase.

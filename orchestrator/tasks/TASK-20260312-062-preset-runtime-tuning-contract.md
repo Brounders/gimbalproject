@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-062
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Сделать runtime tuning для `day`, `night`, `ir` явным и читаемым: закрепить, какие параметры реально различаются между preset-контекстами и исключить неочевидные/магические пересечения.

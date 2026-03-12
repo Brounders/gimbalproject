@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-063
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Ввести короткий обязательный regression pack по самым проблемным operator-scene случаям, чтобы runtime hardening на `night` / `ir` проверялся не только общим aggregate.

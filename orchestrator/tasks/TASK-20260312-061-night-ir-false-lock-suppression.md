@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-061
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Снизить ложные `lock` и шумовые reacquire на `night` / `ir` / noise сценах без глобального переписывания tracking logic и без резкого ухудшения continuity на реальной цели.
