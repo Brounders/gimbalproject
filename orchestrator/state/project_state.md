@@ -246,3 +246,24 @@
   - `TASK-20260312-052`
   - `TASK-20260312-053`
   - `TASK-20260312-054`
+
+## Latest Control Loop
+- Date: 2026-03-12
+- Reviewed Claude reports:
+  - `REPORT-20260312-052` -> Accepted
+  - `REPORT-20260312-053` -> Accepted
+  - `REPORT-20260312-054` -> Accepted
+- Accepted tasks this loop:
+  - `TASK-20260312-052`
+  - `TASK-20260312-053`
+  - `TASK-20260312-054`
+- Reviewer validation summary:
+  - `FrameOutput` is now extracted into `src/uav_tracker/frame_result.py`
+  - render helpers and `draw_frame` are now extracted into `src/uav_tracker/overlay.py`
+  - `src/uav_tracker/pipeline.py` was reduced from 1308 to 1067 lines and now reads as an orchestration-first module
+- Reviewer note:
+  - Claude again left `open_tasks.md` and task statuses unsynchronized with `active_plan.md`; reviewer normalized orchestration state during acceptance
+- Outcome:
+  - pipeline stage-1 split cycle is closed;
+  - no active Claude or RTX tasks remain;
+  - the next cycle can move to `main_gui.py` stage-0 split or another explicitly approved architecture step.

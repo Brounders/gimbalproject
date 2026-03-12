@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-053
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Вынести overlay/draw helpers из `src/uav_tracker/pipeline.py` в отдельный модуль, оставив визуальное поведение операторского слоя неизменным.

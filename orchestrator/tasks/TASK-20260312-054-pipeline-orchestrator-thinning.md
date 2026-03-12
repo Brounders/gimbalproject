@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-054
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 После extraction задач `052` и `053` истончить `src/uav_tracker/pipeline.py` до orchestration-first структуры, не меняя внешнее поведение.

@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-052
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Вынести `FrameOutput` из `src/uav_tracker/pipeline.py` в отдельный модуль-контракт без изменения runtime semantics и без поломки GUI/CLI integration.
