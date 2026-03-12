@@ -1,0 +1,5 @@
+# source,scene
+# Problem-clip regression pack — night and noise clips only.
+# Use with --preset night
+test_videos/night_ground_large_drones.mp4,night
+test_videos/night_ground_indicator_lights.mp4,noise

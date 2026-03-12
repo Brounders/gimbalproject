@@ -139,6 +139,21 @@ test_videos/IR_BIRD_001.mp4 \
 
 ---
 
+## Runtime Hardening Changes (AP-021)
+
+Четвёртый слой hardening: тighter track acquisition и cooldown bypass для индикаторных огней и крупных дронов.
+
+| Параметр | Файл | Было | Стало | Цель |
+|----------|------|------|-------|------|
+| `track_state_acquire_frames` | `night.yaml` | 3 (default) | **4** | 4 детекции для установления трека (меньше false tracks от мигающих огней) |
+| `lock_mode_acquire_frames` | `night.yaml` | 2 (default) | **3** | 3 фрейма для входа в lock mode (меньше false lock entries) |
+| `active_id_switch_allow_if_lost_frames` | `night.yaml` | 6 (default) | **12** | 12 фреймов потери до bypass cooldown (сильно снижает id_changes/min) |
+
+> Все три параметра уже доступны через YAML mapping.
+> Effective: `cooldown_frames=60` + `allow_if_lost=12` — ID switch байпасится только после долгой потери.
+
+---
+
 ## Preset Runtime Tuning Contract
 
 Ключевые runtime knobs для каждого контекста. Источник: YAML конфиги + `profile_io.py::apply_overrides` mapping.
@@ -161,6 +176,9 @@ test_videos/IR_BIRD_001.mp4 \
 | `display_min_hit_streak_night` | 3 (default) | 4 | 4 | Min hits before display |
 | `display_max_lost_frames` | 2 (default) | 1 | 1 | Max frames lost before drop |
 | `active_id_switch_cooldown_frames` | 30 (default) | **60** | 30 (default) | Cooldown frames between ID switches |
+| `track_state_acquire_frames` | 3 (default) | **4** | 3 (default) | Consecutive detections to acquire track |
+| `lock_mode_acquire_frames` | 2 (default) | **3** | 2 (default) | Confirm-frames to enter lock mode |
+| `active_id_switch_allow_if_lost_frames` | 6 (default) | **12** | 6 (default) | Lost frames before cooldown bypass |
 | `class_ema_alpha` | 0.18 (default) | **0.15** | 0.24 | Drone score EMA alpha |
 | `budget_target_fps` | 24.0 (default) | 22.0 | 20.0 | Budget FPS target |
 | `velocity_alpha` | 0.55 (default) | 0.68 | 0.72 | Motion smoothing |

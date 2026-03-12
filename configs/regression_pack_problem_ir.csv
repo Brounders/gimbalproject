@@ -1,0 +1,5 @@
+# source,scene
+# Problem-clip regression pack — IR clips only.
+# Use with --preset antiuav_thermal
+test_videos/IR_DRONE_001.mp4,ir
+test_videos/Demo_IR_DRONE_146.mp4,ir

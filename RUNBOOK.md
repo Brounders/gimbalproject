@@ -140,27 +140,35 @@ PYTHONPATH=src python python_scripts/run_quality_gate.py \
 Явный threshold contract для hard clips. Более lenient, чем основной gate.
 Threshold values определены в `configs/problem_pack_gate_contract.json`.
 
+**One-command invocation (AP-021+):**
+```bash
+PYTHONPATH=src python python_scripts/run_problem_pack_gate.py
+```
+Wrapper читает `configs/problem_pack_gate_contract.json`, запускает gate на night и IR клипах раздельно,
+возвращает exit code 0 (all pass) или 4 (any fail).
+
+**Ручной запуск (canonical invocations из contract):**
 ```bash
 # Night clips (night_ground_large_drones + night_ground_indicator_lights)
 PYTHONPATH=src python python_scripts/run_quality_gate.py \
-    --pack-file configs/regression_pack_problem.csv \
+    --pack-file configs/regression_pack_problem_night.csv \
     --preset night \
     --max-id-changes-per-min 25 \
     --min-continuity 0.30 \
     --min-presence 0.05 \
     --max-false-lock-rate 0.65 \
-    --max-noise-false-lock-rate 0.40 \
+    --max-noise-false-lock-rate 0.35 \
     --max-noise-id-changes-per-min 15
 
 # IR clips (IR_DRONE_001 + Demo_IR_DRONE_146)
 PYTHONPATH=src python python_scripts/run_quality_gate.py \
-    --pack-file configs/regression_pack_problem.csv \
+    --pack-file configs/regression_pack_problem_ir.csv \
     --preset antiuav_thermal \
     --max-id-changes-per-min 25 \
     --min-continuity 0.30 \
     --min-presence 0.05 \
     --max-false-lock-rate 0.65 \
-    --max-noise-false-lock-rate 0.40 \
+    --max-noise-false-lock-rate 0.35 \
     --max-noise-id-changes-per-min 15
 ```
 
