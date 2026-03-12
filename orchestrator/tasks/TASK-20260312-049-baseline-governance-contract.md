@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-049
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Зафиксировать локальный baseline governance contract: что такое `baseline`, `candidate`, `hold_and_tune`, `reject`, где живут эти сущности локально и какие артефакты являются источником истины.

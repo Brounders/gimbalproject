@@ -213,3 +213,23 @@
   - `TASK-20260312-049`
   - `TASK-20260312-050`
   - `TASK-20260312-051`
+
+## Latest Control Loop
+- Date: 2026-03-12
+- Reviewed Claude reports:
+  - `REPORT-20260312-049` -> Accepted
+  - `REPORT-20260312-050` -> Accepted
+  - `REPORT-20260312-051` -> Accepted
+- Accepted tasks this loop:
+  - `TASK-20260312-049`
+  - `TASK-20260312-050`
+  - `TASK-20260312-051`
+- Reviewer validation summary:
+  - `models/README.md` now defines one local governance contract for `baseline`, `candidate`, `hold_and_tune`, and `reject`
+  - `python_scripts/install_baseline.py` installs `models/baseline.pt` and writes `models/baseline_manifest.json` with traceability metadata
+  - `RUNBOOK.md` now documents one canonical local quality decision artifact path and one canonical baseline install flow
+- Reviewer note:
+  - Claude left task files and `open_tasks.md` unsynchronized; reviewer normalized state and aligned the bootstrap section in `RUNBOOK.md` with the new install flow
+- Outcome:
+  - local baseline governance cycle is closed;
+  - no active Claude or RTX tasks remain.

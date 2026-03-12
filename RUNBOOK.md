@@ -327,8 +327,10 @@ python3.11 -m venv tracker_env
 source tracker_env/bin/activate
 pip install -r requirements.txt
 
-# 3. Поместить baseline-модель
-cp <принятый_кандидат.pt> models/baseline.pt   # см. секцию "Baseline model"
+# 3. Установить baseline-модель через canonical flow
+PYTHONPATH=src python python_scripts/install_baseline.py \
+    --source <path_to_accepted.pt> \
+    --notes "Accepted YYYYMMDD: initial local baseline"
 
 # 4. Smoke-проверка
 PYTHONPATH=src python -c "from uav_tracker.pipeline import TrackerPipeline; print('OK')"

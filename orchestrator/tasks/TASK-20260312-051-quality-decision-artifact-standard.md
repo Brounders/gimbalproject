@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-051
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Стандартизировать локальный quality decision artifact, чтобы решение по baseline/candidate было зафиксировано в одном понятном формате, а не оставалось только в текстовых обсуждениях.

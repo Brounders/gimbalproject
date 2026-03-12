@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-050
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Сделать accepted-model install flow воспроизводимым: установить принятую модель в `models/baseline.pt` должно быть можно по каноническому локальному пути и с понятной metadata/traceability.
