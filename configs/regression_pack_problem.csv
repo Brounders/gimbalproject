@@ -1,0 +1,10 @@
+# source,scene
+# Problem-clip regression pack — canonical hard cases for runtime quality hardening.
+# Use with --preset night for night clips, --preset antiuav_thermal for IR clips.
+# Run: PYTHONPATH=src ./tracker_env/bin/python python_scripts/run_quality_gate.py \
+#        --pack-file configs/regression_pack_problem.csv --preset night
+# For IR clips use --preset antiuav_thermal.
+test_videos/night_ground_large_drones.mp4,night
+test_videos/night_ground_indicator_lights.mp4,noise
+test_videos/IR_DRONE_001.mp4,ir
+test_videos/Demo_IR_DRONE_146.mp4,ir

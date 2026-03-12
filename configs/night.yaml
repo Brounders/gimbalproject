@@ -14,8 +14,9 @@ roi_conf_thresh: 0.10
 night_mot_thresh: 14
 night_diff_thresh: 10
 class_ema_alpha: 0.22
-drone_lock_score_min: 0.58
-drone_reacquire_score_min: 0.45
+drone_lock_score_min: 0.64  # [night hardening] raised from 0.58
+drone_reacquire_score_min: 0.52  # [night hardening] raised from 0.45
+lock_confirm_frames: 7  # [night hardening] raised from default 5
 velocity_alpha: 0.68
 lock_reacquire_predict_gain: 1.12
 lock_reacquire_predict_horizon_max: 5

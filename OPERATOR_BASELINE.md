@@ -91,6 +91,46 @@ test_videos/IR_BIRD_001.mp4 \
 
 ---
 
+## Runtime Hardening Changes (AP-018)
+
+Изменения внесены в `night.yaml` и `antiuav_thermal.yaml` для снижения false-lock на ночных и IR сценах.
+
+| Параметр | Файл | Было | Стало | Цель |
+|----------|------|------|-------|------|
+| `drone_lock_score_min` | `night.yaml` | 0.58 | **0.64** | Строже порог lock |
+| `drone_reacquire_score_min` | `night.yaml` | 0.45 | **0.52** | Строже reacquire |
+| `lock_confirm_frames` | `night.yaml` | 5 (default) | **7** | Дольше подтверждение lock |
+| `drone_lock_score_min` | `antiuav_thermal.yaml` | 0.56 | **0.60** | Строже порог lock |
+| `drone_reacquire_score_min` | `antiuav_thermal.yaml` | 0.42 | **0.48** | Алайн с default |
+| `lock_confirm_frames` | `antiuav_thermal.yaml` | 5 (default) | **7** | Дольше подтверждение lock |
+
+> `lock_confirm_frames` доступен через YAML начиная с AP-018 (добавлен в `profile_io.py` mapping).
+
+---
+
+## Preset Runtime Tuning Contract
+
+Ключевые runtime knobs для каждого контекста. Источник: YAML конфиги + `profile_io.py::apply_overrides` mapping.
+
+> **Важно:** не все поля `Config` доступны через YAML — только те, что есть в mapping `apply_overrides`.
+
+| Параметр | day (default) | night | ir (antiuav_thermal) | Эффект |
+|----------|--------------|-------|---------------------|--------|
+| `conf_thresh` | 0.30 | 0.12 | 0.12 | Detection sensitivity |
+| `imgsz` | 640 | 960 | 960 | Resolution for detection |
+| `small_target_mode` | false | true | true | Small target path |
+| `lock_confirm_frames` | 5 | **7** | **7** | Frames to confirm lock |
+| `drone_lock_score_min` | 0.62 | **0.64** | **0.60** | Minimum lock score |
+| `drone_reacquire_score_min` | 0.48 | **0.52** | **0.48** | Minimum reacquire score |
+| `night_mot_thresh` | 18 (default) | 14 | 14 | Night motion threshold |
+| `night_diff_thresh` | 12 (default) | 10 | 10 | Night diff threshold |
+| `display_min_hit_streak_night` | 3 (default) | 4 | 4 | Min hits before display |
+| `display_max_lost_frames` | 2 (default) | 1 | 1 | Max frames lost before drop |
+| `budget_target_fps` | 24.0 (default) | 22.0 | 20.0 | Budget FPS target |
+| `velocity_alpha` | 0.55 (default) | 0.68 | 0.72 | Motion smoothing |
+
+---
+
 ## Ссылки
 
 - Smoke data: `orchestrator/state/operator_smoke_20260311.md`

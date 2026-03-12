@@ -74,6 +74,7 @@ def apply_overrides(cfg: Config, overrides: dict[str, Any]) -> Config:
         'lock_tracker_min_score': 'LOCK_TRACKER_MIN_SCORE',
         'lock_tracker_search_scale': 'LOCK_TRACKER_SEARCH_SCALE',
         'velocity_alpha': 'VELOCITY_ALPHA',
+        'lock_confirm_frames': 'LOCK_CONFIRM_FRAMES',
         'lock_reacquire_predict_gain': 'LOCK_REACQUIRE_PREDICT_GAIN',
         'lock_reacquire_predict_horizon_max': 'LOCK_REACQUIRE_PREDICT_HORIZON_MAX',
         'lock_mode_acquire_frames': 'LOCK_MODE_ACQUIRE_FRAMES',

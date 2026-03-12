@@ -113,6 +113,28 @@ PYTHONPATH=src python python_scripts/run_quality_gate.py \
     --tag candidate_v1_
 ```
 
+### Problem-clip fast loop
+
+Быстрая проверка на проблемных клипах до/после runtime tuning.
+Pack-файл: `configs/regression_pack_problem.csv` (night + noise + IR hard cases).
+
+```bash
+# Быстрая проверка KPI (180 кадров, night пресет)
+PYTHONPATH=src python python_scripts/run_quick_kpi_smoke.py \
+    --sources test_videos/night_ground_large_drones.mp4,test_videos/night_ground_indicator_lights.mp4,test_videos/IR_DRONE_001.mp4,test_videos/Demo_IR_DRONE_146.mp4 \
+    --preset night --max-frames 180
+
+# Full gate на problem pack (ночные + noise клипы)
+PYTHONPATH=src python python_scripts/run_quality_gate.py \
+    --pack-file configs/regression_pack_problem.csv \
+    --preset night
+
+# Full gate на problem pack (IR клипы)
+PYTHONPATH=src python python_scripts/run_quality_gate.py \
+    --pack-file configs/regression_pack_problem.csv \
+    --preset antiuav_thermal
+```
+
 ### Offline benchmark
 
 ```bash
