@@ -2,8 +2,11 @@
 app/ui/theme.py — Canonical source of truth for the application stylesheet.
 
 All UI theme constants live here. Import APP_STYLESHEET in main_gui.py:
-    from app.ui.theme import APP_STYLESHEET
+    from app.ui.theme import APP_STYLESHEET, SCENARIO_LABELS, refresh_widget_style
 """
+from __future__ import annotations
+
+from PySide6.QtWidgets import QWidget
 
 APP_STYLESHEET = """
 QMainWindow {
@@ -229,3 +232,22 @@ QPushButton[active="true"]:hover {
     background: #4A6B5A;
 }
 """
+
+# Display labels for scenario keys (extracted from main_gui.py TASK-20260312-055)
+SCENARIO_LABELS: dict[str, str] = {
+    'default': 'Дневной (базовый)',
+    'small_target': 'Малые цели',
+    'night': 'Ночной режим',
+    'antiuav_thermal': 'Thermal / Anti-UAV',
+    'rpi_hailo': 'RPi + Hailo',
+    'custom': 'Пользовательский',
+}
+
+
+def refresh_widget_style(widget: QWidget) -> None:
+    """Force Qt to re-evaluate stylesheet dynamic properties on `widget`."""
+    style = widget.style()
+    if style is not None:
+        style.unpolish(widget)
+        style.polish(widget)
+    widget.update()

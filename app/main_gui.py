@@ -44,7 +44,8 @@ from uav_tracker.modes import RUNTIME_MODES, apply_runtime_mode
 from uav_tracker.pipeline import TrackerPipeline, VideoSession, apply_runtime_preset, parse_video_source
 from uav_tracker.profile_io import apply_overrides, available_presets, load_preset, load_profile, save_profile
 from app.ui import UIState, UIStateMachine, VideoStage
-from app.ui.theme import APP_STYLESHEET
+from app.ui.theme import APP_STYLESHEET, SCENARIO_LABELS, refresh_widget_style
+from app.ui.cards import build_inspector_card, build_target_info_card
 
 # Canonical operator modes: shown as quick-access buttons in the left rail.
 # Mapping: label → (preset_key, night_enabled_override)
@@ -55,16 +56,6 @@ CANONICAL_OPERATOR_MODES: dict[str, tuple[str, bool | None]] = {
     'night': ('night', None),     # night preset (force operator display mode)
     'ir':    ('antiuav_thermal', None),  # thermal / anti-UAV preset
 }
-
-SCENARIO_LABELS = {
-    'default': 'Дневной (базовый)',
-    'small_target': 'Малые цели',
-    'night': 'Ночной режим',
-    'antiuav_thermal': 'Thermal / Anti-UAV',
-    'rpi_hailo': 'RPi + Hailo',
-    'custom': 'Пользовательский',
-}
-
 
 class TrackerWorker(QThread):
     frame_ready = Signal(object)
@@ -444,41 +435,10 @@ class MainWindow(QMainWindow):
     def build_video_stage(self) -> QWidget:
         self.video_stage = VideoStage()
         self.video_label = self.video_stage.surface
-        self.target_info_card = self._build_target_info_card()
+        (self.target_info_card, self._tc_id, self._tc_conf,
+         self._tc_fps, self._tc_time, self._tc_state) = build_target_info_card()
         self.video_stage.add_overlay_top_right(self.target_info_card)
         return self.video_stage
-
-    def _build_target_info_card(self) -> QFrame:
-        from PySide6.QtWidgets import QGridLayout
-        card = QFrame()
-        card.setObjectName('TargetInfoCard')
-        card.setMinimumWidth(170)
-        grid = QGridLayout(card)
-        grid.setContentsMargins(10, 8, 10, 8)
-        grid.setSpacing(3)
-
-        def _row(label_text: str):
-            lbl = QLabel(label_text)
-            lbl.setObjectName('TargetCardRow')
-            val = QLabel('—')
-            val.setObjectName('TargetCardRow')
-            return lbl, val
-
-        lbl_id, self._tc_id = _row('Цель')
-        lbl_conf, self._tc_conf = _row('Уверенность')
-        lbl_fps, self._tc_fps = _row('FPS')
-        lbl_time, self._tc_time = _row('На цели')
-
-        self._tc_state = QLabel('IDLE')
-        self._tc_state.setObjectName('TargetCardState')
-        self._tc_state.setProperty('state', 'idle')
-
-        for row_i, (lbl, val) in enumerate([(lbl_id, self._tc_id), (lbl_conf, self._tc_conf),
-                                             (lbl_fps, self._tc_fps), (lbl_time, self._tc_time)]):
-            grid.addWidget(lbl, row_i, 0)
-            grid.addWidget(val, row_i, 1)
-        grid.addWidget(self._tc_state, 4, 0, 1, 2)
-        return card
 
     def build_bottom_console(self) -> QFrame:
         bar = QFrame()
@@ -495,21 +455,6 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.bottom_console_label, 1)
         return bar
 
-    def _build_inspector_card(self, title: str) -> tuple[QFrame, QLabel]:
-        card = QFrame()
-        card.setObjectName('InspectorCard')
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(4)
-        header = QLabel(title)
-        header.setObjectName('InspectorTitle')
-        layout.addWidget(header)
-        value = QLabel('-')
-        value.setObjectName('InspectorValue')
-        value.setWordWrap(True)
-        layout.addWidget(value)
-        return card, value
-
     def build_inspector_drawer(self) -> QWidget:
         body = QGroupBox('Диагностика')
         body.setObjectName('InspectorModule')
@@ -517,11 +462,11 @@ class MainWindow(QMainWindow):
         body_layout.setContentsMargins(8, 8, 8, 8)
         body_layout.setSpacing(8)
 
-        target_card, self.panel_target_summary = self._build_inspector_card('Цель')
-        quality_card, self.panel_quality_summary = self._build_inspector_card('Качество')
-        runtime_card, self.panel_monitoring_summary = self._build_inspector_card('Runtime health')
-        params_card, self.panel_params_summary = self._build_inspector_card('Параметры')
-        eval_card, self.eval_summary_label = self._build_inspector_card('Оценка')
+        target_card, self.panel_target_summary = build_inspector_card('Цель')
+        quality_card, self.panel_quality_summary = build_inspector_card('Качество')
+        runtime_card, self.panel_monitoring_summary = build_inspector_card('Runtime health')
+        params_card, self.panel_params_summary = build_inspector_card('Параметры')
+        eval_card, self.eval_summary_label = build_inspector_card('Оценка')
         self.eval_summary_hint = QLabel('-')
         self.eval_summary_hint.setObjectName('InspectorValue')
         eval_card.layout().addWidget(self.eval_summary_hint)
@@ -662,7 +607,7 @@ class MainWindow(QMainWindow):
     def _on_expert_dialog_closed(self):
         self.expert_badge.setVisible(False)
         self.expert_btn.setProperty('variant', 'ghost')
-        self._refresh_widget_style(self.expert_btn)
+        refresh_widget_style(self.expert_btn)
 
     def _hide_expert_dialog(self):
         self.expert_dialog.hide()
@@ -795,13 +740,6 @@ class MainWindow(QMainWindow):
             self._toggle_expert_mode()
             return
 
-    def _refresh_widget_style(self, widget: QWidget):
-        style = widget.style()
-        if style is not None:
-            style.unpolish(widget)
-            style.polish(widget)
-        widget.update()
-
     def _refresh_header_state(self):
         scenario_key = str(self.scenario_combo.currentData() or 'custom')
         scenario_label = SCENARIO_LABELS.get(scenario_key, scenario_key)
@@ -835,7 +773,7 @@ class MainWindow(QMainWindow):
         state_text, state_name = state_map.get(self._state_machine.state, ('IDLE', 'idle'))
         self.top_state_badge.setText(state_text)
         self.top_state_badge.setProperty('state', state_name)
-        self._refresh_widget_style(self.top_state_badge)
+        refresh_widget_style(self.top_state_badge)
 
         readable_state = {
             UIState.IDLE: 'Ожидание',
@@ -858,7 +796,7 @@ class MainWindow(QMainWindow):
         else:
             self.record_indicator_label.setText('REC OFF')
         self.record_indicator_label.setProperty('recording', recording)
-        self._refresh_widget_style(self.record_indicator_label)
+        refresh_widget_style(self.record_indicator_label)
 
         self.panel_params_summary.setText(
             'Сценарий: '
@@ -966,7 +904,7 @@ class MainWindow(QMainWindow):
         self.expert_dialog.activateWindow()
         self.expert_badge.setVisible(True)
         self.expert_btn.setProperty('variant', 'primary')
-        self._refresh_widget_style(self.expert_btn)
+        refresh_widget_style(self.expert_btn)
 
     def _request_next_target(self) -> None:
         if self.worker is not None and self._job_state == 'tracking':
@@ -1025,7 +963,7 @@ class MainWindow(QMainWindow):
         }
         for key, btn in mode_btns.items():
             btn.setProperty('active', key == mode_key)
-            self._refresh_widget_style(btn)
+            refresh_widget_style(btn)
 
     def _apply_scenario_preset(self, preset_key: str):
         cfg, data = load_preset(preset_key, Config())
@@ -1548,7 +1486,7 @@ class MainWindow(QMainWindow):
         self._tc_time.setText(elapsed_str)
         self._tc_state.setText(card_state)
         self._tc_state.setProperty('state', card_state_key)
-        self._refresh_widget_style(self._tc_state)
+        refresh_widget_style(self._tc_state)
         # Enable/disable Next Target button
         self.next_target_btn.setEnabled(self._job_state == 'tracking' and target_count > 1)
 
