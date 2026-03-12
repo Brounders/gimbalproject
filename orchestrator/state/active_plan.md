@@ -1,21 +1,22 @@
 # Active Plan
 
 ## Plan ID
-- AP-20260312-010
+- AP-20260312-011
 
 ## Source Direction
-- Human direction: run a full project audit from idea to implementation across architecture, execution, and filesystem structure.
-- Time budget: up to 4 hours of analysis.
-- This cycle is analysis-only and must end with a prioritized evolution plan.
+- Human direction: apply the next rational steps after the first successful RTX -> GitHub -> Mac conveyor smoke-run.
+- Scope: fix conveyor metadata defects and restore reliable aggregate quality-gate before enabling scheduled automation.
 
 ## Status
-- Completed
+- Active
 
 ## Brief In Focus
-- BRIEF-20260312-013-project-audit-4h
+- BRIEF-20260312-014-conveyor-hardening-after-smoke
 
 ## Active Claude Tasks (execution allowed now)
-- (none)
+- TASK-20260312-033 | dataset scene profile fix | Open
+- TASK-20260312-034 | broken dataset blocking | Open
+- TASK-20260312-035 | quality-gate aggregate fix | Open
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
@@ -24,6 +25,6 @@
 - Любые задачи вне списков выше считаются backlog и не исполняются.
 
 ## Exit Criteria
-- One primary audit report exists with evidence-based findings.
-- The report covers architecture, execution workflows, and filesystem structure.
-- Findings are prioritized and converted into a practical roadmap.
+- Dataset registry no longer misclassifies `drone-bird-yolo` as `ir`.
+- Broken datasets are blocked instead of being queued for training.
+- Full regression pack quality-gate produces reliable aggregate artifacts for candidate intake.

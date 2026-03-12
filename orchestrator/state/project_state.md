@@ -101,3 +101,16 @@
   - audit cycle is closed;
   - no active Claude or RTX tasks remain;
   - next implementation cycle must be opened explicitly from the audit roadmap.
+
+## Latest Approved Direction
+- Date: 2026-03-12
+- Human approved the next rational steps after the first successful RTX conveyor smoke-run.
+- Locked facts:
+  - RTX -> GitHub Release -> Mac intake flow works end-to-end;
+  - first candidate chunk for `drone-bird-yolo` remains `hold_and_tune`, not promoted;
+  - current blockers are conveyor metadata correctness and quality-gate aggregate completeness, not artifact delivery.
+- Active hardening context:
+  - `BRIEF-20260312-014-conveyor-hardening-after-smoke`
+  - `TASK-20260312-033`
+  - `TASK-20260312-034`
+  - `TASK-20260312-035`
