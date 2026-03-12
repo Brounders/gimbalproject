@@ -1,6 +1,6 @@
 name: night
 runtime_mode: research
-model_path: runs/detect/runs/drone_bird_probe_fast/weights/best.pt
+model_path: models/baseline.pt
 device: mps
 imgsz: 960
 conf_thresh: 0.12

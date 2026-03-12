@@ -187,14 +187,46 @@ PYTHONPATH=src python -m unittest -q tests.test_target_manager_lock_policy tests
 
 ---
 
+## Baseline model
+
+Стабильный локальный production path модели:
+
+```
+models/baseline.pt
+```
+
+Все operator-пресеты (`default`, `night`, `small_target`, `antiuav_thermal`) ссылаются на этот файл.
+
+### Как обновить baseline
+
+1. Принять candidate-модель (после прохождения quality gate).
+2. Скопировать принятый `.pt` в стабильный path:
+   ```bash
+   cp <path_to_accepted_candidate.pt> models/baseline.pt
+   ```
+3. Закоммитить обновление (или задокументировать hash) в orchestrator-отчёт.
+
+> `models/baseline.pt` — не создаётся автоматически при клонировании репозитория.
+> При первом развёртывании скопируйте актуальную принятую модель вручную.
+
+---
+
 ## Non-canonical скрипты (legacy)
 
-Следующие скрипты используются разово для вспомогательных задач:
+Ранние прототипы и вспомогательные инструменты перемещены в `legacy/`:
+
+| Файл | Описание |
+|------|----------|
+| `legacy/benchmark.py` | M1 matmul + YOLO performance benchmark |
+| `legacy/real_tracker.py` | Ранний прототип camera tracker |
+| `legacy/train_script.py` | Ранний training harness |
+
+Эти файлы не входят в operator workflow. Подробности: [legacy/README.md](legacy/README.md)
+
+Вспомогательные `python_scripts/` (не canonical, но актуальные):
 
 - `python_scripts/run_backend_parity.py` — сравнение backend-выходов
 - `python_scripts/run_dataset_batch.py` — пакетная обработка датасетов
-
-Эти скрипты не входят в стандартный operator workflow.
 
 ---
 
