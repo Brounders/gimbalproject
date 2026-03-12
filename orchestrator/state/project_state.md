@@ -166,3 +166,16 @@
   - local product integrity cycle is closed;
   - no active Claude or RTX tasks remain;
   - next cycle can move to either dependency/reproducibility work or deeper architecture refactor.
+
+## Latest Approved Direction
+- Date: 2026-03-12
+- Human approved the next implementation cycle from audit findings with local desktop product priority preserved.
+- Locked scope:
+  - phase 1 only: local reproducibility and quality discipline;
+  - no deep refactor of `pipeline.py` / `main_gui.py` in this cycle;
+  - no expansion of temporary RTX/GitHub/web infrastructure as product architecture.
+- Active context:
+  - `BRIEF-20260312-016-local-reproducibility-and-quality-v1`
+  - `TASK-20260312-046`
+  - `TASK-20260312-047`
+  - `TASK-20260312-048`

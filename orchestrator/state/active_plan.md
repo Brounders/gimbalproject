@@ -1,20 +1,22 @@
 # Active Plan
 
 ## Plan ID
-- AP-20260312-012
+- AP-20260312-013
 
 ## Source Direction
-- Human direction: build the next implementation cycle from audit findings, but prioritize the local desktop product over temporary RTX/GitHub/web infrastructure.
-- Scope: local product integrity only — theme source of truth, stable local baseline model path, and root/entrypoint cleanup.
+- Human direction: continue executing the audit fixes, but prioritize the local desktop product over temporary RTX/GitHub/web infrastructure.
+- Scope: local reproducibility and quality discipline only — dependency contract, preset-specific regression packs, and canonical local quality-gate flow.
 
 ## Status
-- Completed
+- Active
 
 ## Brief In Focus
-- BRIEF-20260312-015-local-product-integrity-v1
+- BRIEF-20260312-016-local-reproducibility-and-quality-v1
 
 ## Active Claude Tasks (execution allowed now)
-- (none)
+- TASK-20260312-046 | dependency lock and bootstrap | Open
+- TASK-20260312-047 | preset-specific regression packs | Open
+- TASK-20260312-048 | minimal local quality-gate contract | Open
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
@@ -23,6 +25,6 @@
 - Любые задачи вне списков выше считаются backlog и не исполняются.
 
 ## Exit Criteria
-- [x] UI theme has one explicit maintained source of truth. (`app/ui/theme.py`)
-- [x] Canonical local presets no longer depend on `runs/.../best.pt` as production model paths. (`models/baseline.pt`)
-- [x] Repository root exposes only clear local launch paths for the desktop product. (`legacy/` created)
+- [ ] Local bootstrap no longer depends on implicit `tracker_env` state.
+- [ ] Regression/evaluation assets are split by `day`, `night`, and `ir` scenarios.
+- [ ] Local `quick smoke -> benchmark -> quality-gate` flow is canonical and documented.
