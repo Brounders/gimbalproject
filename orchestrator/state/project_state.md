@@ -134,3 +134,14 @@
   - conveyor metadata hardening cycle is closed;
   - aggregate quality-gate output is deterministic under clip-level failure;
   - no active Claude or RTX tasks remain.
+
+## Latest Approved Direction
+- Date: 2026-03-12
+- Human approved the next implementation cycle derived from audit `032`, with one critical priority rule:
+  - the final product is a local desktop program;
+  - RTX/GitHub/web infrastructure is temporary and must not become the architectural center.
+- Active local-product-integrity context:
+  - `BRIEF-20260312-015-local-product-integrity-v1`
+  - `TASK-20260312-043`
+  - `TASK-20260312-044`
+  - `TASK-20260312-045`
