@@ -336,3 +336,17 @@
   - local quality enforcement cycle is closed;
   - no active Claude or RTX tasks remain;
   - the next cycle can move to deeper GUI refactor, tighter runtime quality tuning, or another explicitly approved audit follow-up.
+
+## Latest Approved Direction
+- Date: 2026-03-12
+- Human approved the next implementation cycle after local quality enforcement.
+- Locked scope:
+  - runtime-quality hardening only;
+  - no new training cycle;
+  - no deeper architecture refactor in this cycle;
+  - keep the local desktop product and operator usefulness as the center of the work.
+- Active context:
+  - `BRIEF-20260312-021-runtime-quality-hardening-v1`
+  - `TASK-20260312-061`
+  - `TASK-20260312-062`
+  - `TASK-20260312-063`
