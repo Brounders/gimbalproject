@@ -1,20 +1,22 @@
 # Active Plan
 
 ## Plan ID
-- AP-20260312-020
+- AP-20260312-021
 
 ## Source Direction
-- Human direction: move to the next stage after runtime hardening stage-2.
-- Scope: runtime hardening stage-3 only — narrow the remaining night/noise problem, fix `night_ground_large_drones` stability, and turn the problem pack into a threshold-based mini-gate.
+- Human direction: implement the next stage after runtime hardening stage-3.
+- Scope: runtime hardening stage-4 only — tighten night/noise runtime behavior for the two worst problem scenes, and turn the problem-pack mini-gate into a real short acceptance barrier.
 
 ## Status
-- Completed
+- Active
 
 ## Brief In Focus
-- BRIEF-20260312-023-runtime-hardening-stage3-v1
+- BRIEF-20260312-024-runtime-hardening-stage4-v1
 
 ## Active Claude Tasks (execution allowed now)
-- (none)
+- TASK-20260312-070 | indicator lights noise gating | Open
+- TASK-20260312-071 | large drones night stability fix | Open
+- TASK-20260312-072 | problem-pack mini-gate enforcement | Open
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
@@ -23,6 +25,6 @@
 - Любые задачи вне списков выше считаются backlog и не исполняются.
 
 ## Exit Criteria
-- [x] noise-like night scenes are handled more narrowly than generic night behavior
-- [x] `night_ground_large_drones` no longer shows runaway instability in the short smoke loop
-- [x] the problem pack has one explicit threshold-based mini-gate for future runtime cycles
+- [ ] `night_ground_indicator_lights` is more tightly bounded in the short problem-pack loop
+- [ ] `night_ground_large_drones` no longer shows runaway `id_changes/min` behavior in the short loop
+- [ ] the problem-pack mini-gate acts as a real short acceptance barrier for future runtime cycles

@@ -448,3 +448,17 @@
   - runtime hardening stage-3 cycle is closed
   - no active Claude or RTX tasks remain
   - the next cycle should target a narrower night/noise runtime fix or shift to another explicitly approved product phase
+
+## Latest Approved Direction
+- Date: 2026-03-12
+- Human approved the next implementation cycle after runtime hardening stage-3.
+- Locked scope:
+  - runtime hardening stage-4 only;
+  - no new training cycle;
+  - no new GUI/pipeline refactor;
+  - keep the local desktop product and operator usefulness as the center of the work.
+- Active context:
+  - `BRIEF-20260312-024-runtime-hardening-stage4-v1`
+  - `TASK-20260312-070`
+  - `TASK-20260312-071`
+  - `TASK-20260312-072`
