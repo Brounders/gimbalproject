@@ -200,3 +200,16 @@
   - local reproducibility and quality-discipline phase 1 is closed;
   - no active Claude or RTX tasks remain;
   - the next cycle can move either to deeper architecture refactor or to tighter local baseline/quality enforcement.
+
+## Latest Approved Direction
+- Date: 2026-03-12
+- Human approved the next implementation cycle after local reproducibility work.
+- Locked scope:
+  - baseline governance before deep architecture refactor;
+  - keep local desktop product as the center;
+  - do not expand temporary RTX/GitHub/web infrastructure as the product core.
+- Active context:
+  - `BRIEF-20260312-017-local-baseline-governance-v1`
+  - `TASK-20260312-049`
+  - `TASK-20260312-050`
+  - `TASK-20260312-051`
