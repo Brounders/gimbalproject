@@ -96,7 +96,22 @@ PYTHONPATH=src python python_scripts/run_quality_gate.py \
     --pack-file configs/regression_pack_ir.csv --preset antiuav_thermal
 ```
 
-Exit code: `0` = PASS, `1` = FAIL, `2` = config error.
+Exit code: `0` = PASS, `4` = FAIL, `2` = config error.
+
+#### Канонический запуск по контексту
+
+```bash
+# Авто-выбор pack-file и preset по контексту сценария:
+PYTHONPATH=src python python_scripts/run_quality_gate.py --context day
+PYTHONPATH=src python python_scripts/run_quality_gate.py --context night
+PYTHONPATH=src python python_scripts/run_quality_gate.py --context ir
+
+# С кандидатом и baseline comparison:
+PYTHONPATH=src python python_scripts/run_quality_gate.py \
+    --context night --model <candidate.pt> \
+    --baseline runs/evaluations/quality_gate/baseline_quality_gate_night.json \
+    --tag candidate_v1_
+```
 
 ### Offline benchmark
 
@@ -122,8 +137,13 @@ PYTHONPATH=src python python_scripts/run_scenario_sweep.py --help
 |-----|---------|---------------|------|
 | **1. Quick smoke** | `run_quick_kpi_smoke.py` | FPS, id_changes, false_lock_rate на 1-2 клипах | FPS > 8, без краша |
 | **2. Benchmark** | `run_offline_benchmark.py` | Полная прогонка по сценарию | Метрики в пределах baseline |
-| **3. Quality gate** | `run_quality_gate.py` | Deterministic pack, exit code | Exit 0 |
-| **4. Decision** | ручное сравнение | Сравнить с `OPERATOR_BASELINE.md` | Нет регресса по ключевым KPI |
+| **3a. Gate day** | `run_quality_gate.py --context day` | Дневные клипы, preset=default | Exit 0 |
+| **3b. Gate night** | `run_quality_gate.py --context night` | Ночные клипы, preset=night | Exit 0 |
+| **3c. Gate ir** | `run_quality_gate.py --context ir` | IR/thermal клипы, preset=antiuav_thermal | Exit 0 |
+| **4. Decision** | результаты всех трёх gate | Все три context-gate PASS | promote |
+
+> **Правило promote:** ВСЕ три context-gate (day + night + ir) должны вернуть exit 0.
+> Если хотя бы один — FAIL: `hold_and_tune` или `reject`. См. [models/README.md](models/README.md).
 
 ```bash
 source tracker_env/bin/activate
@@ -137,10 +157,12 @@ PYTHONPATH=src python python_scripts/run_quick_kpi_smoke.py \
 PYTHONPATH=src python python_scripts/run_offline_benchmark.py \
     --source-list configs/regression_pack_night.csv --preset night
 
-# Шаг 3: Quality gate (полный pack)
-PYTHONPATH=src python python_scripts/run_quality_gate.py
+# Шаги 3a-3c: Quality gate по контекстам
+PYTHONPATH=src python python_scripts/run_quality_gate.py --context day
+PYTHONPATH=src python python_scripts/run_quality_gate.py --context night
+PYTHONPATH=src python python_scripts/run_quality_gate.py --context ir
 
-# Шаг 4: Сравнить результат с OPERATOR_BASELINE.md
+# Шаг 4: Все три exit 0 → promote через install_baseline.py
 ```
 
 > Для candidate-модели добавить `--model <path>` в шаги 1-3.
@@ -148,31 +170,65 @@ PYTHONPATH=src python python_scripts/run_quality_gate.py
 
 ### Decision artifact standard
 
-**Canonical output:** `runs/evaluations/quality_gate/<tag>_quality_gate_<preset>.json`
+**Canonical output (per context):**
 
-Задать тег через `--tag` при запуске gate:
+| Context | Output JSON |
+|---------|-------------|
+| day | `runs/evaluations/quality_gate/<tag>quality_gate_default.json` |
+| night | `runs/evaluations/quality_gate/<tag>quality_gate_night.json` |
+| ir | `runs/evaluations/quality_gate/<tag>quality_gate_antiuav_thermal.json` |
+
+Задать тег через `--tag`:
 ```bash
-# Именование: baseline_YYYYMMDD или candidate_vN
-PYTHONPATH=src python python_scripts/run_quality_gate.py \
-    --preset night --tag candidate_v1_20260312
+# Именование: baseline_YYYYMMDD или candidate_vN_YYYYMMDD
+PYTHONPATH=src python python_scripts/run_quality_gate.py --context night --tag candidate_v1_20260312_
 ```
 
-**Ключевые поля JSON:**
+**Ключевые поля JSON (`report_type: "quality_gate"`):**
 
 | Поле | Тип | Значение |
 |------|-----|----------|
-| `gate_passed` | bool | `true` = PASS (accept), `false` = FAIL |
+| `report_type` | str | `"quality_gate"` |
+| `context` | str | `"day"` \| `"night"` \| `"ir"` \| `""` |
+| `gate_passed` | bool | `true` = PASS, `false` = FAIL |
 | `failures` | list[str] | Список источник: fail_reasons |
 | `mean` | dict | Агрегированные метрики по всем клипам |
 | `rows[].passed` | bool | Результат по каждому клипу |
 | `rows[].fail_reasons` | str | Конкретные нарушения threshold |
 
-**Правило принятия решения:**
-- `gate_passed = true` → candidate принята → install via `install_baseline.py --gate-report <json>`
-- `gate_passed = false`, нарушения tunable → `hold_and_tune`
-- `gate_passed = false`, регресс за границы tolerance → `reject`
+**Правило принятия решения (promote):**
+- ВСЕ три context-gate (`day` + `night` + `ir`) `gate_passed = true` → promote
+- Любой FAIL, нарушения tunable → `hold_and_tune`
+- Любой FAIL, регресс за границы tolerance → `reject`
+
+**Install (promote):**
+```bash
+PYTHONPATH=src python python_scripts/install_baseline.py \
+    --source <accepted_candidate.pt> \
+    --notes "Accepted YYYYMMDD: <description>" \
+    --gate-report runs/evaluations/quality_gate/<tag>quality_gate_night.json \
+    --preset-gates "day=runs/evaluations/quality_gate/<tag>quality_gate_default.json,night=runs/evaluations/quality_gate/<tag>quality_gate_night.json,ir=runs/evaluations/quality_gate/<tag>quality_gate_antiuav_thermal.json"
+```
 
 States и governance: [models/README.md](models/README.md)
+
+### Canonical summary contract
+
+Все benchmark/gate JSON содержат поле `report_type` для различения:
+
+| Поле | Quality Gate JSON | Benchmark JSON |
+|------|------------------|----------------|
+| `report_type` | `"quality_gate"` | `"benchmark"` |
+| `gate_passed` | bool | — |
+| `context` | `"day"`/`"night"`/`"ir"`/`""` | — |
+| `tag` | — | string |
+| `preset` | string | string |
+| `mean` | dict (avg metrics) | dict (avg metrics) |
+| `rows` | list | list |
+| `failures` | list[str] | — |
+
+**Правило:** канонический decision artifact = `quality_gate_<preset>.json`.
+Benchmark JSON используется для exploratory evaluation, не для промоушена.
 
 ---
 

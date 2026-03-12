@@ -30,6 +30,20 @@ BASELINE_PT = MODELS_DIR / "baseline.pt"
 MANIFEST_PATH = MODELS_DIR / "baseline_manifest.json"
 
 
+def _parse_preset_gates(spec: str) -> dict[str, str]:
+    """Parse 'day=path1,night=path2,ir=path3' → {'day': 'path1', ...}."""
+    result: dict[str, str] = {}
+    for part in spec.split(","):
+        part = part.strip()
+        if "=" in part:
+            key, _, val = part.partition("=")
+            key = key.strip()
+            val = val.strip()
+            if key and val:
+                result[key] = val
+    return result
+
+
 def _sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -55,6 +69,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Print manifest without copying files.",
     )
+    p.add_argument(
+        "--preset-gates",
+        type=str,
+        default="",
+        help=(
+            "Comma-separated preset-specific gate report paths for traceability. "
+            "Format: day=<path>,night=<path>,ir=<path>. "
+            "Stored in manifest as preset_gate_reports dict."
+        ),
+    )
     return p.parse_args()
 
 
@@ -78,6 +102,7 @@ def main() -> None:
         "source_sha256": _sha256(src),
         "notes": args.notes,
         "gate_report_path": gate_report_path,
+        "preset_gate_reports": _parse_preset_gates(args.preset_gates),
     }
 
     if args.dry_run:

@@ -182,7 +182,9 @@ def main() -> int:
         )
 
     overall = {
+        "report_type": "benchmark",
         "generated_at_utc": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "tag": args.tag,
         "preset": args.preset,
         "runtime_mode": cfg.RUNTIME_MODE,
         "device": cfg.DEVICE,

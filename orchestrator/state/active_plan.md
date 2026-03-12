@@ -8,15 +8,15 @@
 - Scope: local quality enforcement only — make preset-specific gate usage explicit, harden local baseline/candidate decision flow, and normalize local benchmark/quality summary artifacts.
 
 ## Status
-- Active
+- Done
 
 ## Brief In Focus
 - BRIEF-20260312-020-local-quality-enforcement-v1
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260312-058 | preset gate enforcement | Open
-- TASK-20260312-059 | baseline candidate decision hardening | Open
-- TASK-20260312-060 | quality report normalization | Open
+- TASK-20260312-058 | preset gate enforcement | Done
+- TASK-20260312-059 | baseline candidate decision hardening | Done
+- TASK-20260312-060 | quality report normalization | Done
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
@@ -25,6 +25,6 @@
 - Любые задачи вне списков выше считаются backlog и не исполняются.
 
 ## Exit Criteria
-- [ ] preset-specific gate contexts for `day`, `night`, and `ir` are explicit in the local quality flow
-- [ ] local baseline/candidate decision flow is tied to preset-specific evidence and install traceability
-- [ ] benchmark and quality-gate outputs converge on one canonical local summary artifact contract
+- [x] preset-specific gate contexts for `day`, `night`, and `ir` are explicit in the local quality flow
+- [x] local baseline/candidate decision flow is tied to preset-specific evidence and install traceability
+- [x] benchmark and quality-gate outputs converge on one canonical local summary artifact contract

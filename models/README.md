@@ -19,9 +19,16 @@
 
 ```
 candidate
-  ├── quality gate PASS  →  baseline  (install via install_baseline.py)
-  ├── quality gate FAIL, метрики tunable  →  hold_and_tune
-  └── quality gate FAIL, регресс за границы tolerance  →  reject
+  ├── ВСЕ три context-gate PASS (day + night + ir)  →  baseline  (install via install_baseline.py)
+  ├── любой context-gate FAIL, метрики tunable      →  hold_and_tune
+  └── любой context-gate FAIL, регресс за tolerance →  reject
+```
+
+Context-gate команды:
+```bash
+python_scripts/run_quality_gate.py --context day    # preset=default
+python_scripts/run_quality_gate.py --context night  # preset=night
+python_scripts/run_quality_gate.py --context ir     # preset=antiuav_thermal
 ```
 
 Quality gate thresholds: `python_scripts/run_quality_gate.py --help`
@@ -43,8 +50,13 @@ Operator tolerance boundaries: `OPERATOR_BASELINE.md → Граница baseline
   "installed_at": "2026-03-12T00:00:00Z",
   "source_path": "/absolute/path/to/accepted_candidate.pt",
   "source_sha256": "abc123...",
-  "notes": "Accepted after gate on regression_pack_night.csv",
-  "gate_report_path": "/absolute/path/to/runs/evaluations/quality_gate/<tag>_quality_gate_<preset>.json"
+  "notes": "Accepted after gate on all context-gates",
+  "gate_report_path": "/absolute/path/to/runs/evaluations/quality_gate/<tag>quality_gate_night.json",
+  "preset_gate_reports": {
+    "day":   "/absolute/path/to/runs/evaluations/quality_gate/<tag>quality_gate_default.json",
+    "night": "/absolute/path/to/runs/evaluations/quality_gate/<tag>quality_gate_night.json",
+    "ir":    "/absolute/path/to/runs/evaluations/quality_gate/<tag>quality_gate_antiuav_thermal.json"
+  }
 }
 ```
 

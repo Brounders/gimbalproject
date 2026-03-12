@@ -51,6 +51,19 @@ def parse_args() -> argparse.Namespace:
 
     p.add_argument("--out-dir", type=Path, default=Path("runs/evaluations/quality_gate"))
     p.add_argument("--tag", type=str, default="")
+    p.add_argument(
+        "--context",
+        type=str,
+        default="",
+        choices=["day", "night", "ir"],
+        help=(
+            "Preset context shorthand: auto-selects --pack-file and --preset. "
+            "day=default+regression_pack_day.csv, "
+            "night=night+regression_pack_night.csv, "
+            "ir=antiuav_thermal+regression_pack_ir.csv. "
+            "Overrides --preset and --pack-file when specified."
+        ),
+    )
     return p.parse_args()
 
 
@@ -152,8 +165,18 @@ def _find_baseline_row(mapping: dict[str, dict[str, Any]], source: str) -> dict[
     return mapping.get(source) or mapping.get(Path(source).name) or mapping.get(Path(source).stem)
 
 
+_CONTEXT_MAP: dict[str, tuple[str, Path]] = {
+    "day":   ("default",         Path("configs/regression_pack_day.csv")),
+    "night": ("night",           Path("configs/regression_pack_night.csv")),
+    "ir":    ("antiuav_thermal", Path("configs/regression_pack_ir.csv")),
+}
+
+
 def main() -> int:
     args = parse_args()
+
+    if args.context:
+        args.preset, args.pack_file = _CONTEXT_MAP[args.context]
 
     if args.preset not in set(available_presets()):
         print(f"[error] Unknown preset: {args.preset}")
@@ -298,9 +321,11 @@ def main() -> int:
 
     passed = len(failures) == 0
     summary = {
+        "report_type": "quality_gate",
         "generated_at_utc": datetime.utcnow().isoformat(timespec="seconds") + "Z",
         "pack_file": str(args.pack_file),
         "preset": args.preset,
+        "context": args.context if args.context else "",
         "runtime_mode": cfg.RUNTIME_MODE,
         "device": cfg.DEVICE,
         "imgsz": cfg.IMG_SIZE,
