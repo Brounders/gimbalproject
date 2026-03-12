@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-058
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Сделать preset-specific gate обязательным и однозначным: `day`, `night`, `ir` должны оцениваться как отдельные quality contexts, а не прятаться внутри одного aggregate.

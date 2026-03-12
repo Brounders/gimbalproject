@@ -315,3 +315,24 @@
   - `TASK-20260312-058`
   - `TASK-20260312-059`
   - `TASK-20260312-060`
+
+## Latest Control Loop
+- Date: 2026-03-12
+- Reviewed Claude reports:
+  - `REPORT-20260312-058` -> Accepted
+  - `REPORT-20260312-059` -> Accepted
+  - `REPORT-20260312-060` -> Accepted
+- Accepted tasks this loop:
+  - `TASK-20260312-058`
+  - `TASK-20260312-059`
+  - `TASK-20260312-060`
+- Reviewer validation summary:
+  - `run_quality_gate.py` now supports explicit `--context day|night|ir` routing to preset-specific regression packs
+  - `install_baseline.py` now accepts `--preset-gates` and writes preset-specific gate traceability into the baseline manifest
+  - `run_offline_benchmark.py` and `run_quality_gate.py` now expose a clearer local summary contract via explicit report metadata
+- Reviewer note:
+  - Claude again left `active_plan.md`, `open_tasks.md`, and task statuses unsynchronized; reviewer normalized orchestration state during acceptance
+- Outcome:
+  - local quality enforcement cycle is closed;
+  - no active Claude or RTX tasks remain;
+  - the next cycle can move to deeper GUI refactor, tighter runtime quality tuning, or another explicitly approved audit follow-up.

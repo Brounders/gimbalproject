@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-059
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Сделать локальное решение `promote / hold_and_tune / reject` более жестким и менее зависимым от ручной трактовки за счет явного decision flow, привязанного к preset-specific quality evidence.

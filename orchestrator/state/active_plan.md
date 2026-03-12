@@ -8,15 +8,13 @@
 - Scope: local quality enforcement only — make preset-specific gate usage explicit, harden local baseline/candidate decision flow, and normalize local benchmark/quality summary artifacts.
 
 ## Status
-- Done
+- Completed
 
 ## Brief In Focus
 - BRIEF-20260312-020-local-quality-enforcement-v1
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260312-058 | preset gate enforcement | Done
-- TASK-20260312-059 | baseline candidate decision hardening | Done
-- TASK-20260312-060 | quality report normalization | Done
+- (none)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)

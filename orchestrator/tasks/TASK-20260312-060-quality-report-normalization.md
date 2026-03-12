@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-060
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Привести benchmark/gate outputs к одному каноническому локальному формату, чтобы baseline vs candidate comparison был проще, а ручная сборка итогов сокращалась.
