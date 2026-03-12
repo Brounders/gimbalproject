@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-032
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Провести полный инженерный аудит проекта GimbalProject с бюджетом времени до 4 часов и выдать рабочий план дальнейшей эволюции на основе фактов из кода, workflow и файловой системы.
