@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-03-12T09:44:15Z",
+  "updated_at": "2026-03-12T10:40:29Z",
   "entries": [
     {
       "dataset_id": "drone-bird-yolo",
@@ -9,14 +9,14 @@
       "scene_profile": "ir",
       "class_profile": "drone_bird",
       "epoch_budget_total": 144,
-      "epochs_done_total": 72,
+      "epochs_done_total": 84,
       "base_checkpoint": "C:/Users/PC/GimbalProject/runs/detect/runs/curriculum_drone-bird-yolo/weights/best.pt",
       "last_checkpoint": "C:/Users/PC/GimbalProject/runs/detect/runs/curriculum_drone-bird-yolo/weights/best.pt",
       "last_run_name": "curriculum_drone-bird-yolo",
-      "last_artifact_id": "curriculum_drone-bird-yolo_20260312_114816_chunk5",
+      "last_artifact_id": "curriculum_drone-bird-yolo_20260312_124515_chunk6",
       "status": "published",
       "last_decision": null,
-      "updated_at": "2026-03-12T09:44:15Z",
+      "updated_at": "2026-03-12T10:40:29Z",
       "notes": ""
     }
   ]
