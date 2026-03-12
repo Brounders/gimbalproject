@@ -8,15 +8,13 @@
 - Scope: runtime hardening stage-2 only — tighten noise-scene lock gating, harden reacquire/short-gap hold behavior, and introduce one canonical A/B evidence loop on the problem clips.
 
 ## Status
-- Done
+- Completed
 
 ## Brief In Focus
 - BRIEF-20260312-022-runtime-hardening-stage2-v1
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260312-064 | noise-scene lock gating | Done
-- TASK-20260312-065 | reacquire and hold policy hardening | Done
-- TASK-20260312-066 | problem-pack A/B evidence | Done
+- (none)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)

@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-066
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Сделать один канонический A/B evidence loop по проблемным клипам, чтобы before/after runtime hardening сравнивался на фиксированном коротком наборе сцен, а не вручную по разрозненным артефактам.

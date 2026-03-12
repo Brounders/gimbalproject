@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-064
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Отдельно ужесточить `lock` / `reacquire` gating на шумовых `night`-сценах типа `night_ground_indicator_lights`, чтобы снизить ложные operator-visible захваты без глобального переписывания tracking policy.

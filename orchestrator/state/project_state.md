@@ -386,3 +386,27 @@
   - `TASK-20260312-064`
   - `TASK-20260312-065`
   - `TASK-20260312-066`
+
+## Latest Control Loop
+- Date: 2026-03-12
+- Reviewed Claude reports:
+  - `REPORT-20260312-064` -> Accepted with caveat
+  - `REPORT-20260312-065` -> Accepted with caveat
+  - `REPORT-20260312-066` -> Accepted
+- Accepted tasks this loop:
+  - `TASK-20260312-064`
+  - `TASK-20260312-065`
+  - `TASK-20260312-066`
+- Reviewer validation summary:
+  - `lock_lost_grace`, `lock_mode_release_frames`, and `lock_reacquire_dist` are now preset-driven for `night` and `antiuav_thermal`
+  - one canonical A/B evidence loop now exists via `python_scripts/compare_kpi_snapshots.py` and the `RUNBOOK.md` problem-clip workflow
+  - the new runtime knobs and evidence tooling compile clean and remain compatible with the current local desktop flow
+- Reviewer caveat:
+  - IR problem clips improved under the new runtime settings (`false_lock=0.575`, `id_chg/min=0.00` aggregate on `IR_DRONE_001` + `Demo_IR_DRONE_146`)
+  - night problem clips did not improve uniformly; `night_ground_large_drones` regressed sharply (`false_lock=0.911`, `id_chg/min=68.50`), so this cycle does not close the night/noise false-lock problem
+- Reviewer note:
+  - Claude again left `active_plan.md`, `open_tasks.md`, and task statuses unsynchronized; reviewer normalized orchestration state during acceptance
+- Outcome:
+  - runtime hardening stage-2 cycle is closed
+  - no active Claude or RTX tasks remain
+  - the next cycle should either continue runtime hardening with a narrower target or move to the next explicitly approved product phase

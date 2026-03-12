@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-065
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Сделать `reacquire`, short-gap hold и release/acquire hysteresis более предсказуемыми, чтобы уменьшить ложные повторные захваты и дергание на кратких пропусках цели без ухудшения operator continuity.
