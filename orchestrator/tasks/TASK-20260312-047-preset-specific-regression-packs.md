@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-047
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Разделить regression clips минимум на `day`, `night`, `ir`, чтобы локальный benchmark и quality-gate перестали скрывать preset-specific регрессии внутри одного общего агрегата.

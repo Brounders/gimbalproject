@@ -179,3 +179,24 @@
   - `TASK-20260312-046`
   - `TASK-20260312-047`
   - `TASK-20260312-048`
+
+## Latest Control Loop
+- Date: 2026-03-12
+- Reviewed Claude reports:
+  - `REPORT-20260312-046` -> Accepted
+  - `REPORT-20260312-047` -> Accepted
+  - `REPORT-20260312-048` -> Accepted
+- Accepted tasks this loop:
+  - `TASK-20260312-046`
+  - `TASK-20260312-047`
+  - `TASK-20260312-048`
+- Reviewer validation summary:
+  - `requirements.txt` now provides an explicit local dependency/bootstrap contract for the desktop/evaluation contour
+  - regression packs are split into `day`, `night`, and `ir` scenario files
+  - `RUNBOOK.md` now documents a canonical local flow: `quick smoke -> benchmark -> quality-gate -> decision`
+- Reviewer caveat:
+  - `requirements.txt` is a minimal contract using lower-bound versions, not a strict lockfile; exact bit-for-bit reproducibility remains a future follow-up, not a blocker for acceptance of this cycle
+- Outcome:
+  - local reproducibility and quality-discipline phase 1 is closed;
+  - no active Claude or RTX tasks remain;
+  - the next cycle can move either to deeper architecture refactor or to tighter local baseline/quality enforcement.

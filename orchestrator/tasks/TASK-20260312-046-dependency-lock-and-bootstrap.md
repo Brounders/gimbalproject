@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-046
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Создать явный локальный dependency/bootstrap contract для desktop-продукта, чтобы запуск проекта на новой машине не зависел от неявного состояния `tracker_env`.

@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-048
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Сделать локальный `quick smoke -> benchmark -> quality-gate` контур однозначным, чтобы baseline/candidate решения принимались по понятному и воспроизводимому порядку.
