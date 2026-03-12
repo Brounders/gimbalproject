@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-03-12T06:52:57Z",
+  "updated_at": "2026-03-12T07:49:58Z",
   "dataset_root": "C:\\Users\\PC\\TrainingDatasets",
   "datasets": [
     {
@@ -22,7 +22,7 @@
       "total_bytes": 4711768,
       "latest_mtime": "2026-03-08T16:37:49Z",
       "epoch_budget_total": 0,
-      "last_seen_at": "2026-03-12T05:58:10Z",
+      "last_seen_at": "2026-03-12T06:53:38Z",
       "notes": ""
     },
     {
@@ -44,7 +44,7 @@
       "total_bytes": 11136112056,
       "latest_mtime": "2026-03-11T04:11:54Z",
       "epoch_budget_total": 144,
-      "last_seen_at": "2026-03-12T05:58:27Z",
+      "last_seen_at": "2026-03-12T06:53:55Z",
       "notes": ""
     }
   ]
