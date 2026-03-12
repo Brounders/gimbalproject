@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-055
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Вынести theme/style-related code из `app/main_gui.py` в dedicated UI helper module(s), сохранив текущий operator behavior и используя уже существующий `app/ui/theme.py` как source of truth для stylesheet.

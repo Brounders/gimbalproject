@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-056
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Вынести display-card/HUD helper logic из `app/main_gui.py` в dedicated UI helper module(s), не меняя operator behavior и не трогая source-of-truth tracking state.

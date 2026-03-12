@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-057
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 После extraction задач `055` и `056` истончить `app/main_gui.py` до orchestration-first структуры, вынеся low-risk non-worker UI plumbing without changing behavior.
