@@ -17,6 +17,9 @@ class_ema_alpha: 0.22
 drone_lock_score_min: 0.64  # [night hardening] raised from 0.58
 drone_reacquire_score_min: 0.52  # [night hardening] raised from 0.45
 lock_confirm_frames: 7  # [night hardening] raised from default 5
+lock_lost_grace: 1      # [night hardening] reduced from default 2
+lock_mode_release_frames: 4  # [night hardening] faster release (was default 6)
+lock_reacquire_dist: 90      # [night hardening] tighter spatial gate (was default 120)
 velocity_alpha: 0.68
 lock_reacquire_predict_gain: 1.12
 lock_reacquire_predict_horizon_max: 5

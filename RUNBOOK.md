@@ -135,6 +135,39 @@ PYTHONPATH=src python python_scripts/run_quality_gate.py \
     --preset antiuav_thermal
 ```
 
+### A/B evidence loop (problem clips)
+
+Канонический before/after workflow для измерения эффекта runtime tuning на problem clips.
+
+**Шаг 1 — снять before-снимок (до изменений):**
+```bash
+mkdir -p runs/evaluations/ab
+PYTHONPATH=src python python_scripts/run_quick_kpi_smoke.py \
+    --pack configs/regression_pack_problem.csv \
+    --preset night --max-frames 180 \
+    --output-json runs/evaluations/ab/before_night.json
+```
+
+**Шаг 2 — внести изменения в YAML конфиги.**
+
+**Шаг 3 — снять after-снимок:**
+```bash
+PYTHONPATH=src python python_scripts/run_quick_kpi_smoke.py \
+    --pack configs/regression_pack_problem.csv \
+    --preset night --max-frames 180 \
+    --output-json runs/evaluations/ab/after_night.json
+```
+
+**Шаг 4 — сравнить delta-таблицу:**
+```bash
+python python_scripts/compare_kpi_snapshots.py \
+    runs/evaluations/ab/before_night.json \
+    runs/evaluations/ab/after_night.json
+```
+
+Символы в колонке OK?: `✓` = значимое улучшение, `✗` = значимый регресс, ` ` = нет изменений.
+По умолчанию порог значимости `--threshold 0.05`.
+
 ### Offline benchmark
 
 ```bash

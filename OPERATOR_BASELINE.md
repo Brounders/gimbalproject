@@ -108,6 +108,24 @@ test_videos/IR_BIRD_001.mp4 \
 
 ---
 
+## Runtime Hardening Changes (AP-019)
+
+Второй слой hardening: сокращение grace-period, ускорение release, сужение spatial gate reacquire.
+
+| Параметр | Файл | Было | Стало | Цель |
+|----------|------|------|-------|------|
+| `lock_lost_grace` | `night.yaml` | 2 (default) | **1** | Меньше tolerance для gap в detection |
+| `lock_mode_release_frames` | `night.yaml` | 6 (default) | **4** | Быстрее отпускает ложный lock |
+| `lock_reacquire_dist` | `night.yaml` | 120 (default) | **90** | Уже spatial gate для reacquire |
+| `lock_lost_grace` | `antiuav_thermal.yaml` | 2 (default) | **1** | Меньше tolerance для gap |
+| `lock_mode_release_frames` | `antiuav_thermal.yaml` | 6 (default) | **4** | Быстрее release |
+| `lock_reacquire_dist` | `antiuav_thermal.yaml` | 120 (default) | **90** | Уже spatial gate |
+
+> `lock_lost_grace` и `lock_reacquire_dist` доступны через YAML начиная с AP-019.
+> Effective reacquire dist = base + speed_bonus (до +90 px): быстрые цели reacquire штатно.
+
+---
+
 ## Preset Runtime Tuning Contract
 
 Ключевые runtime knobs для каждого контекста. Источник: YAML конфиги + `profile_io.py::apply_overrides` mapping.
@@ -120,6 +138,9 @@ test_videos/IR_BIRD_001.mp4 \
 | `imgsz` | 640 | 960 | 960 | Resolution for detection |
 | `small_target_mode` | false | true | true | Small target path |
 | `lock_confirm_frames` | 5 | **7** | **7** | Frames to confirm lock |
+| `lock_lost_grace` | 2 | **1** | **1** | Grace frames in lock confirmation |
+| `lock_mode_release_frames` | 6 | **4** | **4** | Frames to exit lock state |
+| `lock_reacquire_dist` | 120 | **90** | **90** | Base spatial gate for reacquire (px) |
 | `drone_lock_score_min` | 0.62 | **0.64** | **0.60** | Minimum lock score |
 | `drone_reacquire_score_min` | 0.48 | **0.52** | **0.48** | Minimum reacquire score |
 | `night_mot_thresh` | 18 (default) | 14 | 14 | Night motion threshold |
