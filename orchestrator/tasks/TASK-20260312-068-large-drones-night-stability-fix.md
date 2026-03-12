@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-068
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Сфокусированно исправить поведение на `night_ground_large_drones`, где stage-2 дал резкий рост `active_id_changes_per_min` и высокий `false_lock_rate`.

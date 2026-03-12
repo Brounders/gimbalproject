@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-067
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Сделать `night` runtime менее грубым: явно выделить noise-like night behavior для сцен типа `night_ground_indicator_lights`, чтобы снизить ложные захваты без глобального ухудшения обычных ночных сцен.

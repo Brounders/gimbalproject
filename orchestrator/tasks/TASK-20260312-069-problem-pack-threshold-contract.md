@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-069
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Сделать из `regression_pack_problem.csv` не только A/B evidence loop, но и короткий threshold-based mini-gate для runtime hardening cycles.

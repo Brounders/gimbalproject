@@ -424,3 +424,27 @@
   - `TASK-20260312-067`
   - `TASK-20260312-068`
   - `TASK-20260312-069`
+
+## Latest Control Loop
+- Date: 2026-03-12
+- Reviewed Claude reports:
+  - `REPORT-20260312-067` -> Accepted
+  - `REPORT-20260312-068` -> Accepted with caveat
+  - `REPORT-20260312-069` -> Accepted
+- Accepted tasks this loop:
+  - `TASK-20260312-067`
+  - `TASK-20260312-068`
+  - `TASK-20260312-069`
+- Reviewer validation summary:
+  - `run_quality_gate.py` now distinguishes noise-like scenes with a dedicated `--max-noise-id-changes-per-min` threshold
+  - `night.yaml` now includes tighter night-scene stability knobs (`active_id_switch_cooldown_frames=60`, `class_ema_alpha=0.15`)
+  - `configs/problem_pack_gate_contract.json` and `RUNBOOK.md` now define one canonical threshold-based mini-gate for the problem-pack loop
+- Reviewer caveat:
+  - the cycle improves the tooling and narrows noise-scene handling, but it does not close the night/noise runtime problem;
+  - `night_ground_indicator_lights` is now bounded in the short smoke loop, while `night_ground_large_drones` still shows runaway instability (`false_lock=0.911`, `id_chg/min=68.50`)
+- Reviewer note:
+  - Claude again left `active_plan.md`, `open_tasks.md`, and task statuses unsynchronized; reviewer normalized orchestration state during acceptance
+- Outcome:
+  - runtime hardening stage-3 cycle is closed
+  - no active Claude or RTX tasks remain
+  - the next cycle should target a narrower night/noise runtime fix or shift to another explicitly approved product phase

@@ -8,15 +8,13 @@
 - Scope: runtime hardening stage-3 only — narrow the remaining night/noise problem, fix `night_ground_large_drones` stability, and turn the problem pack into a threshold-based mini-gate.
 
 ## Status
-- Done
+- Completed
 
 ## Brief In Focus
 - BRIEF-20260312-023-runtime-hardening-stage3-v1
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260312-067 | night-noise scene classification gating | Done
-- TASK-20260312-068 | large-drones night stability fix | Done
-- TASK-20260312-069 | problem-pack threshold contract | Done
+- (none)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
