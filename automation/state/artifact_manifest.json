@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-03-12T10:40:29Z",
+  "updated_at": "2026-03-12T11:38:15Z",
   "artifacts": [
     {
       "artifact_id": "curriculum_drone-bird-yolo_20260312_012112",
@@ -120,6 +120,23 @@
       "decision": null,
       "notes": "",
       "published_at": "2026-03-12T10:40:17Z"
+    },
+    {
+      "artifact_id": "curriculum_drone-bird-yolo_20260312_134132_chunk7",
+      "run_name": "curriculum_drone-bird-yolo",
+      "dataset_id": "drone-bird-yolo",
+      "zip_path": "C:\\Users\\PC\\GimbalProject\\exports\\curriculum_drone-bird-yolo_20260312_134132_chunk7.zip",
+      "asset_name": "curriculum_drone-bird-yolo_20260312_134132_chunk7.zip",
+      "github_repo": "Brounders/gimbalproject",
+      "release_tag": "training-artifacts",
+      "download_url": "https://github.com/Brounders/gimbalproject/releases/download/training-artifacts/curriculum_drone-bird-yolo_20260312_134132_chunk7.zip",
+      "checkpoint_path": "C:/Users/PC/GimbalProject/runs/detect/runs/curriculum_drone-bird-yolo/weights/best.pt",
+      "epoch_from": 85,
+      "epoch_to": 96,
+      "status": "published",
+      "decision": null,
+      "notes": "",
+      "published_at": "2026-03-12T11:37:56Z"
     }
   ]
 }
