@@ -267,3 +267,16 @@
   - pipeline stage-1 split cycle is closed;
   - no active Claude or RTX tasks remain;
   - the next cycle can move to `main_gui.py` stage-0 split or another explicitly approved architecture step.
+
+## Latest Approved Direction
+- Date: 2026-03-12
+- Human approved the next implementation cycle after `pipeline.py` stage-1 split.
+- Locked scope:
+  - architecture repair now moves to `app/main_gui.py` only;
+  - no new UI redesign in this cycle;
+  - no training/automation or embedded migration work in this cycle.
+- Active context:
+  - `BRIEF-20260312-019-main-gui-stage0-split-v1`
+  - `TASK-20260312-055`
+  - `TASK-20260312-056`
+  - `TASK-20260312-057`

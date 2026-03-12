@@ -1,20 +1,22 @@
 # Active Plan
 
 ## Plan ID
-- AP-20260312-015
+- AP-20260312-016
 
 ## Source Direction
-- Human direction: move to the next audit-driven stage after local baseline governance and focus on the most rational architecture repair first.
-- Scope: `pipeline.py` stage-1 split only — extract `FrameOutput`, extract overlay/draw helpers, and thin `pipeline.py` into an orchestration-first module.
+- Human direction: move to the next stage after `pipeline.py` stage-1 split.
+- Scope: `app/main_gui.py` stage-0 split only — extract theme/style wiring, display-card/HUD helpers, and thin non-worker UI plumbing so the main window becomes orchestration-first.
 
 ## Status
-- Completed
+- Active
 
 ## Brief In Focus
-- BRIEF-20260312-018-pipeline-stage1-split-v1
+- BRIEF-20260312-019-main-gui-stage0-split-v1
 
 ## Active Claude Tasks (execution allowed now)
-- (none)
+- TASK-20260312-055 | gui theme style extract | Open
+- TASK-20260312-056 | gui display card extract | Open
+- TASK-20260312-057 | gui nonworker plumbing thinning | Open
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
@@ -23,6 +25,6 @@
 - Любые задачи вне списков выше считаются backlog и не исполняются.
 
 ## Exit Criteria
-- [x] `FrameOutput` no longer lives in `src/uav_tracker/pipeline.py`. (→ `frame_result.py`)
-- [x] overlay/draw helpers are extracted from `src/uav_tracker/pipeline.py`. (→ `overlay.py`)
-- [x] `pipeline.py` is smaller and orchestration-first without changing runtime semantics. (1308 → 1067 lines)
+- [ ] theme/style-related helper code is extracted out of `app/main_gui.py`.
+- [ ] display-card/HUD helper code is extracted out of `app/main_gui.py`.
+- [ ] `app/main_gui.py` is smaller and orchestration-first without changing operator behavior.
