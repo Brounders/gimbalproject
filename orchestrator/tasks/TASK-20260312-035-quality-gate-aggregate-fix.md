@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-035
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Исправить tooling quality-gate так, чтобы полный прогон regression pack снова давал завершенный aggregate result и не требовал ручной доборки недостающих клипов.

@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-033
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Исправить логику определения `scene_profile` в dataset registry так, чтобы `drone-bird-yolo` не классифицировался как `ir` из-за ложного совпадения в имени.

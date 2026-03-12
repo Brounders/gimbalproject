@@ -114,3 +114,23 @@
   - `TASK-20260312-033`
   - `TASK-20260312-034`
   - `TASK-20260312-035`
+
+## Latest Control Loop
+- Date: 2026-03-12
+- Reviewed Claude reports:
+  - `REPORT-20260312-033` -> Accepted
+  - `REPORT-20260312-034` -> Accepted
+  - `REPORT-20260312-035` -> Accepted
+- Accepted tasks this loop:
+  - `TASK-20260312-033`
+  - `TASK-20260312-034`
+  - `TASK-20260312-035`
+- Reviewer validation summary:
+  - synthetic conveyor scan confirms `drone-bird-yolo -> scene_profile=mixed`
+  - incomplete dataset is blocked with `status=blocked_no_images`
+  - `next-chunk` skips blocked dataset and selects only valid datasets
+  - `run_quality_gate.py` now writes aggregate JSON/CSV even when one clip raises `evaluate_error`
+- Outcome:
+  - conveyor metadata hardening cycle is closed;
+  - aggregate quality-gate output is deterministic under clip-level failure;
+  - no active Claude or RTX tasks remain.

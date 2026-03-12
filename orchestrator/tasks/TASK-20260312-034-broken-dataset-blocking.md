@@ -3,7 +3,7 @@
 Task ID: TASK-20260312-034
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Сделать dataset registry устойчивым к неполным dataset-каталогам: такие наборы не должны попадать в `ready/queued`, а должны явно блокироваться с понятным статусом и причиной.
