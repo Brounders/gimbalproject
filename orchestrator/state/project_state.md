@@ -462,3 +462,28 @@
   - `TASK-20260312-070`
   - `TASK-20260312-071`
   - `TASK-20260312-072`
+
+## Latest Control Loop
+- Date: 2026-03-13
+- Reviewed Claude reports:
+  - `REPORT-20260312-070` -> Accepted
+  - `REPORT-20260312-071` -> Accepted with caveat
+  - `REPORT-20260312-072` -> Accepted
+- Accepted tasks this loop:
+  - `TASK-20260312-070`
+  - `TASK-20260312-071`
+  - `TASK-20260312-072`
+- Reviewer validation summary:
+  - `night.yaml` now loads the tighter stage-4 knobs: `track_state_acquire_frames=4`, `lock_mode_acquire_frames=3`, `active_id_switch_allow_if_lost_frames=12`
+  - `run_quality_gate.py` exposes the expected noise-scene thresholds and context-aware CLI surface
+  - `run_problem_pack_gate.py` and the split problem-pack CSV files make the short mini-gate runnable locally
+- Reviewer caveat:
+  - `night_ground_indicator_lights` is now bounded in the short smoke loop (`false_lock=0.339`, `id_chg/min=0.00` over 180 frames)
+  - `night_ground_large_drones` remains poor (`false_lock=0.722`, `id_chg/min=48.93` over 180 frames), so the night/noise problem is still only partially solved
+  - `configs/problem_pack_gate_contract.json` shipped with stale canonical invocations; reviewer corrected them to the split night/ir pack files during acceptance
+- Reviewer note:
+  - Claude again left `active_plan.md` and `open_tasks.md` unsynchronized; reviewer normalized orchestration state during acceptance
+- Outcome:
+  - runtime hardening stage-4 cycle is closed
+  - no active Claude or RTX tasks remain
+  - the next cycle should stay focused on the remaining `night_ground_large_drones` / noise-night runtime barrier rather than opening a new training or refactor track

@@ -23,7 +23,7 @@
     "min_presence": "0.05 vs default 0.08: noise/background clips have near-zero real presence"
   },
   "canonical_invocations": {
-    "night": "PYTHONPATH=src python python_scripts/run_quality_gate.py --pack-file configs/regression_pack_problem.csv --preset night --max-id-changes-per-min 25 --min-continuity 0.30 --min-presence 0.05 --max-false-lock-rate 0.65 --max-noise-false-lock-rate 0.35 --max-noise-id-changes-per-min 15",
-    "ir": "PYTHONPATH=src python python_scripts/run_quality_gate.py --pack-file configs/regression_pack_problem.csv --preset antiuav_thermal --max-id-changes-per-min 25 --min-continuity 0.30 --min-presence 0.05 --max-false-lock-rate 0.65 --max-noise-false-lock-rate 0.35 --max-noise-id-changes-per-min 15"
+    "night": "PYTHONPATH=src python python_scripts/run_quality_gate.py --pack-file configs/regression_pack_problem_night.csv --preset night --max-id-changes-per-min 25 --min-continuity 0.30 --min-presence 0.05 --max-false-lock-rate 0.65 --max-noise-false-lock-rate 0.35 --max-noise-id-changes-per-min 15",
+    "ir": "PYTHONPATH=src python python_scripts/run_quality_gate.py --pack-file configs/regression_pack_problem_ir.csv --preset antiuav_thermal --max-id-changes-per-min 25 --min-continuity 0.30 --min-presence 0.05 --max-false-lock-rate 0.65 --max-noise-false-lock-rate 0.35 --max-noise-id-changes-per-min 15"
   }
 }

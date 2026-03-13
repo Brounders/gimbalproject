@@ -8,15 +8,13 @@
 - Scope: runtime hardening stage-4 only — tighten night/noise runtime behavior for the two worst problem scenes, and turn the problem-pack mini-gate into a real short acceptance barrier.
 
 ## Status
-- Done
+- Completed
 
 ## Brief In Focus
 - BRIEF-20260312-024-runtime-hardening-stage4-v1
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260312-070 | indicator lights noise gating | Done
-- TASK-20260312-071 | large drones night stability fix | Done
-- TASK-20260312-072 | problem-pack mini-gate enforcement | Done
+- (none)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
