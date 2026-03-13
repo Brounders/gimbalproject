@@ -487,3 +487,22 @@
   - runtime hardening stage-4 cycle is closed
   - no active Claude or RTX tasks remain
   - the next cycle should stay focused on the remaining `night_ground_large_drones` / noise-night runtime barrier rather than opening a new training or refactor track
+
+## Latest Approved Direction
+- Date: 2026-03-13
+- Human approved the next narrow runtime-quality cycle after accepted runtime hardening stage-4.
+- Locked scope:
+  - targeted stage-4b only;
+  - fix the remaining large-target night failure mode;
+  - preserve bounded noise-like night behavior;
+  - make the split night problem-pack a real short acceptance barrier.
+- Explicitly excluded:
+  - no new training cycle
+  - no GUI/pipeline refactor
+  - no UI redesign
+  - no automation/embedded work
+- Active context:
+  - `BRIEF-20260313-025-runtime-hardening-stage4b-v1`
+  - `TASK-20260313-073`
+  - `TASK-20260313-074`
+  - `TASK-20260313-075`
