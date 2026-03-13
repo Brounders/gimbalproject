@@ -581,3 +581,16 @@
   - the adversarial review cycle is closed
   - no active Claude or RTX tasks remain
   - the next approved engineering phase should be a narrow `large-target night detector/runtime contract` cycle, not a new training cycle and not a broad runtime rewrite
+
+## Latest Approved Direction
+- Date: 2026-03-13
+- Human approved the next implementation cycle after the corrected adversarial review.
+- Locked conclusion:
+  - the next best step is not training and not a new broad lock-policy cycle;
+  - the remaining defect is a narrow large-target night detector/runtime contract problem;
+  - the next cycle must expose and tune detector-level night knobs (`NIGHT_MAX_AREA`, `NIGHT_TRACK_DIST`, `NIGHT_LOST_MAX`) and validate them against the existing night problem pack.
+- Active context:
+  - `BRIEF-20260313-027-large-target-night-detector-contract-v1`
+  - `TASK-20260313-078`
+  - `TASK-20260313-079`
+  - `TASK-20260313-080`
