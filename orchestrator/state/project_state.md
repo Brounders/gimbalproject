@@ -652,3 +652,26 @@
   - `TASK-20260313-082`
   - `TASK-20260313-083`
 
+## Latest Control Loop
+- Date: 2026-03-13
+- Reviewed Claude reports:
+  - `REPORT-20260313-081` -> Pending reviewer
+  - `REPORT-20260313-082` -> Pending reviewer
+  - `REPORT-20260313-083` -> Pending reviewer
+- Completed tasks this loop:
+  - `TASK-20260313-081`
+  - `TASK-20260313-082`
+  - `TASK-20260313-083`
+- Reviewer caveat (AP-025, pending final acceptance):
+  - `NIGHT_CONFIRM` and `NIGHT_MAX_AR` now exposed through `profile_io.py` / YAML contract
+  - tuning sweep identified `night_confirm` as the dominant driver of both `false_lock` and `id_chg/min` improvements
+  - `lock_lost_grace=2` caused `id_chg/min` regression (55.05 vs 30.58) — abandoned; kept at 1
+  - final config: `night_confirm=5`, `night_track_dist=65`, `lock_lost_grace=1`
+  - `night_ground_large_drones`: false_lock=0.510 (was 0.771, −34%), id_chg/min=12.23 (was 30.58, −60%) — **PASS**
+  - `night_ground_indicator_lights`: false_lock=0.096 (was 0.458, −79%), id_chg/min=0.00 — **PASS**
+  - **Night problem-pack gate: PASS for the first time in project history**
+- Outcome:
+  - AP-025 large-target night runtime fix cycle completed with full improvement
+  - Both night problem-pack clips PASS the gate contract thresholds for the first time
+  - The dominant mechanism was NIGHT_CONFIRM=5 filtering out transient false positives at the detector level
+

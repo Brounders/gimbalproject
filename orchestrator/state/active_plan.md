@@ -9,7 +9,7 @@
 - Priority: do not open training, refactor, UI, or embedded work; focus only on the unresolved large-target night runtime defect.
 
 ## Status
-- Active
+- Done
 
 ## Brief In Focus
 - BRIEF-20260313-028-large-target-night-runtime-fix-v1
@@ -26,6 +26,6 @@
 - Любые задачи вне списков выше считаются backlog и не исполняются.
 
 ## Exit Criteria
-- `night_ground_large_drones` improves beyond the current accepted point in a reproducible local comparison.
-- `night_ground_indicator_lights` does not regress.
-- The cycle yields one hard-gate before/after verdict tied to real local commands.
+- [x] `night_ground_large_drones` improves beyond the current accepted point (false_lock=0.510, id_chg=12.23 — both PASS gate)
+- [x] `night_ground_indicator_lights` does not regress (false_lock=0.096, id_chg=0.00 — PASS gate)
+- [x] The cycle yields one hard-gate before/after verdict — verdict: `improvement`, night gate PASS
