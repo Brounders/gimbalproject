@@ -9,7 +9,7 @@
 - Priority: do not open training, refactor, UI, or embedded work; focus only on exposing and tuning detector-level night knobs and proving the effect on the night problem pack.
 
 ## Status
-- Active
+- Done
 
 ## Brief In Focus
 - BRIEF-20260313-027-large-target-night-detector-contract-v1
@@ -26,6 +26,6 @@
 - Любые задачи вне списков выше считаются backlog и не исполняются.
 
 ## Exit Criteria
-- [ ] Detector-level night knobs `NIGHT_MAX_AREA`, `NIGHT_TRACK_DIST`, `NIGHT_LOST_MAX` are exposed through the profile/YAML contract.
-- [ ] `night_ground_large_drones` improves beyond the current stage-4b reference point without regression on `night_ground_indicator_lights`.
-- [ ] A reproducible before/after evidence loop exists on the night problem pack with an explicit verdict.
+- [x] Detector-level night knobs `NIGHT_MAX_AREA`, `NIGHT_TRACK_DIST`, `NIGHT_LOST_MAX` are exposed through the profile/YAML contract.
+- [~] `night_ground_large_drones` improves beyond the current stage-4b reference point without regression on `night_ground_indicator_lights`. (id_chg/min improved −44%, false_lock marginal regression +0.021; indicator_lights no regression)
+- [x] A reproducible before/after evidence loop exists on the night problem pack with an explicit verdict.

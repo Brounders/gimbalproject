@@ -594,3 +594,27 @@
   - `TASK-20260313-078`
   - `TASK-20260313-079`
   - `TASK-20260313-080`
+
+## Latest Control Loop
+- Date: 2026-03-13
+- Reviewed Claude reports:
+  - `REPORT-20260313-078` -> Pending reviewer
+  - `REPORT-20260313-079` -> Pending reviewer
+  - `REPORT-20260313-080` -> Pending reviewer
+- Completed tasks this loop:
+  - `TASK-20260313-078`
+  - `TASK-20260313-079`
+  - `TASK-20260313-080`
+- Reviewer caveat (AP-024, pending final acceptance):
+  - `NIGHT_MAX_AREA`, `NIGHT_TRACK_DIST`, `NIGHT_LOST_MAX` now exposed through `profile_io.py` / YAML contract
+  - tuning sweep of 6 configurations identified: `night_track_dist` is the primary driver of `id_chg/min`, `night_lost_max` is the primary driver of `false_lock`, `night_max_area` had no measurable effect on the test clip
+  - final config (`night_max_area=220`, `night_track_dist=65`, `night_lost_max=8`):
+    - `night_ground_large_drones`: `id_chg/min=30.58` (was 55.05, −44%), `false_lock=0.771` (was 0.750, marginal regression +0.021)
+    - `night_ground_indicator_lights`: `false_lock=0.458`, `id_chg/min=0.00` — no regression
+  - `id_chg/min` contract gap reduced from 3.06× to 1.70× (threshold 18.0)
+  - full contract gate (false_lock<0.55, id_chg<18.0) still not met; night detector layer confirmed as correct target
+- Outcome:
+  - AP-024 large-target night detector contract cycle completed with partial improvement
+  - `night_ground_large_drones` id_chg/min improved substantially; false_lock marginal regression
+  - `night_ground_indicator_lights` maintained — no regression
+  - the next cycle should continue refining night detector knobs or investigate `NIGHT_CONFIRM` as additional parameter
