@@ -59,3 +59,6 @@ TASK-20260313-074 | Claude Mac | Accepted | 2026-03-13 | orchestrator/reports/RE
 TASK-20260313-075 | Claude Mac | Accepted | 2026-03-13 | orchestrator/reports/REPORT-20260313-075.md
 TASK-20260313-076 | Claude Mac | Rejected | 2026-03-13 | orchestrator/reports/REPORT-20260313-076.md (ignored accepted post-hardening reviewer measurements in project_state.md)
 TASK-20260313-077 | Claude Mac | Accepted | 2026-03-13 | orchestrator/reports/REPORT-20260313-077.md
+TASK-20260313-078 | Claude Mac | Accepted | 2026-03-13 | orchestrator/reports/REPORT-20260313-078.md
+TASK-20260313-079 | Claude Mac | Accepted | 2026-03-13 | orchestrator/reports/REPORT-20260313-079.md (caveat: large-target night remains unresolved)
+TASK-20260313-080 | Claude Mac | Accepted | 2026-03-13 | orchestrator/reports/REPORT-20260313-080.md

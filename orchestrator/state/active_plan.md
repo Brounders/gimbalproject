@@ -9,15 +9,13 @@
 - Priority: do not open training, refactor, UI, or embedded work; focus only on exposing and tuning detector-level night knobs and proving the effect on the night problem pack.
 
 ## Status
-- Done
+- Completed
 
 ## Brief In Focus
 - BRIEF-20260313-027-large-target-night-detector-contract-v1
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260313-078 | night detector profile contract | Open
-- TASK-20260313-079 | large-target night detector tuning | Open
-- TASK-20260313-080 | large-target problem gate evidence | Open
+- (none)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)

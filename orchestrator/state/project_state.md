@@ -618,3 +618,23 @@
   - `night_ground_large_drones` id_chg/min improved substantially; false_lock marginal regression
   - `night_ground_indicator_lights` maintained — no regression
   - the next cycle should continue refining night detector knobs or investigate `NIGHT_CONFIRM` as additional parameter
+
+## Latest Control Loop
+- Date: 2026-03-13
+- Reviewed Claude reports:
+  - `REPORT-20260313-078` -> Accepted
+  - `REPORT-20260313-079` -> Accepted with caveat
+  - `REPORT-20260313-080` -> Accepted
+- Accepted tasks this loop:
+  - `TASK-20260313-078`
+  - `TASK-20260313-079`
+  - `TASK-20260313-080`
+- Reviewer validation summary:
+  - detector-level night knobs are now exposed through the profile/YAML contract and reachable from `night.yaml`
+  - the large-target tuning cycle improved `night_ground_large_drones` `id_chg/min` materially, but did not reduce `false_lock_rate` enough to consider the defect closed
+  - the before/after evidence loop is now reproducible through the existing problem-pack mini-gate path
+- Outcome:
+  - AP-024 is accepted and closed
+  - `night_ground_indicator_lights` remains bounded and non-regressed
+  - `night_ground_large_drones` remains the main unresolved runtime defect
+  - no new training or refactor cycle should be opened until the next step is explicitly approved
