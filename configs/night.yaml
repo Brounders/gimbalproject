@@ -54,3 +54,5 @@ show_trails: true
 night_max_area: 220      # default 200: minimal raise for large-drone blobs
 night_track_dist: 65     # default 42: wider spatial gate — primary id_chg driver
 night_lost_max: 8        # default 8: kept at default to prevent false_lock regression
+# [night detector — continuity gating] AP-025
+night_confirm: 4         # default 3: require 4 consecutive frames to establish night detection

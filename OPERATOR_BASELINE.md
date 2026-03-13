@@ -167,19 +167,23 @@ test_videos/IR_BIRD_001.mp4 \
 
 ---
 
-## Night Detector Knobs (AP-024)
+## Night Detector Knobs (AP-024 / AP-025)
 
 Шестой слой: night detector layer knobs экспонированы через YAML contract.
 До AP-024 эти параметры не были доступны через `profile_io.py::apply_overrides` mapping.
 
 | YAML ключ | Config поле | Default | Назначение |
 |-----------|------------|---------|------------|
-| `night_max_area` | `NIGHT_MAX_AREA` | 200 | Max blob area (px²) в night detector; увеличить для large drones (рекомендовано: 400–600) |
-| `night_track_dist` | `NIGHT_TRACK_DIST` | 42 | Spatial gate (px) night tracker'а; увеличить для быстрых крупных целей (рекомендовано: 60–100) |
-| `night_lost_max` | `NIGHT_LOST_MAX` | 8 | Grace frames до потери night track; увеличить для удержания крупных дронов (рекомендовано: 12–20) |
+| `night_max_area` | `NIGHT_MAX_AREA` | 200 | Max blob area (px²) в night detector; увеличить для large drones |
+| `night_track_dist` | `NIGHT_TRACK_DIST` | 42 | Spatial gate (px) night tracker'а; увеличить для быстрых крупных целей (рекомендовано: 60–80) |
+| `night_lost_max` | `NIGHT_LOST_MAX` | 8 | Grace frames до потери night track |
+| `night_confirm` | `NIGHT_CONFIRM` | 3 | Последовательных кадров детекции для включения в candidates; увеличить для continuity gating |
+| `night_max_ar` | `NIGHT_MAX_AR` | 3.0 | Max aspect ratio blob; увеличить для elongated targets |
 
 > Root cause id_chg/min для large-target night clips — нестабильность детекций на уровне night detector,
 > не lock policy layer. Knobs выше адресуют эту нестабильность.
+> AP-024 фактические значения в `night` пресете: night_max_area=220, night_track_dist=65, night_lost_max=8.
+> AP-025 добавляет: night_confirm=4.
 
 ---
 
@@ -195,7 +199,7 @@ test_videos/IR_BIRD_001.mp4 \
 | `imgsz` | 640 | 960 | 960 | Resolution for detection |
 | `small_target_mode` | false | true | true | Small target path |
 | `lock_confirm_frames` | 5 | **7** | **7** | Frames to confirm lock |
-| `lock_lost_grace` | 2 | **1** | **1** | Grace frames in lock confirmation |
+| `lock_lost_grace` | 2 | **2** (AP-025) | **1** | Grace frames in lock confirmation |
 | `lock_mode_release_frames` | 6 | **4** | **4** | Frames to exit lock state |
 | `lock_reacquire_dist` | 120 | **90** | **90** | Base spatial gate for reacquire (px) |
 | `drone_lock_score_min` | 0.62 | **0.64** | **0.60** | Minimum lock score |
@@ -213,9 +217,10 @@ test_videos/IR_BIRD_001.mp4 \
 | `class_ema_alpha` | 0.18 (default) | **0.15** | 0.24 | Drone score EMA alpha |
 | `budget_target_fps` | 24.0 (default) | 22.0 | 20.0 | Budget FPS target |
 | `velocity_alpha` | 0.55 (default) | 0.68 | 0.72 | Motion smoothing |
-| `night_max_area` | 200 (default) | **500** (AP-024) | 200 (default) | Night detector max blob area |
-| `night_track_dist` | 42 (default) | **80** (AP-024) | 42 (default) | Night tracker spatial gate (px) |
-| `night_lost_max` | 8 (default) | **16** (AP-024) | 8 (default) | Night track grace frames |
+| `night_max_area` | 200 (default) | **220** (AP-024) | 200 (default) | Night detector max blob area |
+| `night_track_dist` | 42 (default) | **65** (AP-024) | 42 (default) | Night tracker spatial gate (px) |
+| `night_lost_max` | 8 (default) | 8 (default) | 8 (default) | Night track grace frames |
+| `night_confirm` | 3 (default) | **4** (AP-025) | 3 (default) | Consecutive frames to establish night detection |
 
 ---
 

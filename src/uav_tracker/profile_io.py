@@ -106,6 +106,8 @@ def apply_overrides(cfg: Config, overrides: dict[str, Any]) -> Config:
         'night_max_area': 'NIGHT_MAX_AREA',
         'night_track_dist': 'NIGHT_TRACK_DIST',
         'night_lost_max': 'NIGHT_LOST_MAX',
+        'night_confirm': 'NIGHT_CONFIRM',
+        'night_max_ar': 'NIGHT_MAX_AR',
         'night_run_when_primary_seen': 'NIGHT_RUN_WHEN_PRIMARY_SEEN',
         'night_primary_cooldown': 'NIGHT_PRIMARY_COOLDOWN',
         'display_min_hit_streak_primary': 'DISPLAY_MIN_HIT_STREAK_PRIMARY',
