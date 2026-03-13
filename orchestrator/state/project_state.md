@@ -531,3 +531,15 @@
   - runtime hardening stage-4b cycle is closed
   - no active Claude or RTX tasks remain
   - the next cycle should remain tightly focused on the unresolved `night_ground_large_drones` / large-target night runtime barrier
+
+## Latest Approved Direction
+- Date: 2026-03-13
+- Human approved a short adversarial review cycle for Codex's current conclusion.
+- Locked scope:
+  - no implementation changes
+  - no new training
+  - no backlog reshaping
+  - one analysis-only review of whether `runtime hardening stage-5 / large-target night fix` is actually the best next step
+- Active context:
+  - `BRIEF-20260313-026-codex-conclusion-adversarial-review`
+  - `TASK-20260313-076`
