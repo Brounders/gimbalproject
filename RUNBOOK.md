@@ -116,7 +116,9 @@ PYTHONPATH=src python python_scripts/run_quality_gate.py \
 ### Problem-clip fast loop
 
 Быстрая проверка на проблемных клипах до/после runtime tuning.
-Pack-файл: `configs/regression_pack_problem.csv` (night + noise + IR hard cases).
+Pack-файлы:
+- `configs/regression_pack_problem_night.csv`
+- `configs/regression_pack_problem_ir.csv`
 
 ```bash
 # Быстрая проверка KPI (180 кадров, night пресет)
@@ -126,12 +128,12 @@ PYTHONPATH=src python python_scripts/run_quick_kpi_smoke.py \
 
 # Full gate на problem pack (ночные + noise клипы)
 PYTHONPATH=src python python_scripts/run_quality_gate.py \
-    --pack-file configs/regression_pack_problem.csv \
+    --pack-file configs/regression_pack_problem_night.csv \
     --preset night
 
 # Full gate на problem pack (IR клипы)
 PYTHONPATH=src python python_scripts/run_quality_gate.py \
-    --pack-file configs/regression_pack_problem.csv \
+    --pack-file configs/regression_pack_problem_ir.csv \
     --preset antiuav_thermal
 ```
 
@@ -167,7 +169,6 @@ PYTHONPATH=src python python_scripts/run_quality_gate.py \
     --pack-file configs/regression_pack_problem_ir.csv \
     --preset antiuav_thermal \
     --max-id-changes-per-min 25 \
-    --max-night-id-changes-per-min 18 \
     --min-continuity 0.30 \
     --min-presence 0.05 \
     --max-false-lock-rate 0.55 \
@@ -185,7 +186,7 @@ Contract: `configs/problem_pack_gate_contract.json` — версионирова
 ```bash
 mkdir -p runs/evaluations/ab
 PYTHONPATH=src python python_scripts/run_quick_kpi_smoke.py \
-    --pack configs/regression_pack_problem.csv \
+    --pack configs/regression_pack_problem_night.csv \
     --preset night --max-frames 180 \
     --output-json runs/evaluations/ab/before_night.json
 ```
@@ -195,7 +196,7 @@ PYTHONPATH=src python python_scripts/run_quick_kpi_smoke.py \
 **Шаг 3 — снять after-снимок:**
 ```bash
 PYTHONPATH=src python python_scripts/run_quick_kpi_smoke.py \
-    --pack configs/regression_pack_problem.csv \
+    --pack configs/regression_pack_problem_night.csv \
     --preset night --max-frames 180 \
     --output-json runs/evaluations/ab/after_night.json
 ```

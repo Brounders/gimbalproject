@@ -8,15 +8,13 @@
 - Scope: targeted stage-4b hardening for the remaining large-target night failure mode, with explicit separation from already-bounded noise-like night behavior.
 
 ## Status
-- Done
+- Completed
 
 ## Brief In Focus
 - BRIEF-20260313-025-runtime-hardening-stage4b-v1
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260313-073 | large target night policy fix | Done
-- TASK-20260313-074 | noise vs large night separation | Done
-- TASK-20260313-075 | problem pack hard gate tightening | Done
+- (none)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)

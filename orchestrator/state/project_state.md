@@ -506,3 +506,28 @@
   - `TASK-20260313-073`
   - `TASK-20260313-074`
   - `TASK-20260313-075`
+
+## Latest Control Loop
+- Date: 2026-03-13
+- Reviewed Claude reports:
+  - `REPORT-20260313-073` -> Accepted with caveat
+  - `REPORT-20260313-074` -> Accepted
+  - `REPORT-20260313-075` -> Accepted
+- Accepted tasks this loop:
+  - `TASK-20260313-073`
+  - `TASK-20260313-074`
+  - `TASK-20260313-075`
+- Reviewer validation summary:
+  - `night.yaml` now carries the stage-4b knobs: `track_state_lost_frames=12` and `lock_tracker_min_score=0.52`
+  - `run_quality_gate.py` now separates `night` thresholds from `noise` thresholds through `--max-night-id-changes-per-min`
+  - `run_problem_pack_gate.py` and the split `regression_pack_problem_night.csv` / `regression_pack_problem_ir.csv` form a runnable short local barrier
+- Reviewer caveat:
+  - `night_ground_indicator_lights` remains bounded in `id_chg/min` (`0.00`) but still fails the noise false-lock threshold (`false_lock=0.458`)
+  - `night_ground_large_drones` improved versus the previous review point but still fails badly (`id_chg/min=55.05`, `false_lock=0.750`)
+  - stage-4b therefore improves bounded behavior without closing the large-target night defect
+- Reviewer note:
+  - `RUNBOOK.md` still referenced the legacy combined `regression_pack_problem.csv`; reviewer normalized it to the split night/ir packs during acceptance
+- Outcome:
+  - runtime hardening stage-4b cycle is closed
+  - no active Claude or RTX tasks remain
+  - the next cycle should remain tightly focused on the unresolved `night_ground_large_drones` / large-target night runtime barrier

@@ -54,3 +54,6 @@ TASK-20260312-066 | Claude Mac | Accepted | 2026-03-12 | orchestrator/reports/RE
 TASK-20260312-067 | Claude Mac | Accepted | 2026-03-12 | orchestrator/reports/REPORT-20260312-067.md
 TASK-20260312-068 | Claude Mac | Accepted | 2026-03-12 | orchestrator/reports/REPORT-20260312-068.md
 TASK-20260312-069 | Claude Mac | Accepted | 2026-03-12 | orchestrator/reports/REPORT-20260312-069.md
+TASK-20260313-073 | Claude Mac | Accepted | 2026-03-13 | orchestrator/reports/REPORT-20260313-073.md
+TASK-20260313-074 | Claude Mac | Accepted | 2026-03-13 | orchestrator/reports/REPORT-20260313-074.md
+TASK-20260313-075 | Claude Mac | Accepted | 2026-03-13 | orchestrator/reports/REPORT-20260313-075.md
