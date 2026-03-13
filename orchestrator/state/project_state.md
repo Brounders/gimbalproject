@@ -543,3 +543,19 @@
 - Active context:
   - `BRIEF-20260313-026-codex-conclusion-adversarial-review`
   - `TASK-20260313-076`
+
+## Latest Control Loop
+- Date: 2026-03-13
+- Reviewed Claude reports:
+  - `REPORT-20260313-076` -> Rejected
+- Rejected tasks this loop:
+  - `TASK-20260313-076`
+- Reviewer rejection reason:
+  - the report claimed that no post-hardening measurements existed after stage-4 / stage-4b, but accepted reviewer measurements were already recorded in this file;
+  - the verdict therefore rested on a false premise and could not be accepted as a valid adversarial review.
+- Follow-up opened:
+  - `TASK-20260313-077` under `BRIEF-20260313-026-codex-conclusion-adversarial-review`
+- Outcome:
+  - the adversarial review cycle remains active
+  - no implementation work was accepted from this cycle
+  - the next step is a corrected analysis-only review grounded in accepted reviewer evidence
