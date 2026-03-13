@@ -559,3 +559,25 @@
   - the adversarial review cycle remains active
   - no implementation work was accepted from this cycle
   - the next step is a corrected analysis-only review grounded in accepted reviewer evidence
+
+## Latest Control Loop
+- Date: 2026-03-13
+- Reviewed Claude reports:
+  - `REPORT-20260313-077` -> Accepted
+- Accepted tasks this loop:
+  - `TASK-20260313-077`
+- Reviewer validation summary:
+  - the corrected review explicitly uses the accepted post-hardening reviewer measurements from stage-4 and stage-4b already recorded in this file
+  - the report correctly identifies `night_ground_large_drones` as the main unresolved runtime defect and correctly preserves the "not training first" conclusion
+  - the report also adds a stronger technical insight: the next best step is not a generic lock-policy-only `stage-5`, but a targeted large-target night fix that first exposes the night-detector knobs to the profile/runtime contract
+- Unified conclusion:
+  - Codex was directionally correct that the next step should stay on the unresolved `night_ground_large_drones` runtime barrier and should not open a new training cycle first
+  - Codex was too vague about the implementation path
+  - the best next step is now defined more precisely as:
+    - expose `NIGHT_MAX_AREA`, `NIGHT_TRACK_DIST`, and `NIGHT_LOST_MAX` through `profile_io.py` / profile overrides
+    - tune those knobs specifically for large-target night behavior
+    - validate through the existing problem-pack mini-gate before any new training decision
+- Outcome:
+  - the adversarial review cycle is closed
+  - no active Claude or RTX tasks remain
+  - the next approved engineering phase should be a narrow `large-target night detector/runtime contract` cycle, not a new training cycle and not a broad runtime rewrite

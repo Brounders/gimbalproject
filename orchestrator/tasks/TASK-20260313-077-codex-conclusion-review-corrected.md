@@ -3,7 +3,7 @@
 Task ID: TASK-20260313-077
 Owner: Claude Mac
 Priority: P1
-Status: Open
+Status: Accepted
 
 ## Goal
 Re-run the adversarial review of Codex's current conclusion, but this time explicitly use the already accepted post-hardening reviewer measurements from stage-4 and stage-4b instead of assuming that no such measurements exist.
