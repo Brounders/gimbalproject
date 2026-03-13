@@ -9,15 +9,13 @@
 - Priority: do not open training, refactor, UI, or embedded work; focus only on the unresolved large-target night runtime defect.
 
 ## Status
-- Done
+- Completed
 
 ## Brief In Focus
 - BRIEF-20260313-028-large-target-night-runtime-fix-v1
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260313-081 | large-target continuity gating | Open
-- TASK-20260313-082 | large-target reacquire/release guard | Open
-- TASK-20260313-083 | large-target hard gate evidence | Open
+- (none)
 
 ## Active RTX Tasks (execution allowed now)
 - (none)

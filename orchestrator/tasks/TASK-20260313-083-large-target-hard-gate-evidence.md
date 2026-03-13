@@ -35,4 +35,4 @@
 - No code changes outside the narrow evidence path for this cycle.
 
 # Status
-- Open
+- Accepted

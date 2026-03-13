@@ -675,3 +675,23 @@
   - Both night problem-pack clips PASS the gate contract thresholds for the first time
   - The dominant mechanism was NIGHT_CONFIRM=5 filtering out transient false positives at the detector level
 
+## Latest Control Loop
+- Date: 2026-03-13
+- Reviewed Claude reports:
+  - `REPORT-20260313-081` -> Accepted
+  - `REPORT-20260313-082` -> Accepted
+  - `REPORT-20260313-083` -> Accepted
+- Accepted tasks this loop:
+  - `TASK-20260313-081`
+  - `TASK-20260313-082`
+  - `TASK-20260313-083`
+- Reviewer validation summary:
+  - `NIGHT_CONFIRM` and `NIGHT_MAX_AR` are now exposed through the profile/YAML contract and reachable from `night.yaml`
+  - reviewer rerun of the canonical night problem-pack confirmed first PASS in project history:
+    - `night_ground_large_drones`: `false_lock=0.510`, `id_chg/min=12.23`
+    - `night_ground_indicator_lights`: `false_lock=0.121`, `id_chg/min=0.00`
+  - the accepted large-target runtime fix is primarily driven by `night_confirm=5` while keeping `lock_lost_grace=1` and `night_track_dist=65`
+- Outcome:
+  - AP-025 is accepted and closed
+  - both night problem-pack clips PASS the gate thresholds
+  - the next project step should be opened only through a new approved `План:` cycle

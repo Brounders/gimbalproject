@@ -35,4 +35,4 @@
 - Do not rewrite the whole lock policy.
 
 # Status
-- Open
+- Accepted
