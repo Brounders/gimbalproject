@@ -1,5 +1,23 @@
 # Project State
 
+## Latest Approved Direction
+- Date: 2026-03-13
+- Human approved the next post-AP-025 step as a local model decision cycle.
+- Locked scope:
+  - verify the current Mac baseline contract;
+  - re-intake already published curriculum candidates under the current accepted runtime;
+  - produce one explicit branch decision for the current curriculum branch.
+- Locked exclusions:
+  - no new training;
+  - no new runtime refactor;
+  - no new UI cycle;
+  - no embedded / Hailo work.
+- Active context:
+  - `BRIEF-20260313-029-model-decision-cycle-v1`
+  - `TASK-20260313-084`
+  - `TASK-20260313-085`
+  - `TASK-20260313-086`
+
 ## Mission
 - Система стабильного обнаружения и сопровождения БПЛА (день/ночь/IR) с подготовкой к переносу на RPi5 + Hailo.
 

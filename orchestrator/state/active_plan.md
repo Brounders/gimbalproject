@@ -1,21 +1,23 @@
 # Active Plan
 
 ## Plan ID
-- AP-20260313-025
+- AP-20260313-026
 
 ## Source Direction
-- Human approved the next implementation cycle after acceptance of the large-target night detector/runtime contract cycle.
-- Scope: a narrow large-target night runtime fix focused on continuity gating, reacquire/release guard behavior, and a hard evidence gate.
-- Priority: do not open training, refactor, UI, or embedded work; focus only on the unresolved large-target night runtime defect.
+- Human approved the next post-AP-025 step as a local model decision cycle.
+- Scope: verify the current Mac baseline contract, re-intake already published curriculum candidates under the current accepted runtime, and produce one explicit branch decision.
+- Priority: no new training, no new refactor, no new UI cycle, and no embedded work; use the already published curriculum artifacts and the current local quality contract.
 
 ## Status
-- Completed
+- Active
 
 ## Brief In Focus
-- BRIEF-20260313-028-large-target-night-runtime-fix-v1
+- BRIEF-20260313-029-model-decision-cycle-v1
 
 ## Active Claude Tasks (execution allowed now)
-- (none)
+- TASK-20260313-084 | local baseline operational check | Open
+- TASK-20260313-085 | reintake published curriculum candidates | Open
+- TASK-20260313-086 | model branch decision | Open
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
@@ -24,6 +26,6 @@
 - Любые задачи вне списков выше считаются backlog и не исполняются.
 
 ## Exit Criteria
-- [x] `night_ground_large_drones` improves beyond the current accepted point (false_lock=0.510, id_chg=12.23 — both PASS gate)
-- [x] `night_ground_indicator_lights` does not regress (false_lock=0.096, id_chg=0.00 — PASS gate)
-- [x] The cycle yields one hard-gate before/after verdict — verdict: `improvement`, night gate PASS
+- [ ] The current Mac baseline contract is explicitly verified as operational.
+- [ ] Published curriculum candidates are re-evaluated under the current accepted runtime and local quality contract.
+- [ ] One explicit branch decision is recorded for the current curriculum branch.
