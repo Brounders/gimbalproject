@@ -37,4 +37,4 @@
 - Analysis-first, with minimal doc/state alignment only if necessary.
 
 ## Status
-- Open
+- Accepted

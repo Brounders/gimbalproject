@@ -727,10 +727,10 @@
 ## Latest Control Loop
 - Date: 2026-03-13
 - Completed tasks this loop:
-  - `TASK-20260313-084` -> Pending reviewer
-  - `TASK-20260313-085` -> Pending reviewer
-  - `TASK-20260313-086` -> Pending reviewer
-- Reviewer caveat (AP-026, pending final acceptance):
+  - `TASK-20260313-084` -> Accepted
+  - `TASK-20260313-085` -> Accepted
+  - `TASK-20260313-086` -> Accepted
+- Reviewer summary (AP-026):
   - `models/baseline.pt` is ABSENT — runtime falls back to `drone_bird_probe_fast` via `resolve_model_path()`
   - `install_baseline.py` is operational but has never been invoked
   - curriculum candidates chunk6 (ep73-84) and chunk10 (ep121-132) evaluated under AP-025 runtime
@@ -742,6 +742,6 @@
   - `automation/state/decision_log.json` updated with first formal decision entry
   - `automation/state/training_ledger.json` updated: status=rejected
 - Outcome:
-  - AP-026 model decision cycle complete
+  - AP-026 model decision cycle accepted and complete
   - No candidate promotable; drone-bird-yolo curriculum rejected
   - Recommended next steps: (1) formalize drone_bird_probe_fast as models/baseline.pt; (2) audit training dataset composition; (3) reset training strategy with visible-light night data

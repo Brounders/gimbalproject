@@ -39,4 +39,4 @@
 - Do not evaluate more artifacts than necessary.
 
 ## Status
-- Open
+- Accepted
