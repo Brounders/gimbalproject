@@ -167,6 +167,22 @@ test_videos/IR_BIRD_001.mp4 \
 
 ---
 
+## Night Detector Knobs (AP-024)
+
+Шестой слой: night detector layer knobs экспонированы через YAML contract.
+До AP-024 эти параметры не были доступны через `profile_io.py::apply_overrides` mapping.
+
+| YAML ключ | Config поле | Default | Назначение |
+|-----------|------------|---------|------------|
+| `night_max_area` | `NIGHT_MAX_AREA` | 200 | Max blob area (px²) в night detector; увеличить для large drones (рекомендовано: 400–600) |
+| `night_track_dist` | `NIGHT_TRACK_DIST` | 42 | Spatial gate (px) night tracker'а; увеличить для быстрых крупных целей (рекомендовано: 60–100) |
+| `night_lost_max` | `NIGHT_LOST_MAX` | 8 | Grace frames до потери night track; увеличить для удержания крупных дронов (рекомендовано: 12–20) |
+
+> Root cause id_chg/min для large-target night clips — нестабильность детекций на уровне night detector,
+> не lock policy layer. Knobs выше адресуют эту нестабильность.
+
+---
+
 ## Preset Runtime Tuning Contract
 
 Ключевые runtime knobs для каждого контекста. Источник: YAML конфиги + `profile_io.py::apply_overrides` mapping.
@@ -197,6 +213,9 @@ test_videos/IR_BIRD_001.mp4 \
 | `class_ema_alpha` | 0.18 (default) | **0.15** | 0.24 | Drone score EMA alpha |
 | `budget_target_fps` | 24.0 (default) | 22.0 | 20.0 | Budget FPS target |
 | `velocity_alpha` | 0.55 (default) | 0.68 | 0.72 | Motion smoothing |
+| `night_max_area` | 200 (default) | **500** (AP-024) | 200 (default) | Night detector max blob area |
+| `night_track_dist` | 42 (default) | **80** (AP-024) | 42 (default) | Night tracker spatial gate (px) |
+| `night_lost_max` | 8 (default) | **16** (AP-024) | 8 (default) | Night track grace frames |
 
 ---
 
