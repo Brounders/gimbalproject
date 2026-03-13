@@ -24,6 +24,8 @@ active_id_switch_cooldown_frames: 60  # [night hardening] double cooldown (was d
 track_state_acquire_frames: 4  # [night hardening] require 4 hits to acquire track (was default 3)
 lock_mode_acquire_frames: 3  # [night hardening] require 3 confirm-frames to enter lock (was default 2)
 active_id_switch_allow_if_lost_frames: 12  # [night hardening] longer loss before ID-switch (was default 6)
+track_state_lost_frames: 12  # [night hardening] hold track 12 frames before LOST (was default 8)
+lock_tracker_min_score: 0.52  # [night hardening] stricter correlation gate (was default 0.42)
 velocity_alpha: 0.68
 lock_reacquire_predict_gain: 1.12
 lock_reacquire_predict_horizon_max: 5

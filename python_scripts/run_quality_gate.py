@@ -43,6 +43,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--max-noise-false-lock-rate", type=float, default=0.18)
     p.add_argument("--max-noise-id-changes-per-min", type=float, default=15.0,
                    help="Max active_id_changes_per_min for noise/background scenes (default: 15.0).")
+    p.add_argument("--max-night-id-changes-per-min", type=float, default=8.0,
+                   help="Max active_id_changes_per_min for night scenes (default: 8.0).")
 
     p.add_argument("--allow-baseline-fps-drop", type=float, default=1.0)
     p.add_argument("--allow-baseline-continuity-drop", type=float, default=0.03)
@@ -263,9 +265,13 @@ def main() -> int:
         if float(row["lock_switches_per_min"]) > float(args.max_lock_switches_per_min):
             row_failures.append(f"swpm>{args.max_lock_switches_per_min}")
         is_noise = scene in {"noise", "noisy", "background"}
+        is_night = scene == "night"
         if is_noise:
             if float(row["active_id_changes_per_min"]) > float(args.max_noise_id_changes_per_min):
                 row_failures.append(f"noise_idchg/min>{args.max_noise_id_changes_per_min}")
+        elif is_night:
+            if float(row["active_id_changes_per_min"]) > float(args.max_night_id_changes_per_min):
+                row_failures.append(f"night_idchg/min>{args.max_night_id_changes_per_min}")
         else:
             if float(row["active_id_changes_per_min"]) > float(args.max_id_changes_per_min):
                 row_failures.append(f"idchg/min>{args.max_id_changes_per_min}")
@@ -346,6 +352,7 @@ def main() -> int:
             "max_false_lock_rate": args.max_false_lock_rate,
             "max_noise_false_lock_rate": args.max_noise_false_lock_rate,
             "max_noise_id_changes_per_min": args.max_noise_id_changes_per_min,
+            "max_night_id_changes_per_min": args.max_night_id_changes_per_min,
         },
         "baseline": str(args.baseline) if args.baseline else "",
         "gate_passed": passed,

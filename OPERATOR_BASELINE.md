@@ -154,6 +154,19 @@ test_videos/IR_BIRD_001.mp4 \
 
 ---
 
+## Runtime Hardening Changes (AP-022)
+
+Пятый слой hardening: lock tracker correlation gate + track persistence для large-target night scenes.
+
+| Параметр | Файл | Было | Стало | Цель |
+|----------|------|------|-------|------|
+| `track_state_lost_frames` | `night.yaml` | 8 (default) | **12** | Держать track 12 кадров до LOST — меньше бросает трек на large drone |
+| `lock_tracker_min_score` | `night.yaml` | 0.42 (default) | **0.52** | Строже correlation gate для lock tracker — меньше false lock entries |
+
+> Оба параметра уже доступны через YAML mapping.
+
+---
+
 ## Preset Runtime Tuning Contract
 
 Ключевые runtime knobs для каждого контекста. Источник: YAML конфиги + `profile_io.py::apply_overrides` mapping.
@@ -179,6 +192,8 @@ test_videos/IR_BIRD_001.mp4 \
 | `track_state_acquire_frames` | 3 (default) | **4** | 3 (default) | Consecutive detections to acquire track |
 | `lock_mode_acquire_frames` | 2 (default) | **3** | 2 (default) | Confirm-frames to enter lock mode |
 | `active_id_switch_allow_if_lost_frames` | 6 (default) | **12** | 6 (default) | Lost frames before cooldown bypass |
+| `track_state_lost_frames` | 8 (default) | **12** | 8 (default) | Frames before track goes to LOST state |
+| `lock_tracker_min_score` | 0.42 (default) | **0.52** | 0.42 (default) | Minimum correlation score for lock tracker |
 | `class_ema_alpha` | 0.18 (default) | **0.15** | 0.24 | Drone score EMA alpha |
 | `budget_target_fps` | 24.0 (default) | 22.0 | 20.0 | Budget FPS target |
 | `velocity_alpha` | 0.55 (default) | 0.68 | 0.72 | Motion smoothing |

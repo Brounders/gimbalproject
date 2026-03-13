@@ -11,19 +11,21 @@
     "max_id_changes_per_min": 25.0,
     "min_continuity": 0.30,
     "min_presence": 0.05,
-    "max_false_lock_rate": 0.65,
+    "max_false_lock_rate": 0.55,
     "max_noise_false_lock_rate": 0.35,
-    "max_noise_id_changes_per_min": 15.0
+    "max_noise_id_changes_per_min": 15.0,
+    "max_night_id_changes_per_min": 18.0
   },
   "rationale": {
     "max_id_changes_per_min": "25 vs default 8: night_ground_large_drones is a known-hard clip; target is below 25 after hardening",
-    "max_false_lock_rate": "0.65 vs default 0.35: indicator-light and large-drone night clips have inherently higher false_lock",
+    "max_false_lock_rate": "0.55 vs default 0.35: large-drone night clips have inherently higher false_lock; tightened from 0.65 after AP-022 lock_tracker_min_score (0.42→0.52) improvement",
     "max_noise_false_lock_rate": "0.35 vs default 0.18: noise clips without GT have structurally high false_lock; tightened from 0.40 after AP-021 track_state_acquire_frames hardening",
     "min_continuity": "0.30 vs default 0.45: hard clips may have fragmented tracks",
-    "min_presence": "0.05 vs default 0.08: noise/background clips have near-zero real presence"
+    "min_presence": "0.05 vs default 0.08: noise/background clips have near-zero real presence",
+    "max_night_id_changes_per_min": "18 vs default 8: night_ground_large_drones target after AP-022 stage-4b; explicit night gate separate from noise and ir/day"
   },
   "canonical_invocations": {
-    "night": "PYTHONPATH=src python python_scripts/run_quality_gate.py --pack-file configs/regression_pack_problem_night.csv --preset night --max-id-changes-per-min 25 --min-continuity 0.30 --min-presence 0.05 --max-false-lock-rate 0.65 --max-noise-false-lock-rate 0.35 --max-noise-id-changes-per-min 15",
-    "ir": "PYTHONPATH=src python python_scripts/run_quality_gate.py --pack-file configs/regression_pack_problem_ir.csv --preset antiuav_thermal --max-id-changes-per-min 25 --min-continuity 0.30 --min-presence 0.05 --max-false-lock-rate 0.65 --max-noise-false-lock-rate 0.35 --max-noise-id-changes-per-min 15"
+    "night": "PYTHONPATH=src python python_scripts/run_quality_gate.py --pack-file configs/regression_pack_problem_night.csv --preset night --max-id-changes-per-min 25 --max-night-id-changes-per-min 18 --min-continuity 0.30 --min-presence 0.05 --max-false-lock-rate 0.55 --max-noise-false-lock-rate 0.35 --max-noise-id-changes-per-min 15",
+    "ir": "PYTHONPATH=src python python_scripts/run_quality_gate.py --pack-file configs/regression_pack_problem_ir.csv --preset antiuav_thermal --max-id-changes-per-min 25 --min-continuity 0.30 --min-presence 0.05 --max-false-lock-rate 0.55 --max-noise-false-lock-rate 0.35 --max-noise-id-changes-per-min 15"
   }
 }

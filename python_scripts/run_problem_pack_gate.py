@@ -20,6 +20,7 @@ def main() -> int:
     t = contract["thresholds"]
     threshold_args = [
         "--max-id-changes-per-min", str(t["max_id_changes_per_min"]),
+        "--max-night-id-changes-per-min", str(t["max_night_id_changes_per_min"]),
         "--min-continuity", str(t["min_continuity"]),
         "--min-presence", str(t["min_presence"]),
         "--max-false-lock-rate", str(t["max_false_lock_rate"]),

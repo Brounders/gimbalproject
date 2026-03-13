@@ -150,13 +150,15 @@ Wrapper читает `configs/problem_pack_gate_contract.json`, запускае
 **Ручной запуск (canonical invocations из contract):**
 ```bash
 # Night clips (night_ground_large_drones + night_ground_indicator_lights)
+# AP-022+: night scene uses --max-night-id-changes-per-min (separate from noise and ir/day)
 PYTHONPATH=src python python_scripts/run_quality_gate.py \
     --pack-file configs/regression_pack_problem_night.csv \
     --preset night \
     --max-id-changes-per-min 25 \
+    --max-night-id-changes-per-min 18 \
     --min-continuity 0.30 \
     --min-presence 0.05 \
-    --max-false-lock-rate 0.65 \
+    --max-false-lock-rate 0.55 \
     --max-noise-false-lock-rate 0.35 \
     --max-noise-id-changes-per-min 15
 
@@ -165,9 +167,10 @@ PYTHONPATH=src python python_scripts/run_quality_gate.py \
     --pack-file configs/regression_pack_problem_ir.csv \
     --preset antiuav_thermal \
     --max-id-changes-per-min 25 \
+    --max-night-id-changes-per-min 18 \
     --min-continuity 0.30 \
     --min-presence 0.05 \
-    --max-false-lock-rate 0.65 \
+    --max-false-lock-rate 0.55 \
     --max-noise-false-lock-rate 0.35 \
     --max-noise-id-changes-per-min 15
 ```
