@@ -8,13 +8,13 @@
 - Scope: one analysis-only cycle to verify or challenge the recommendation to prioritize a narrow large-target night runtime fix over other possible next steps.
 
 ## Status
-- Active
+- Done
 
 ## Brief In Focus
 - BRIEF-20260313-026-codex-conclusion-adversarial-review
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260313-077 | codex conclusion review corrected | Open
+- TASK-20260313-077 | codex conclusion review corrected | Done
 
 ## Active RTX Tasks (execution allowed now)
 - (none)
