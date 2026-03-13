@@ -638,3 +638,17 @@
   - `night_ground_indicator_lights` remains bounded and non-regressed
   - `night_ground_large_drones` remains the main unresolved runtime defect
   - no new training or refactor cycle should be opened until the next step is explicitly approved
+
+## Latest Approved Direction
+- Date: 2026-03-13
+- Human approved the next implementation cycle after acceptance of the large-target night detector/runtime contract work.
+- Locked scope:
+  - runtime-only, narrow large-target night fix;
+  - no training, no UI, no refactor, no embedded work;
+  - focus on continuity gating, reacquire/release guard behavior, and a hard evidence gate for `night_ground_large_drones` with no-regression against `night_ground_indicator_lights`.
+- Active context:
+  - `BRIEF-20260313-028-large-target-night-runtime-fix-v1`
+  - `TASK-20260313-081`
+  - `TASK-20260313-082`
+  - `TASK-20260313-083`
+
