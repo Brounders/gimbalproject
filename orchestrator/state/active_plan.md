@@ -9,7 +9,7 @@
 - Priority: no new training, no new refactor, no new UI cycle, and no embedded work; use the already published curriculum artifacts and the current local quality contract.
 
 ## Status
-- Active
+- Done
 
 ## Brief In Focus
 - BRIEF-20260313-029-model-decision-cycle-v1
@@ -26,6 +26,6 @@
 - Любые задачи вне списков выше считаются backlog и не исполняются.
 
 ## Exit Criteria
-- [ ] The current Mac baseline contract is explicitly verified as operational.
-- [ ] Published curriculum candidates are re-evaluated under the current accepted runtime and local quality contract.
-- [ ] One explicit branch decision is recorded for the current curriculum branch.
+- [x] The current Mac baseline contract is explicitly verified as operational — baseline.pt ABSENT; runtime fallback to drone_bird_probe_fast documented
+- [x] Published curriculum candidates re-evaluated — chunk6 (ep73-84) and chunk10 (ep121-132) tested under AP-025 runtime
+- [x] One explicit branch decision recorded — `reject_and_reset_training_strategy` in decision_log.json

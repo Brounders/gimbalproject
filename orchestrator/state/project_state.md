@@ -713,3 +713,35 @@
   - AP-025 is accepted and closed
   - both night problem-pack clips PASS the gate thresholds
   - the next project step should be opened only through a new approved `План:` cycle
+
+## Latest Approved Direction
+- Date: 2026-03-13
+- Human approved a local model decision cycle after AP-025 acceptance.
+- Locked scope: verify baseline contract, re-intake published curriculum candidates under current accepted runtime, produce one explicit branch decision.
+- Active context:
+  - `BRIEF-20260313-029-model-decision-cycle-v1`
+  - `TASK-20260313-084`
+  - `TASK-20260313-085`
+  - `TASK-20260313-086`
+
+## Latest Control Loop
+- Date: 2026-03-13
+- Completed tasks this loop:
+  - `TASK-20260313-084` -> Pending reviewer
+  - `TASK-20260313-085` -> Pending reviewer
+  - `TASK-20260313-086` -> Pending reviewer
+- Reviewer caveat (AP-026, pending final acceptance):
+  - `models/baseline.pt` is ABSENT — runtime falls back to `drone_bird_probe_fast` via `resolve_model_path()`
+  - `install_baseline.py` is operational but has never been invoked
+  - curriculum candidates chunk6 (ep73-84) and chunk10 (ep121-132) evaluated under AP-025 runtime
+  - day gate: all models (baseline + curriculum) share false_lock=1.000 — structural issue with day clip, not a discriminator
+  - night gate: chunk6 false_lock=0.830/id_chg=48.93, chunk10 false_lock=0.951/id_chg=55.05 — massive regression vs de-facto baseline (0.510/12.23)
+  - IR gate (chunk10): catastrophic failure (false_lock=0.875-1.000)
+  - trend: more epochs = worse night performance
+  - decision: `reject_and_reset_training_strategy` for `drone-bird-yolo` curriculum
+  - `automation/state/decision_log.json` updated with first formal decision entry
+  - `automation/state/training_ledger.json` updated: status=rejected
+- Outcome:
+  - AP-026 model decision cycle complete
+  - No candidate promotable; drone-bird-yolo curriculum rejected
+  - Recommended next steps: (1) formalize drone_bird_probe_fast as models/baseline.pt; (2) audit training dataset composition; (3) reset training strategy with visible-light night data

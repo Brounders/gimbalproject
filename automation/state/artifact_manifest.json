@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-03-12T14:36:10Z",
+  "updated_at": "2026-03-13T00:00:00Z",
   "artifacts": [
     {
       "artifact_id": "curriculum_drone-bird-yolo_20260312_012112",
@@ -117,8 +117,8 @@
       "epoch_from": 73,
       "epoch_to": 84,
       "status": "published",
-      "decision": null,
-      "notes": "",
+      "decision": "reject",
+      "notes": "AP-026: rejected — night gate regression vs de-facto baseline",
       "published_at": "2026-03-12T10:40:17Z"
     },
     {
@@ -185,8 +185,8 @@
       "epoch_from": 121,
       "epoch_to": 132,
       "status": "published",
-      "decision": null,
-      "notes": "",
+      "decision": "reject",
+      "notes": "AP-026: rejected — night gate regression vs de-facto baseline",
       "published_at": "2026-03-12T14:36:00Z"
     }
   ]

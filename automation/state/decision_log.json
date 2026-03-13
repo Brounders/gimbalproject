@@ -1,5 +1,26 @@
 {
   "version": 1,
-  "updated_at": "2026-03-12T14:36:10Z",
-  "decisions": []
+  "updated_at": "2026-03-13T00:00:00Z",
+  "decisions": [
+    {
+      "decision_id": "decision_drone-bird-yolo_20260313",
+      "dataset_id": "drone-bird-yolo",
+      "run_name": "curriculum_drone-bird-yolo",
+      "artifact_ids_evaluated": [
+        "curriculum_drone-bird-yolo_20260312_124515_chunk6",
+        "curriculum_drone-bird-yolo_20260312_164003_chunk10"
+      ],
+      "decision": "reject_and_reset_training_strategy",
+      "runtime_state": "AP-025 (night_confirm=5, night_track_dist=65, lock_lost_grace=1)",
+      "reason": "All candidates fail night gate with massive regression vs de-facto baseline. Night large_drones false_lock: baseline 0.510 vs chunk6 0.830 vs chunk10 0.951. Trend worsens with more epochs. No candidate is promotable.",
+      "gate_reports": {
+        "day_chunk10": "runs/evaluations/quality_gate/ap026_chunk10_dayonlyquality_gate_default.json",
+        "night_chunk6": "runs/evaluations/quality_gate/ap026_chunk6_nightquality_gate_night.json",
+        "night_chunk10": "runs/evaluations/quality_gate/ap026_chunk10_nightquality_gate_night.json",
+        "ir_chunk10": "runs/evaluations/quality_gate/ap026_chunk10_irquality_gate_antiuav_thermal.json"
+      },
+      "decided_at": "2026-03-13T00:00:00Z",
+      "decided_by": "Claude Mac (AP-026)"
+    }
+  ]
 }
