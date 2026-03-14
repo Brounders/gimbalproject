@@ -112,7 +112,7 @@ tests/*             → src/uav_tracker/* (PYTHONPATH=src required)
 | Detection | `detectors/` | `detectors/` | ✅ Already grouped |
 | Tracking | `tracking/` | `tracking/` | ✅ Complete (5 files) |
 | Pipeline Control | `pipeline_control/` | `pipeline_control/` | 🔄 Partial (budget_controller done; auto_scene_adapter pending BRIEF-031) |
-| Display | root (flat) | `display/` | Planned |
+| Display | `display/` | `display/` | ✅ Complete (3 files) |
 | Config | root (flat) | keep flat or `config/` | Risk: breaking imports |
 | Integrations | `runtime/` | `runtime/` | Already grouped |
 
@@ -123,19 +123,17 @@ tests/*             → src/uav_tracker/* (PYTHONPATH=src required)
 | Detection | `detectors/night_detector.py`, `detectors/roi_assist.py` |
 | Tracking | `tracking/target_manager.py`, `tracking/lock_tracker.py`, `tracking/lock_event_tracker.py`, `tracking/tracking_state_machine.py`*, `tracking/continuity_tracker.py`* |
 | Pipeline Control | `budget_controller.py`* → `pipeline_control/budget_controller.py` |
-| Display | `display_state_tracker.py`*, `overlay.py`*, `frame_result.py`* → `display/` |
+| Display | `display/display_state_tracker.py`, `display/overlay.py`, `display/frame_result.py` |
 | Config | `config.py`, `profile_io.py`, `modes.py` (keep flat — imported broadly) |
 | Coordinator | `pipeline.py` (stays at root, imports all clusters) |
-
-*items with asterisk = planned moves, not yet executed
 
 ### Risk Assessment
 
 | Change | Risk | Blocker |
 |--------|------|---------|
-| Move files into tracking/ | Low | 2-3 import lines per file |
-| Move files into pipeline_control/ | Low | ~3-5 import lines |
-| Move files into display/ | Medium | overlay.py imported by many callers |
+| Move files into tracking/ | Low | DONE |
+| Move files into pipeline_control/ | Low | DONE (auto_scene_adapter pending BRIEF-031) |
+| Move files into display/ | Low | DONE |
 | Move config.py | High | 145+ callers, breaking change |
 | Split main_gui.py | High | UI+worker coupling, QThread lifecycle |
 

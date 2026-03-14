@@ -26,9 +26,7 @@
 | Hailo impl | HailoBackend real implementation for RPi5 — replace stub with actual Hailo SDK calls | High: hardware dependency, platform-specific | `src/uav_tracker/runtime/hailo_backend.py` |
 | ROOT-DOC-001 | Root MD proliferation — 12+ MD files at root; consolidate/move to `docs/` without breaking existing references | Low | root `*.md` files |
 | MAIN-GUI-001 | Split `app/main_gui.py` (1600 lines) — extract TrackerWorker business logic from UI layer | High | `app/main_gui.py`, new `app/workers/tracker_worker.py` |
-| DISP-001 | Move `frame_result.py` → `display/` — careful: imported by overlay + pipeline | Medium | Audit all callers first |
-| DISP-002 | Move `display_state_tracker.py` → `display/` — 2 callers | Low | After DISP-001 |
-| DISP-003 | Move `overlay.py` → `display/` — multiple callers in GUI | Medium | Audit all callers first |
+| DISP-001..003 | ~~Display cluster moves~~ — COMPLETED | — | — |
 
 ---
 
@@ -58,6 +56,9 @@
 | TRACK-001 | `continuity_tracker.py` → `tracking/` subpackage |
 | TRACK-002 | `tracking_state_machine.py` → `tracking/` subpackage |
 | PCTL-001 | Создан `pipeline_control/` + `budget_controller.py` перемещён туда |
+| DISP-001 | `display_state_tracker.py` → `display/` subpackage |
+| DISP-002 | `frame_result.py` → `display/` subpackage |
+| DISP-003 | `overlay.py` → `display/` subpackage |
 
 ---
 
