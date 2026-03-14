@@ -98,6 +98,17 @@ PYTHONPATH=src python python_scripts/run_quality_gate.py \
 
 Exit code: `0` = PASS, `4` = FAIL, `2` = config error.
 
+#### Day Gate — известное ограничение (FPS-only)
+
+Клип `drone_closeup_mixkit_44644_360.mp4` не имеет GT-файла (`label.json` / `gt.json`).
+В `evaluation.py` метрика `false_lock` считает как false_lock **каждый** кадр, где tracker
+активен, а `gt_visible=False`. Без GT — `gt_visible` всегда `False` → `false_lock=1.000`
+гарантирован для **любой** модели, включая de-facto baseline.
+
+**Следствие:** `false_lock` из day gate **не является дифференциатором** между моделями.
+Используйте day gate только для сравнения `fps` и `active_id_changes_per_min`.
+Для добавления GT: поместите `label.json` или `gt.json` рядом с видеофайлом.
+
 #### Канонический запуск по контексту
 
 ```bash

@@ -2,4 +2,11 @@
 # Day scenario regression pack — use with --preset default
 # Run: PYTHONPATH=src ./tracker_env/bin/python python_scripts/run_quality_gate.py \
 #        --pack-file configs/regression_pack_day.csv --preset default
+#
+# NOTE: drone_closeup_mixkit_44644_360.mp4 has NO GT file.
+# false_lock is structurally 1.000 for ANY model on this clip (evaluation.py counts
+# all active-lock frames as false_lock when gt_visible=False).
+# This gate is VALID only for FPS and id_chg/min metrics.
+# Do NOT use false_lock from this gate to compare models — it will always be 1.000.
+# To add GT: place label.json or gt.json next to the video file.
 test_videos/drone_closeup_mixkit_44644_360.mp4,day
