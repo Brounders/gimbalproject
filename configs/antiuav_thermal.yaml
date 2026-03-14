@@ -44,6 +44,10 @@ active_id_switch_cooldown_frames: 60   # default 30: double cooldown between ID 
 track_state_acquire_frames: 4          # default 3: require 4 consecutive hits to acquire track
 lock_mode_acquire_frames: 3            # default 2: require 3 confirm-frames to enter lock mode
 active_id_switch_allow_if_lost_frames: 12  # default 6: hold longer before cooldown bypass
+# [IR hardening v2 — track persistence — REVERTED] session-2026-03-14
+# track_state_lost_frames tested at 12 and 16: zero effect (id_chg=63.26 unchanged)
+# Root cause confirmed: YOLO detection gaps > 16 frames on Demo_IR_DRONE_146
+# Runtime lever exhausted — requires IR-specialized model
 show_gt_overlay: true
 show_debug_timings: true
 show_trails: true
