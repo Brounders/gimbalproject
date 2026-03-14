@@ -12,7 +12,7 @@
 |----|-------------|------|----------------|
 | BRIEF-031 | AutoSceneAdapter extraction — BLOCKER: (1) file doesn't exist, requires NEW class creation not file move; (2) method mutates 5 cfg fields in-place (`CONF_THRESH`, `NIGHT_MOT_THRESH`, `NIGHT_DIFF_THRESH`, `LOCK_CONFIRM_FRAMES`, `DRONE_LOCK_SCORE_MIN`) affecting NightDetector/TargetManager/LockTracker downstream; (3) 0% test coverage — no regression safety net; (4) interface design unresolved (pass cfg ref vs return override dict) | High: cfg mutation pattern must be resolved before extraction | `src/uav_tracker/pipeline.py:190-283`, new `src/uav_tracker/pipeline_control/auto_scene_adapter.py` |
 | A10 | Test coverage from ~15% → >30% — add tests for pipeline, config, detectors, target_manager | Medium: test isolation for stateful classes | `tests/`, `src/uav_tracker/pipeline.py`, `src/uav_tracker/config.py`, detectors |
-| TASK-033 | Verify APP_STYLESHEET extraction — `app/ui/theme.py` exists; audit whether it's fully used by `main_gui.py` or still has inline remnants | Low | `app/main_gui.py`, `app/ui/theme.py` |
+| TASK-033 | ~~Verify APP_STYLESHEET extraction~~ — CLOSED by audit (2026-03-14): COMPLETE. `theme.py` is sole source of truth; `main_gui.py` has 0 inline styles, applies `APP_STYLESHEET` via single import | — | — |
 | SCRIPTS-001 | Organize `python_scripts/` into subdirs: `training/`, `evaluation/`, `tools/` — no code changes, just directory structure | Low | `python_scripts/` |
 | TRACK-001 | Move `continuity_tracker.py` → `tracking/` — zero internal imports, 2 callers | Low | 2 import lines, 1 file move |
 | TRACK-002 | Move `tracking_state_machine.py` → `tracking/` — zero internal imports, 2 callers | Low | 2 import lines, 1 file move |
@@ -59,6 +59,7 @@
 | DISP-001 | `display_state_tracker.py` → `display/` subpackage |
 | DISP-002 | `frame_result.py` → `display/` subpackage |
 | DISP-003 | `overlay.py` → `display/` subpackage |
+| TASK-033 | theme.py audit — COMPLETE: `theme.py` is sole source of truth, 0 inline styles in `main_gui.py` |
 
 ---
 
