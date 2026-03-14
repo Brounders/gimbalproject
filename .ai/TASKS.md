@@ -56,6 +56,7 @@
 | .ai init | Created `.ai/` folder with CLAUDE.md, MEMORY.md, ARCHITECTURE_MAP.md, TASKS.md, CONTEXT7_GUIDE.md |
 | TRACK-000 | `lock_event_tracker.py` → `tracking/` subpackage |
 | TRACK-001 | `continuity_tracker.py` → `tracking/` subpackage |
+| TRACK-002 | `tracking_state_machine.py` → `tracking/` subpackage |
 
 ---
 
