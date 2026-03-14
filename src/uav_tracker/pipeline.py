@@ -8,7 +8,7 @@ from typing import Optional, Union
 import cv2
 import numpy as np
 
-from uav_tracker.budget_controller import BudgetController
+from uav_tracker.pipeline_control.budget_controller import BudgetController
 from uav_tracker.config import Config
 from uav_tracker.tracking.continuity_tracker import ContinuityTracker
 from uav_tracker.display_state_tracker import DisplayStateTracker

@@ -10,7 +10,7 @@ Usage:
 import unittest
 
 from uav_tracker.config import Config
-from uav_tracker.budget_controller import BudgetController
+from uav_tracker.pipeline_control.budget_controller import BudgetController
 from uav_tracker.tracking.continuity_tracker import ContinuityTracker
 from uav_tracker.tracking.lock_event_tracker import LockEventTracker
 from uav_tracker.tracking.tracking_state_machine import TrackingStateMachine
