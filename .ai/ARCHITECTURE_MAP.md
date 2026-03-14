@@ -111,7 +111,7 @@ tests/*             → src/uav_tracker/* (PYTHONPATH=src required)
 |---------|-----------------|-------------------|--------|
 | Detection | `detectors/` | `detectors/` | ✅ Already grouped |
 | Tracking | `tracking/` | `tracking/` | ✅ Complete (5 files) |
-| Pipeline Control | `pipeline_control/` | `pipeline_control/` | 🔄 Partial (budget_controller done; auto_scene_adapter pending BRIEF-031) |
+| Pipeline Control | `pipeline_control/` | `pipeline_control/` | 🔴 Blocked (budget_controller done; auto_scene_adapter BLOCKED — inline extraction + cfg mutation, see BRIEF-031) |
 | Display | `display/` | `display/` | ✅ Complete (3 files) |
 | Config | root (flat) | keep flat or `config/` | Risk: breaking imports |
 | Integrations | `runtime/` | `runtime/` | Already grouped |
@@ -122,7 +122,7 @@ tests/*             → src/uav_tracker/* (PYTHONPATH=src required)
 |---------|-------|
 | Detection | `detectors/night_detector.py`, `detectors/roi_assist.py` |
 | Tracking | `tracking/target_manager.py`, `tracking/lock_tracker.py`, `tracking/lock_event_tracker.py`, `tracking/tracking_state_machine.py`*, `tracking/continuity_tracker.py`* |
-| Pipeline Control | `budget_controller.py`* → `pipeline_control/budget_controller.py` |
+| Pipeline Control | `pipeline_control/budget_controller.py` ✅; `auto_scene_adapter` 🔴 inline in `pipeline.py:190-283` — BRIEF-031 blocked |
 | Display | `display/display_state_tracker.py`, `display/overlay.py`, `display/frame_result.py` |
 | Config | `config.py`, `profile_io.py`, `modes.py` (keep flat — imported broadly) |
 | Coordinator | `pipeline.py` (stays at root, imports all clusters) |
@@ -132,7 +132,7 @@ tests/*             → src/uav_tracker/* (PYTHONPATH=src required)
 | Change | Risk | Blocker |
 |--------|------|---------|
 | Move files into tracking/ | Low | DONE |
-| Move files into pipeline_control/ | Low | DONE (auto_scene_adapter pending BRIEF-031) |
+| Extract AutoSceneAdapter → pipeline_control/ | High | BRIEF-031 BLOCKED: (1) no file exists, requires new class extraction; (2) direct cfg mutation (`self.cfg.CONF_THRESH = ...`) — interface unresolved; (3) 0% test coverage |
 | Move files into display/ | Low | DONE |
 | Move config.py | High | 145+ callers, breaking change |
 | Split main_gui.py | High | UI+worker coupling, QThread lifecycle |
