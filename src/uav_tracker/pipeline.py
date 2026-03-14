@@ -11,6 +11,7 @@ import numpy as np
 from uav_tracker.budget_controller import BudgetController
 from uav_tracker.config import Config
 from uav_tracker.continuity_tracker import ContinuityTracker
+from uav_tracker.display_state_tracker import DisplayStateTracker
 from uav_tracker.tracking_state_machine import TrackingStateMachine
 from uav_tracker.detectors.night_detector import NightSmallTargetDetector
 from uav_tracker.detectors.roi_assist import MotionROIProposer
@@ -186,11 +187,7 @@ class TrackerPipeline:
         self.budget = BudgetController(cfg, initial_roi_candidates=max(1, int(cfg.ROI_MAX_CANDIDATES)))
         self.continuity = ContinuityTracker()
         self.tracking_sm = TrackingStateMachine(cfg)
-        self._confidence_ema = 0.0
-        self._display_confidence = 0.0
-        self._confidence_last_update_sec = 0.0
-        self._reticle_center: Optional[tuple[float, float]] = None
-        self._reticle_missing_streak = 0
+        self.display_state = DisplayStateTracker(cfg)
 
         # Auto scene detection state (TASK-020).
         self._auto_scene_state = 'day'       # 'day' or 'night'
@@ -201,10 +198,6 @@ class TrackerPipeline:
         self._auto_scene_orig_lock_confirm = int(cfg.LOCK_CONFIRM_FRAMES)
         self._auto_scene_orig_drone_lock_score = float(cfg.DRONE_LOCK_SCORE_MIN)
         self._auto_scene_frame_tick = 0
-
-        # Display bbox smoothing state (TASK-021).
-        self._smooth_bbox: Optional[list[float]] = None   # [x1, y1, x2, y2] floats
-        self._smooth_bbox_missing = 0
 
     def _update_video_time(self, source_fps: Optional[float]) -> None:
         if source_fps is not None and source_fps > 1.0:
@@ -218,60 +211,6 @@ class TrackerPipeline:
         if self._video_elapsed_sec < 5.0:
             return 0.0
         return self.lock_switch_count * 60.0 / self._video_elapsed_sec
-
-    def _instant_tracking_confidence(self, active: Optional[TrackedTarget], lock_score: float) -> float:
-        if active is None:
-            return 0.0
-        streak_norm = min(1.0, float(active.hit_streak) / max(1.0, float(self.cfg.LOCK_CONFIRM_FRAMES)))
-        lock_norm = float(lock_score) if lock_score > 0.0 else float(active.conf)
-        value = 0.45 * float(active.conf) + 0.35 * lock_norm + 0.20 * streak_norm
-        if active.lost_frames > 0:
-            value *= max(0.2, 1.0 - 0.2 * float(active.lost_frames))
-        return max(0.0, min(1.0, value))
-
-    def _update_display_confidence(self, active: Optional[TrackedTarget], lock_score: float) -> float:
-        instant = self._instant_tracking_confidence(active, lock_score)
-        alpha = max(0.01, min(0.95, float(self.cfg.CONFIDENCE_EMA_ALPHA)))
-        self._confidence_ema = (1.0 - alpha) * self._confidence_ema + alpha * instant
-
-        period = max(0.5, float(self.cfg.CONFIDENCE_DISPLAY_UPDATE_SEC))
-        if self._video_elapsed_sec - self._confidence_last_update_sec >= period:
-            self._display_confidence = self._confidence_ema
-            self._confidence_last_update_sec = self._video_elapsed_sec
-
-        if self.frame_counter <= 3:
-            self._display_confidence = self._confidence_ema
-        return max(0.0, min(1.0, self._display_confidence))
-
-    def _update_reticle_center(self, active: Optional[TrackedTarget]) -> Optional[tuple[int, int]]:
-        if active is not None:
-            x1, y1, x2, y2 = active.bbox
-            cx = float((x1 + x2) * 0.5)
-            cy = float((y1 + y2) * 0.5)
-            if active.lost_frames > 0:
-                horizon = max(1, min(int(self.cfg.LOCK_REACQUIRE_PREDICT_HORIZON_MAX), active.lost_frames))
-                gain = float(self.cfg.LOCK_REACQUIRE_PREDICT_GAIN)
-                cx += float(active.vx) * horizon * gain
-                cy += float(active.vy) * horizon * gain
-            alpha = max(0.01, min(0.95, float(self.cfg.RETICLE_CENTER_ALPHA)))
-            if self._reticle_center is None:
-                self._reticle_center = (cx, cy)
-            else:
-                px, py = self._reticle_center
-                self._reticle_center = (
-                    (1.0 - alpha) * px + alpha * cx,
-                    (1.0 - alpha) * py + alpha * cy,
-                )
-            self._reticle_missing_streak = 0
-        elif self._reticle_center is not None:
-            self._reticle_missing_streak += 1
-            if self._reticle_missing_streak > max(1, int(self.cfg.RETICLE_HOLD_FRAMES)):
-                self._reticle_center = None
-                self._reticle_missing_streak = 0
-
-        if self._reticle_center is None:
-            return None
-        return int(self._reticle_center[0]), int(self._reticle_center[1])
 
     def _adapt_auto_scene(self, frame: np.ndarray) -> None:
         """Auto scene detection: Day / Night / IR (TASK-020 + TASK-026).
@@ -350,49 +289,6 @@ class TrackerPipeline:
             self.cfg.NIGHT_DIFF_THRESH = self._auto_scene_orig_diff
             self.cfg.LOCK_CONFIRM_FRAMES = self._auto_scene_orig_lock_confirm
             self.cfg.DRONE_LOCK_SCORE_MIN = self._auto_scene_orig_drone_lock_score
-
-    def _get_smooth_display_bbox(
-        self, active: Optional[TrackedTarget]
-    ) -> Optional[tuple[int, int, int, int]]:
-        """Return EMA-smoothed bbox for display (TASK-021).
-
-        Center position uses SMOOTH_BBOX_ALPHA.
-        Width/height use softer SMOOTH_BBOX_SIZE_ALPHA to damp size jitter.
-        Holds last bbox for SMOOTH_BBOX_HOLD_FRAMES when target is absent.
-        """
-        alpha_pos = max(0.05, min(0.95, float(getattr(self.cfg, 'SMOOTH_BBOX_ALPHA', 0.35))))
-        alpha_sz = max(0.05, min(0.95, float(getattr(self.cfg, 'SMOOTH_BBOX_SIZE_ALPHA', 0.20))))
-        hold = max(0, int(getattr(self.cfg, 'SMOOTH_BBOX_HOLD_FRAMES', 4)))
-
-        if active is not None:
-            x1, y1, x2, y2 = active.bbox
-            cx, cy = float((x1 + x2) * 0.5), float((y1 + y2) * 0.5)
-            w, h = float(x2 - x1), float(y2 - y1)
-            if self._smooth_bbox is None:
-                self._smooth_bbox = [cx, cy, w, h]
-            else:
-                scx, scy, sw, sh = self._smooth_bbox
-                self._smooth_bbox = [
-                    (1.0 - alpha_pos) * scx + alpha_pos * cx,
-                    (1.0 - alpha_pos) * scy + alpha_pos * cy,
-                    (1.0 - alpha_sz) * sw + alpha_sz * w,
-                    (1.0 - alpha_sz) * sh + alpha_sz * h,
-                ]
-            self._smooth_bbox_missing = 0
-        else:
-            self._smooth_bbox_missing += 1
-            if self._smooth_bbox_missing > hold:
-                self._smooth_bbox = None
-                return None
-
-        if self._smooth_bbox is None:
-            return None
-        scx, scy, sw, sh = self._smooth_bbox
-        sx1 = int(scx - sw * 0.5)
-        sy1 = int(scy - sh * 0.5)
-        sx2 = int(scx + sw * 0.5)
-        sy2 = int(scy + sh * 0.5)
-        return sx1, sy1, sx2, sy2
 
     def _update_lock_events(self) -> list[str]:
         events: list[str] = []
@@ -688,8 +584,9 @@ class TrackerPipeline:
         active = self.manager.get_active_target()
         self.continuity.update(self.manager.active_id)
         active_bbox = active.raw_bbox if active is not None else None
-        display_confidence = self._update_display_confidence(active, lock_score)
-        reticle_center = self._update_reticle_center(active)
+        display_confidence = self.display_state.update_confidence(
+            active, lock_score, self._video_elapsed_sec, self.frame_counter)
+        reticle_center = self.display_state.update_reticle(active)
         continuity_score = self.continuity.score()
         active_presence_rate = self.continuity.presence_rate(self.frame_counter)
         active_id_changes = int(self.continuity.id_changes)
@@ -698,7 +595,7 @@ class TrackerPipeline:
         tracking_mode = self.tracking_sm.update(lost_frames_val)
         display_tracking_mode = self.tracking_sm.update_display()
         self._adapt_auto_scene(frame)
-        smooth_active_bbox = self._get_smooth_display_bbox(active)
+        smooth_active_bbox = self.display_state.update_smooth_bbox(active)
 
         rendered = None
         if render:
