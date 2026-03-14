@@ -4,9 +4,31 @@ from typing import Optional, Union
 
 @dataclass
 class Config:
+    """Flat configuration dataclass for the UAV tracker.
+
+    Fields are grouped into logical sections by comment headers.
+    All field names and defaults are stable — external code uses cfg.FIELD_NAME directly.
+    For nested grouping with a breaking API change, see BRIEF-20260314-030.
+
+    Sections:
+        Source & Runtime   — video source, mode, device
+        Model              — YOLO model path, thresholds, inference size
+        Adaptive Scan      — global/local scan scheduling and ROI sizing
+        Lock Tracker       — template-matching lock parameters
+        ROI Assist         — motion-ROI proposal parameters
+        Budget Controller  — CPU load adaptation
+        Tracking & Lock    — target state machine, lock policy, ID switches
+        Night Detector     — small-target MOG2/diff detector
+        Display & Overlay  — HUD, trails, reticle, confidence display
+        Auto Scene         — automatic day/night/IR scene switching
+        Bbox Smoothing     — display-side bbox EMA to reduce visual jitter
+    """
+
+    # ── Source & Runtime ────────────────────────────────────────────────────
     VIDEO_SOURCE: Union[int, str] = 0
     RUNTIME_MODE: str = 'research'
 
+    # ── Model ───────────────────────────────────────────────────────────────
     MODEL_PATH: str = 'runs/detect/runs/drone_bird_probe_fast/weights/best.pt'
     CONF_THRESH: float = 0.30
     IOU_THRESH: float = 0.45
@@ -17,6 +39,7 @@ class Config:
     SMALL_TARGET_IMG_SIZE: int = 960
     SMALL_TARGET_CONF: float = 0.15
 
+    # ── Adaptive Scan ────────────────────────────────────────────────────────
     ADAPTIVE_SCAN_ENABLED: bool = True
     GLOBAL_SCAN_INTERVAL: int = 6
     LOCAL_TRACK_IMG_SIZE: int = 640
@@ -31,11 +54,13 @@ class Config:
     LOCAL_SMALL_CONF: float = 0.08
     LOCAL_BOOST_LOCK_SCORE_THRESH: float = 0.55
 
+    # ── Lock Tracker (template matching) ────────────────────────────────────
     LOCK_TRACKER_ENABLED: bool = True
     LOCK_TRACKER_SEARCH_SCALE: float = 3.0
     LOCK_TRACKER_MIN_SCORE: float = 0.42
     LOCK_TRACKER_UPDATE_ALPHA: float = 0.18
 
+    # ── ROI Assist ───────────────────────────────────────────────────────────
     ROI_ASSIST_ENABLED: bool = True
     ROI_ASSIST_ON_SMALL_TARGET_ONLY: bool = True
     ROI_DIFF_THRESH: int = 14
@@ -47,6 +72,7 @@ class Config:
     ROI_CONF_THRESH: float = 0.12
     ROI_IMG_SIZE: int = 960
 
+    # ── Budget Controller ────────────────────────────────────────────────────
     BUDGET_ENABLED: bool = True
     BUDGET_TARGET_FPS: float = 24.0
     BUDGET_HIGH_LOAD: float = 1.18
@@ -59,6 +85,7 @@ class Config:
     BUDGET_SCAN_INTERVAL_BOOST_PER_LEVEL: int = 1
     BUDGET_LOCAL_VALIDATE_BOOST_PER_LEVEL: int = 1
 
+    # ── Tracking & Lock Policy ───────────────────────────────────────────────
     SMOOTH_ALPHA: float = 0.4
     SPEED_WEIGHT: float = 0.7
     VELOCITY_ALPHA: float = 0.60
@@ -81,13 +108,17 @@ class Config:
     LOCK_FOCUS_ONLY: bool = True
     DISABLE_NIGHT_ON_LOCK: bool = True
     SHOW_ONLY_ACTIVE_ON_LOCK: bool = True
+    LOCK_EVENT_LOG_ENABLED: bool = False
+    LOCK_EVENT_LOG_PATH: str = ''
+    YOLO_LOST_MAX: int = 12
 
+    # ── Night Detector (MOG2 + frame-diff small-target) ──────────────────────
     NIGHT_ENABLED: bool = True
-    NIGHT_MOG2_HISTORY: int = 50
-    NIGHT_MOG2_VAR_THRESH: int = 25
-    NIGHT_BLUR_KERNEL: int = 5
-    NIGHT_MORPH_KERNEL: int = 3
-    NIGHT_GRID_CELL: int = 8
+    NIGHT_MOG2_HISTORY: int = 50       # MOG2 background history length (frames)
+    NIGHT_MOG2_VAR_THRESH: int = 25    # MOG2 pixel variance threshold
+    NIGHT_BLUR_KERNEL: int = 5         # Gaussian blur kernel size (must be odd)
+    NIGHT_MORPH_KERNEL: int = 3        # Morphology open/close kernel size
+    NIGHT_GRID_CELL: int = 8           # Candidate position grid quantization (px)
     NIGHT_MIN_AREA: int = 3
     NIGHT_MAX_AREA: int = 200
     NIGHT_MOT_THRESH: int = 18
@@ -100,14 +131,11 @@ class Config:
     NIGHT_LOST_MAX: int = 8
     NIGHT_RUN_WHEN_PRIMARY_SEEN: bool = False
     NIGHT_PRIMARY_COOLDOWN: int = 4
-    YOLO_LOST_MAX: int = 12
 
+    # ── Display & Overlay ────────────────────────────────────────────────────
     DISPLAY_MIN_HIT_STREAK_PRIMARY: int = 1
     DISPLAY_MIN_HIT_STREAK_NIGHT: int = 3
     DISPLAY_MAX_LOST_FRAMES: int = 2
-    LOCK_EVENT_LOG_ENABLED: bool = False
-    LOCK_EVENT_LOG_PATH: str = ''
-
     SHOW_GT_OVERLAY: bool = True
     SHOW_DEBUG_TIMINGS: bool = True
     SHOW_FOCUS_WINDOW: bool = True
@@ -124,10 +152,11 @@ class Config:
     CONFIDENCE_DISPLAY_UPDATE_SEC: float = 5.0
     TRAIL_LEN: int = 30
 
-    # Auto scene detection (active when AUTO_SCENE_DETECT=True, e.g. in Auto operator mode).
+    # ── Auto Scene Detection (day / night / IR) ──────────────────────────────
+    # Active when AUTO_SCENE_DETECT=True (e.g. in Auto operator mode).
     AUTO_SCENE_DETECT: bool = False
     AUTO_SCENE_NIGHT_BRIGHTNESS_MAX: int = 50   # mean Y < this → night scene
-    AUTO_SCENE_CONFIRM_FRAMES: int = 30         # consecutive frames required before scene switch
+    AUTO_SCENE_CONFIRM_FRAMES: int = 30         # consecutive frames before scene switch
     AUTO_SCENE_SAMPLE_INTERVAL: int = 10        # analyze every N frames (performance)
     AUTO_SCENE_NIGHT_CONF: float = 0.12         # CONF_THRESH override in night scene
     AUTO_SCENE_NIGHT_MOT_THRESH: int = 12       # NIGHT_MOT_THRESH override in night scene
@@ -137,12 +166,11 @@ class Config:
     AUTO_SCENE_IR_CONF: float = 0.10            # CONF_THRESH override in IR scene
     AUTO_SCENE_IR_MOT_THRESH: int = 8           # NIGHT_MOT_THRESH override in IR scene
     AUTO_SCENE_IR_DIFF_THRESH: int = 6          # NIGHT_DIFF_THRESH override in IR scene
-    # Lock hardening for night/IR: more hits required before confirming lock,
-    # higher drone_score bar — reduces false_lock_rate on noisy scenes (TASK-029).
-    AUTO_SCENE_NIGHT_LOCK_CONFIRM: int = 8      # LOCK_CONFIRM_FRAMES override in night/IR scene (default 5)
-    AUTO_SCENE_NIGHT_DRONE_LOCK_SCORE: float = 0.75  # DRONE_LOCK_SCORE_MIN override in night/IR (default 0.62)
+    # Lock hardening for night/IR: more hits required before confirming lock.
+    AUTO_SCENE_NIGHT_LOCK_CONFIRM: int = 8      # LOCK_CONFIRM_FRAMES override in night/IR
+    AUTO_SCENE_NIGHT_DRONE_LOCK_SCORE: float = 0.75  # DRONE_LOCK_SCORE_MIN override in night/IR
 
-    # Display bbox smoothing (reduces visual jitter on night/IR scenes).
+    # ── Bbox Smoothing (display-side EMA to reduce visual jitter) ────────────
     SMOOTH_BBOX_ALPHA: float = 0.35             # EMA alpha for position (higher = more responsive)
     SMOOTH_BBOX_SIZE_ALPHA: float = 0.20        # EMA alpha for width/height (softer)
     SMOOTH_BBOX_HOLD_FRAMES: int = 4            # hold last bbox N frames after target dropout
