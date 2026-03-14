@@ -11,6 +11,7 @@ import numpy as np
 from uav_tracker.budget_controller import BudgetController
 from uav_tracker.config import Config
 from uav_tracker.continuity_tracker import ContinuityTracker
+from uav_tracker.tracking_state_machine import TrackingStateMachine
 from uav_tracker.detectors.night_detector import NightSmallTargetDetector
 from uav_tracker.detectors.roi_assist import MotionROIProposer
 from uav_tracker.runtime import create_detector_backend
@@ -184,18 +185,12 @@ class TrackerPipeline:
         self._fallback_fps = 25.0
         self.budget = BudgetController(cfg, initial_roi_candidates=max(1, int(cfg.ROI_MAX_CANDIDATES)))
         self.continuity = ContinuityTracker()
+        self.tracking_sm = TrackingStateMachine(cfg)
         self._confidence_ema = 0.0
         self._display_confidence = 0.0
         self._confidence_last_update_sec = 0.0
         self._reticle_center: Optional[tuple[float, float]] = None
         self._reticle_missing_streak = 0
-        self._tracking_state = 'SCAN'
-        self._tracking_present_streak = 0
-        self._tracking_missing_streak = 0
-        self._tracking_had_target = False
-        # Display-only state: lags behind real state to avoid visual flicker.
-        self._display_tracking_state = 'SCAN'
-        self._display_state_hold = 0
 
         # Auto scene detection state (TASK-020).
         self._auto_scene_state = 'day'       # 'day' or 'night'
@@ -277,54 +272,6 @@ class TrackerPipeline:
         if self._reticle_center is None:
             return None
         return int(self._reticle_center[0]), int(self._reticle_center[1])
-
-    def _update_tracking_state(self, active: Optional[TrackedTarget]) -> str:
-        present = active is not None and int(active.lost_frames) <= int(self.cfg.LOCK_LOST_GRACE)
-        acquire_frames = max(1, int(self.cfg.TRACK_STATE_ACQUIRE_FRAMES))
-        lost_frames = max(1, int(self.cfg.TRACK_STATE_LOST_FRAMES))
-        reset_frames = max(lost_frames + 1, int(self.cfg.TRACK_STATE_RESET_FRAMES))
-
-        if present:
-            self._tracking_present_streak += 1
-            self._tracking_missing_streak = 0
-            self._tracking_had_target = True
-            if self._tracking_state != 'TRACK' and self._tracking_present_streak >= acquire_frames:
-                self._tracking_state = 'TRACK'
-        else:
-            self._tracking_present_streak = 0
-            self._tracking_missing_streak += 1
-            if self._tracking_state == 'TRACK' and self._tracking_missing_streak >= lost_frames:
-                self._tracking_state = 'LOST'
-            elif self._tracking_state == 'LOST' and self._tracking_missing_streak >= reset_frames:
-                self._tracking_state = 'SCAN'
-                self._tracking_had_target = False
-            elif not self._tracking_had_target:
-                self._tracking_state = 'SCAN'
-
-        if self._tracking_state == 'LOST' and present and self._tracking_present_streak >= acquire_frames:
-            self._tracking_state = 'TRACK'
-        return self._tracking_state
-
-    def _get_display_tracking_state(self, real_state: str) -> str:
-        """Return a display-smoothed tracking state.
-
-        Upgrades (e.g. SCAN→TRACK) are applied immediately.
-        Downgrades (e.g. TRACK→SCAN) are held for DISPLAY_STATE_HOLD_FRAMES
-        frames to suppress momentary visual flicker without affecting metrics.
-        """
-        _ORDER = {'SCAN': 0, 'LOST': 1, 'TRACK': 2}
-        hold = max(1, int(getattr(self.cfg, 'DISPLAY_STATE_HOLD_FRAMES', 3)))
-        real_level = _ORDER.get(real_state, 0)
-        disp_level = _ORDER.get(self._display_tracking_state, 0)
-        if real_level >= disp_level:
-            self._display_tracking_state = real_state
-            self._display_state_hold = 0
-        else:
-            self._display_state_hold += 1
-            if self._display_state_hold >= hold:
-                self._display_tracking_state = real_state
-                self._display_state_hold = 0
-        return self._display_tracking_state
 
     def _adapt_auto_scene(self, frame: np.ndarray) -> None:
         """Auto scene detection: Day / Night / IR (TASK-020 + TASK-026).
@@ -747,8 +694,9 @@ class TrackerPipeline:
         active_presence_rate = self.continuity.presence_rate(self.frame_counter)
         active_id_changes = int(self.continuity.id_changes)
         median_reacquire_frames = self.continuity.median_reacquire_frames()
-        tracking_mode = self._update_tracking_state(active)
-        display_tracking_mode = self._get_display_tracking_state(tracking_mode)
+        lost_frames_val = active.lost_frames if active is not None else None
+        tracking_mode = self.tracking_sm.update(lost_frames_val)
+        display_tracking_mode = self.tracking_sm.update_display()
         self._adapt_auto_scene(frame)
         smooth_active_bbox = self._get_smooth_display_bbox(active)
 
