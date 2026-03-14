@@ -20,15 +20,17 @@ Runtimes: Mac M1 (Ultralytics/MPS for dev) and RPi5+Hailo (abstracted, stub only
 
 ## Feature Clusters (src/uav_tracker/)
 
-Functional groupings within the package — not yet physically separated into sub-packages.
+All cluster moves completed as of 2026-03-14. Physical subpackage layout:
 
-| Cluster | Files |
-|---|---|
-| Detection | `detectors/night_detector.py`, `detectors/roi_assist.py`, `runtime/ultralytics_backend.py`, `runtime/hailo_backend.py` |
-| Tracking | `tracking/target_manager.py`, `tracking/lock_tracker.py`, `tracking/lock_event_tracker.py`, `tracking/tracking_state_machine.py`, `tracking/continuity_tracker.py` |
-| Pipeline control | `pipeline.py` (coordinator + inline AutoSceneAdapter), `budget_controller.py` |
-| Display | `display_state_tracker.py`, `overlay.py`, `frame_result.py` |
-| Config | `config.py` (145 fields), `profile_io.py`, `modes.py` |
+| Cluster | Subpackage | Files |
+|---|---|---|
+| Detection | `detectors/` | `night_detector.py`, `roi_assist.py` |
+| Integrations | `runtime/` | `ultralytics_backend.py`, `hailo_backend.py` (stub) |
+| Tracking | `tracking/` ✅ | `target_manager.py`, `lock_tracker.py`, `lock_event_tracker.py`, `tracking_state_machine.py`, `continuity_tracker.py` |
+| Pipeline control | `pipeline_control/` ✅ | `budget_controller.py`; AutoSceneAdapter 🔴 blocked inline in `pipeline.py:190-283` |
+| Display | `display/` ✅ | `display_state_tracker.py`, `overlay.py`, `frame_result.py` |
+| Config | root (flat) | `config.py` (145 fields), `profile_io.py`, `modes.py` |
+| Coordinator | root | `pipeline.py` — orchestrates all clusters, stays at root |
 
 ---
 
@@ -48,9 +50,9 @@ Functional groupings within the package — not yet physically separated into su
 
 | File | Lines | Risk | Notes |
 |---|---|---|---|
-| `src/uav_tracker/pipeline.py` | ~820 | HIGH | Coordinator + inline AutoSceneAdapter; A08 ongoing |
-| `app/main_gui.py` | 1599 | HIGH | Monolith: TrackerWorker + UI + APP_STYLESHEET inline; theme.py exists but full migration unconfirmed |
-| `src/uav_tracker/config.py` | ~145 fields | MEDIUM | Flat dataclass; restructure = breaking API change |
+| `src/uav_tracker/pipeline.py` | ~1068 | HIGH | Coordinator + inline AutoSceneAdapter (lines 190-283); A08 complete but BRIEF-031 still blocked |
+| `app/main_gui.py` | ~1600 | HIGH | Monolith: TrackerWorker + UI; APP_STYLESHEET fully in `app/ui/theme.py` (TASK-033 CONFIRMED) |
+| `src/uav_tracker/config.py` | ~145 fields | MEDIUM | Flat dataclass; restructure = breaking API change (BRIEF-030 deferred) |
 | `src/uav_tracker/tracking/target_manager.py` | ~459 | MEDIUM | Multi-target logic; central to all detection paths |
 | `python_scripts/training_conveyor.py` | 555 | MEDIUM | Training automation, no tests |
 | `python_scripts/train_drone_bird.py` | 510 | MEDIUM | Main training script |
@@ -106,6 +108,23 @@ Runner: `python_scripts/run_quality_gate.py`
 
 ---
 
+## Test Coverage (as of 2026-03-14)
+
+282 tests total, all passing. Run: `PYTHONPATH=src python3 -m unittest discover -s tests -q`
+
+| Test File | Tests | Module Covered | Notes |
+|---|---|---|---|
+| `test_display_state_tracker.py` | 21 | `display/display_state_tracker.py` | EMA, reticle hold, bbox hold |
+| `test_config.py` | 67 | `config.py` | Types, invariants, mutability, section presence |
+| `test_target_manager_lifecycle.py` | 37 | `tracking/target_manager.py` | YOLO/night update, age-out, focus-mode |
+| `test_modes.py` | 58 | `modes.py` | All runtime modes, clamping, error paths |
+| `test_profile_io.py` | 51 | `profile_io.py` | Load/save/apply/presets (tempfile isolation) |
+| Legacy tests | 48 | `lock_policy`, `package_import`, etc. | Pre-A10 baseline |
+
+Permanently deferred: `detectors/` (cv2 dependency), `overlay.py` (cv2 dependency).
+
+---
+
 ## Known Undocumented Zones
 
 | Zone | Notes |
@@ -113,4 +132,5 @@ Runner: `python_scripts/run_quality_gate.py`
 | `arduino_sketches/` | Gimbal hardware firmware (C++); not in Python test scope; no agent should touch |
 | `automation/` | AI workflow state (JSONs); separate from `orchestrator/`; dual-system risk |
 | `datasets/` | Training data at repo root; should be in `.gitignore`; not version-controlled by policy |
-| `app/ui/theme.py` | File EXISTS (verified 2026-03-14); audit needed to confirm APP_STYLESHEET is fully migrated from `main_gui.py` |
+| `app/ui/theme.py` | CONFIRMED (TASK-033, 2026-03-14): sole source of APP_STYLESHEET + SCENARIO_LABELS + refresh_widget_style(). Zero inline styles in `main_gui.py`. |
+| `python_scripts/` | Flat dir, ~20 scripts. SCRIPTS-001 Phase 1 (mkdir subdirs) ready — Phase 2 (file moves) MEDIUM risk. |

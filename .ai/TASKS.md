@@ -11,12 +11,8 @@
 | ID | Description | Risk | Files Affected |
 |----|-------------|------|----------------|
 | BRIEF-031 | AutoSceneAdapter extraction — BLOCKER: (1) file doesn't exist, requires NEW class creation not file move; (2) method mutates 5 cfg fields in-place (`CONF_THRESH`, `NIGHT_MOT_THRESH`, `NIGHT_DIFF_THRESH`, `LOCK_CONFIRM_FRAMES`, `DRONE_LOCK_SCORE_MIN`) affecting NightDetector/TargetManager/LockTracker downstream; (3) 0% test coverage — no regression safety net; (4) interface design unresolved (pass cfg ref vs return override dict) | High: cfg mutation pattern must be resolved before extraction | `src/uav_tracker/pipeline.py:190-283`, new `src/uav_tracker/pipeline_control/auto_scene_adapter.py` |
-| A10 | Test coverage → >30% — 🔄 In Progress. Cycle 1 ✅ DisplayStateTracker 21t. Cycle 2 ✅ config.py 67t. Cycle 3 ✅ TargetManager lifecycle 37t (update_from_yolo, update_from_night, age_targets, TTL expiry, focus-mode filter, overlap suppression, active_id cleanup). Cycle 4 ✅ extracted components 6t. Cycle 5 ✅ modes.py 58t. Cycle 6 ✅ profile_io 51t. Total: 282 tests. Remaining: detectors (cv2 required — deferred) | Medium | `test_display_state_tracker.py` ✅ `test_config.py` ✅ `test_target_manager_lifecycle.py` ✅ `test_extracted_components.py` ✅ `test_modes.py` ✅ `test_profile_io.py` ✅ |
-| TASK-033 | ~~Verify APP_STYLESHEET extraction~~ — CLOSED by audit (2026-03-14): COMPLETE. `theme.py` is sole source of truth; `main_gui.py` has 0 inline styles, applies `APP_STYLESHEET` via single import | — | — |
-| SCRIPTS-001 | Organize `python_scripts/` into subdirs: `training/`, `evaluation/`, `tools/` — no code changes, just directory structure. MEDIUM risk: hardcoded paths в run_dataset_batch.py + 3 shell-скриптах + RUNBOOK.md (13 refs); split в 2 фазы для снижения риска: Phase 1 (dirs only, LOW) → Phase 2 (file moves + path fixes, MEDIUM) | Medium | `python_scripts/`, `run_dataset_batch.py:12`, `run_six_hour_training*.sh` (20 refs), `RUNBOOK.md` (13 refs) |
-| TRACK-001 | Move `continuity_tracker.py` → `tracking/` — zero internal imports, 2 callers | Low | 2 import lines, 1 file move |
-| TRACK-002 | Move `tracking_state_machine.py` → `tracking/` — zero internal imports, 2 callers | Low | 2 import lines, 1 file move |
-| PCTL-001 | Create `pipeline_control/` subpackage, move `budget_controller.py` | Low | 2 import lines, 1 file move |
+| A10 | Test coverage → **SUBSTANTIALLY COMPLETE** ✅. 282 tests total (was 48). Cycles: C1 DisplayStateTracker +21, C2 config.py +67, C3 TargetManager lifecycle +37, C4 profile_io blocked→deferred, C5 modes.py +58, C6 profile_io +51. Remaining: detectors (cv2 — permanently deferred), overlay.py (cv2 — deferred) | Medium | All new test files committed. Suite: 282/282 OK |
+| SCRIPTS-001 | Reorganise `python_scripts/` → subdirs. **RECOMMENDED NEXT: Phase 1 only (LOW)** — create `training/`, `evaluation/`, `tools/` dirs + empty `__init__.py` files, zero file moves. Phase 2 (MEDIUM) requires: fix `run_dataset_batch.py:12`, update 3 shell scripts (20 refs), update `RUNBOOK.md` (13 refs) — do separately | Low (Phase 1) / Medium (Phase 2) | Phase 1: mkdir only. Phase 2: `python_scripts/*.sh`, `run_dataset_batch.py:12`, `RUNBOOK.md` |
 
 ## P2 — Future
 
@@ -65,13 +61,18 @@
 
 ## Architectural Safety Classification
 
-### Safe NOW (low risk, < 3 import changes each)
-- TRACK-001, TRACK-002: move tracking components into tracking/
-- PCTL-001: move budget_controller into pipeline_control/
+### Completed cluster moves (as of 2026-03-14)
+- TRACK-000/001/002: `tracking/` subpackage — DONE (lock_event_tracker, continuity_tracker, tracking_state_machine)
+- PCTL-001: `pipeline_control/` subpackage — DONE (budget_controller)
+- DISP-001/002/003: `display/` subpackage — DONE (display_state_tracker, frame_result, overlay)
 
-### Deferred (requires caller audit first)
-- DISP-001..003: display cluster (overlay.py has GUI callers)
+### Ready NOW (recommended next)
+- SCRIPTS-001 Phase 1: `python_scripts/training/`, `evaluation/`, `tools/` dirs — LOW risk, mkdir only
+
+### Deferred (requires caller audit or design decision)
+- SCRIPTS-001 Phase 2: file moves + path fixes — MEDIUM risk, separate task
 - ROOT-DOC-001: root MD consolidation (risk: external references)
+- BRIEF-031: AutoSceneAdapter extraction — HIGH risk, cfg-mutation interface unresolved
 
 ### Blocked (breaking API or deep coupling)
 - BRIEF-030: Config nested groups (145 callers)
