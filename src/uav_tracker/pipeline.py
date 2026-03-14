@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff'}
 
 
-from uav_tracker.frame_result import FrameOutput
-from uav_tracker.overlay import _draw_active_reticle, _draw_target, _target_class_label, draw_frame
+from uav_tracker.display.frame_result import FrameOutput
+from uav_tracker.display.overlay import _draw_active_reticle, _draw_target, _target_class_label, draw_frame
 
 
 class SequenceGroundTruth:
