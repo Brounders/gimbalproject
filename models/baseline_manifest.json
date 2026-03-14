@@ -1,0 +1,11 @@
+{
+  "installed_at": "2026-03-14T10:48:38Z",
+  "source_path": "/Users/bround/Documents/Projects/GimbalProject/runs/detect/runs/drone_bird_probe_fast/weights/best.pt",
+  "source_sha256": "bedc77fe7b899de1ac68ae654f49fcee6301a9d3f8a61e9eff5c1e8d66641d44",
+  "notes": "Formal baseline 2026-03-13: drone_bird_probe_fast. Accepted via AP-025 night gate PASS (night_confirm=5) and AP-026 IR gate measurement. Night: large_drones false_lock=0.510 id_chg=12.23 PASS; indicator_lights false_lock=0.096 PASS. IR: Demo_IR_DRONE_146 false_lock=0.840 FAIL (known open issue), IR_DRONE_001 false_lock=0.784 FAIL (known), IR_BIRD_001 PASS. Installed as formal reference for next training cycle comparison.",
+  "gate_report_path": "/Users/bround/Documents/Projects/GimbalProject/runs/evaluations/quality_gate/quality_gate_night.json",
+  "preset_gate_reports": {
+    "night": "runs/evaluations/quality_gate/quality_gate_night.json",
+    "ir": "runs/evaluations/quality_gate/baseline_formalization_irquality_gate_antiuav_thermal.json"
+  }
+}

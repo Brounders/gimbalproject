@@ -21,6 +21,24 @@
       },
       "decided_at": "2026-03-13T00:00:00Z",
       "decided_by": "Claude Mac (AP-026)"
+    },
+    {
+      "decision_id": "baseline_install_drone_bird_probe_fast_20260313",
+      "dataset_id": "drone_bird_probe_fast",
+      "run_name": "drone_bird_probe_fast",
+      "artifact_ids_evaluated": [
+        "runs/detect/runs/drone_bird_probe_fast/weights/best.pt"
+      ],
+      "decision": "install_as_baseline",
+      "runtime_state": "AP-025 (night_confirm=5, night_track_dist=65, lock_lost_grace=1)",
+      "reason": "First formal baseline installation. Night gate PASS (AP-025). IR gate measured as reference (known failing — open issue). sha256: bedc77fe7b899de1ac68ae654f49fcee6301a9d3f8a61e9eff5c1e8d66641d44",
+      "gate_reports": {
+        "night": "runs/evaluations/quality_gate/quality_gate_night.json",
+        "ir": "runs/evaluations/quality_gate/baseline_formalization_irquality_gate_antiuav_thermal.json"
+      },
+      "manifest": "models/baseline_manifest.json",
+      "decided_at": "2026-03-13T00:00:00Z",
+      "decided_by": "Claude Mac (autonomous session)"
     }
   ]
 }
