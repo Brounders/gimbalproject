@@ -54,6 +54,8 @@
 | A12 | Magic numbers in night_detector.py and roi_assist.py → Config fields |
 | Phase 2 gate fix | Quality gate regression pack — IR GT clips integration and PASS/FAIL exit code fix |
 | .ai init | Created `.ai/` folder with CLAUDE.md, MEMORY.md, ARCHITECTURE_MAP.md, TASKS.md, CONTEXT7_GUIDE.md |
+| TRACK-000 | `lock_event_tracker.py` → `tracking/` subpackage |
+| TRACK-001 | `continuity_tracker.py` → `tracking/` subpackage |
 
 ---
 
