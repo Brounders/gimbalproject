@@ -1,6 +1,6 @@
 name: default
 runtime_mode: operator
-model_path: models/baseline.pt
+model_path: models/baseline.pt  # production slot: models/day_model.pt (once day-specialized model accepted)
 device: mps
 imgsz: 640
 conf_thresh: 0.30

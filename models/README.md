@@ -36,12 +36,35 @@ Operator tolerance boundaries: `OPERATOR_BASELINE.md → Граница baseline
 
 ---
 
+## Per-Context Model Slots
+
+Когда для каждого контекста обучена и принята специализированная модель, она устанавливается
+в именованный slot. Пресет YAML автоматически берёт модель из своего slot-файла.
+
+| Slot файл | Контекст | Пресет YAML | Статус |
+|-----------|----------|-------------|--------|
+| `models/baseline.pt` | Universal (все контексты) | все пресеты | **Установлен** (AP-025) |
+| `models/night_model.pt` | Night visible-light | `configs/night.yaml` | Ожидает обучения |
+| `models/ir_model.pt` | IR/thermal | `configs/antiuav_thermal.yaml` | Ожидает обучения |
+| `models/day_model.pt` | Day visible-light | `configs/default.yaml` | Ожидает обучения |
+
+**Правила:**
+- Slot-файл = принятая production-модель для данного контекста
+- Пока специализированная модель не обучена — пресет указывает на `models/baseline.pt`
+- Кандидаты передаются через `--model <path>` в gate-скриптах (произвольный путь)
+- После acceptance: `install_baseline.py --context night|ir|day` устанавливает в slot
+
+---
+
 ## Baseline artifacts
 
 | Файл | Назначение |
 |------|------------|
-| `models/baseline.pt` | Принятая production-модель (бинарный, не хранится в git) |
+| `models/baseline.pt` | Принятая universal production-модель (не хранится в git) |
 | `models/baseline_manifest.json` | Metadata: источник, sha256, дата установки, ссылка на gate report |
+| `models/night_manifest.json` | Metadata для night_model.pt (создаётся при install --context night) |
+| `models/ir_manifest.json` | Metadata для ir_model.pt (создаётся при install --context ir) |
+| `models/day_manifest.json` | Metadata для day_model.pt (создаётся при install --context day) |
 
 ### baseline_manifest.json format
 

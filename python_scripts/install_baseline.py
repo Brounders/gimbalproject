@@ -26,6 +26,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MODELS_DIR = ROOT / "models"
+
+_CONTEXT_SLOTS: dict[str, tuple[str, str]] = {
+    "baseline": ("baseline.pt", "baseline_manifest.json"),
+    "night":    ("night_model.pt", "night_manifest.json"),
+    "ir":       ("ir_model.pt", "ir_manifest.json"),
+    "day":      ("day_model.pt", "day_manifest.json"),
+}
+
+# Defaults (overridden by --context)
 BASELINE_PT = MODELS_DIR / "baseline.pt"
 MANIFEST_PATH = MODELS_DIR / "baseline_manifest.json"
 
@@ -57,6 +66,17 @@ def parse_args() -> argparse.Namespace:
         description="Install accepted model as local baseline with traceability manifest."
     )
     p.add_argument("--source", type=Path, required=True, help="Path to the accepted .pt model.")
+    p.add_argument(
+        "--context",
+        type=str,
+        default="baseline",
+        choices=list(_CONTEXT_SLOTS.keys()),
+        help=(
+            "Model context slot to install into (default: baseline). "
+            "baseline → models/baseline.pt, night → models/night_model.pt, "
+            "ir → models/ir_model.pt, day → models/day_model.pt."
+        ),
+    )
     p.add_argument("--notes", type=str, default="", help="Free-form acceptance note (date, description).")
     p.add_argument(
         "--gate-report",
@@ -90,6 +110,10 @@ def main() -> None:
         print(f"ERROR: source not found: {src}", file=sys.stderr)
         raise SystemExit(1)
 
+    model_filename, manifest_filename = _CONTEXT_SLOTS[args.context]
+    target_pt = MODELS_DIR / model_filename
+    target_manifest = MODELS_DIR / manifest_filename
+
     gate_report_path = None
     if args.gate_report is not None:
         gate_report_path = str(args.gate_report.resolve())
@@ -98,6 +122,7 @@ def main() -> None:
 
     manifest = {
         "installed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "context": args.context,
         "source_path": str(src),
         "source_sha256": _sha256(src),
         "notes": args.notes,
@@ -108,17 +133,17 @@ def main() -> None:
     if args.dry_run:
         print("DRY RUN — manifest preview:")
         print(json.dumps(manifest, indent=2))
-        print(f"\nWould install: {src}")
-        print(f"  -> {BASELINE_PT}")
-        print(f"  -> {MANIFEST_PATH}")
+        print(f"\nWould install [{args.context}]: {src}")
+        print(f"  -> {target_pt}")
+        print(f"  -> {target_manifest}")
         return
 
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, BASELINE_PT)
-    MANIFEST_PATH.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    shutil.copy2(src, target_pt)
+    target_manifest.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
-    print(f"Installed baseline: {BASELINE_PT}")
-    print(f"Manifest written:   {MANIFEST_PATH}")
+    print(f"Installed [{args.context}]: {target_pt}")
+    print(f"Manifest written:             {target_manifest}")
     print(f"SHA256: {manifest['source_sha256']}")
 
 

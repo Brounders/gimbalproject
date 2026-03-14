@@ -1,6 +1,6 @@
 name: antiuav_thermal
 runtime_mode: research
-model_path: models/baseline.pt
+model_path: models/baseline.pt  # production slot: models/ir_model.pt (once IR-specialized model accepted)
 device: mps
 imgsz: 960
 conf_thresh: 0.12

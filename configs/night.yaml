@@ -1,6 +1,6 @@
 name: night
 runtime_mode: research
-model_path: models/baseline.pt
+model_path: models/baseline.pt  # production slot: models/night_model.pt (once night-specialized model accepted)
 device: mps
 imgsz: 960
 conf_thresh: 0.12
