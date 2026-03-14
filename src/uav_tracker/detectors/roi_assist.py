@@ -5,6 +5,7 @@ import numpy as np
 from ultralytics import YOLO
 
 from uav_tracker.config import Config
+from utils.geometry import iou
 
 
 class MotionROIProposer:
@@ -51,20 +52,10 @@ class MotionROIProposer:
         for roi in proposals:
             if len(merged) >= limit:
                 break
-            if any(self._iou4(roi[:4], m[:4]) > 0.2 for m in merged):
+            if any(iou(roi[:4], m[:4]) > 0.2 for m in merged):
                 continue
             merged.append(roi)
         return [m[:4] for m in merged]
-
-    @staticmethod
-    def _iou4(a, b) -> float:
-        xi1, yi1 = max(a[0], b[0]), max(a[1], b[1])
-        xi2, yi2 = min(a[2], b[2]), min(a[3], b[3])
-        inter = max(0, xi2 - xi1) * max(0, yi2 - yi1)
-        if inter <= 0:
-            return 0.0
-        ua = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter
-        return inter / ua if ua > 0 else 0.0
 
 
 def infer_roi_detections(

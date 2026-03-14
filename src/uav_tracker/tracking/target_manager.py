@@ -4,6 +4,7 @@ from typing import Optional
 
 from uav_tracker.config import Config
 from uav_tracker.runtime.base import Detection
+from utils.geometry import iou
 
 
 @dataclass
@@ -386,19 +387,9 @@ class TargetManager:
 
     def _overlaps_any(self, bbox, others, iou_thresh=0.3):
         for other in others:
-            if self._iou(bbox, other) > iou_thresh:
+            if iou(bbox, other) > iou_thresh:
                 return True
         return False
-
-    @staticmethod
-    def _iou(a, b):
-        xi1, yi1 = max(a[0], b[0]), max(a[1], b[1])
-        xi2, yi2 = min(a[2], b[2]), min(a[3], b[3])
-        inter = max(0, xi2 - xi1) * max(0, yi2 - yi1)
-        if inter == 0:
-            return 0.0
-        union_area = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter
-        return inter / union_area if union_area > 0 else 0.0
 
     def _find_nearby_track(self, cx, cy, max_dist=40, sources: Optional[set[str]] = None):
         best_id, best_dist = None, max_dist

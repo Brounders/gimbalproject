@@ -15,6 +15,7 @@ from uav_tracker.runtime import create_detector_backend
 from uav_tracker.runtime.base import Detection
 from uav_tracker.tracking.lock_tracker import TemplateLockTracker
 from uav_tracker.tracking.target_manager import TargetManager, TrackedTarget
+from utils.geometry import iou
 
 
 logger = logging.getLogger(__name__)
@@ -137,16 +138,6 @@ def apply_runtime_preset(cfg: Config, small_target_mode: bool = False, imgsz: Op
         cfg.CONF_THRESH = min(cfg.CONF_THRESH, cfg.SMALL_TARGET_CONF)
     cfg.MODEL_PATH = resolve_model_path(cfg.MODEL_PATH)
     return cfg
-
-
-def _iou(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> float:
-    xi1, yi1 = max(a[0], b[0]), max(a[1], b[1])
-    xi2, yi2 = min(a[2], b[2]), min(a[3], b[3])
-    inter = max(0, xi2 - xi1) * max(0, yi2 - yi1)
-    if inter <= 0:
-        return 0.0
-    union_area = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter
-    return inter / union_area if union_area > 0 else 0.0
 
 
 class TrackerPipeline:
@@ -706,7 +697,7 @@ class TrackerPipeline:
         active = self.manager.get_active_target()
         if active is None:
             return 0.0
-        return _iou(active.raw_bbox, gt_bbox)
+        return iou(active.raw_bbox, gt_bbox)
 
     def process_frame(
         self,
