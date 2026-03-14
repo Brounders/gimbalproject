@@ -142,6 +142,27 @@ def apply_runtime_preset(cfg: Config, small_target_mode: bool = False, imgsz: Op
 
 
 class TrackerPipeline:
+    """Main tracking pipeline for UAV detection and lock.
+
+    Orchestrates the full per-frame tracking cycle:
+      1. Global YOLO scan (every N frames) or local lock/ROI scan.
+      2. Night small-target detector (when enabled and budget allows).
+      3. Motion-ROI proposer for sub-frame candidate refinement.
+      4. TargetManager: multi-target state, active target selection, lock policy.
+      5. TemplateLockTracker: template-matching-based lock continuity.
+      6. Budget controller: adapts scan frequency under CPU load.
+      7. Auto scene detection: switches night/IR presets on-the-fly.
+
+    Typical usage::
+
+        pipeline = TrackerPipeline(cfg)
+        while True:
+            ret, frame = cap.read()
+            result = pipeline.process_frame(frame)
+            if result.active_id is not None:
+                x1, y1, x2, y2 = result.active_bbox
+    """
+
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.backend = create_detector_backend(cfg.MODEL_PATH, cfg.DEVICE)
@@ -709,6 +730,22 @@ class TrackerPipeline:
         render: bool = True,
         source_fps: Optional[float] = None,
     ) -> FrameOutput:
+        """Process one video frame through the full tracking pipeline.
+
+        Args:
+            frame: BGR image as numpy array (H, W, 3).
+            frame_index: Sequential frame number used for scan scheduling.
+            gt_bbox: Ground-truth bounding box (x1, y1, x2, y2) for evaluation;
+                None when no GT is available.
+            small_target_mode: If True, uses higher resolution inference for small targets.
+            render: If True, draws HUD overlays onto `frame` in-place.
+            source_fps: Native FPS of the source video used for timing metrics;
+                falls back to measured FPS when None.
+
+        Returns:
+            FrameOutput dataclass with tracking state, metrics, and the
+            (optionally annotated) frame.
+        """
         self.frame_counter += 1
         self.manager.frame_tick()
         self._update_video_time(source_fps)
