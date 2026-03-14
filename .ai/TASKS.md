@@ -14,6 +14,9 @@
 | A10 | Test coverage from ~15% → >30% — add tests for pipeline, config, detectors, target_manager | Medium: test isolation for stateful classes | `tests/`, `src/uav_tracker/pipeline.py`, `src/uav_tracker/config.py`, detectors |
 | TASK-033 | Verify APP_STYLESHEET extraction — `app/ui/theme.py` exists; audit whether it's fully used by `main_gui.py` or still has inline remnants | Low | `app/main_gui.py`, `app/ui/theme.py` |
 | SCRIPTS-001 | Organize `python_scripts/` into subdirs: `training/`, `evaluation/`, `tools/` — no code changes, just directory structure | Low | `python_scripts/` |
+| TRACK-001 | Move `continuity_tracker.py` → `tracking/` — zero internal imports, 2 callers | Low | 2 import lines, 1 file move |
+| TRACK-002 | Move `tracking_state_machine.py` → `tracking/` — zero internal imports, 2 callers | Low | 2 import lines, 1 file move |
+| PCTL-001 | Create `pipeline_control/` subpackage, move `budget_controller.py` | Low | 2 import lines, 1 file move |
 
 ## P2 — Future
 
@@ -23,6 +26,9 @@
 | Hailo impl | HailoBackend real implementation for RPi5 — replace stub with actual Hailo SDK calls | High: hardware dependency, platform-specific | `src/uav_tracker/runtime/hailo_backend.py` |
 | ROOT-DOC-001 | Root MD proliferation — 12+ MD files at root; consolidate/move to `docs/` without breaking existing references | Low | root `*.md` files |
 | MAIN-GUI-001 | Split `app/main_gui.py` (1600 lines) — extract TrackerWorker business logic from UI layer | High | `app/main_gui.py`, new `app/workers/tracker_worker.py` |
+| DISP-001 | Move `frame_result.py` → `display/` — careful: imported by overlay + pipeline | Medium | Audit all callers first |
+| DISP-002 | Move `display_state_tracker.py` → `display/` — 2 callers | Low | After DISP-001 |
+| DISP-003 | Move `overlay.py` → `display/` — multiple callers in GUI | Medium | Audit all callers first |
 
 ---
 
@@ -48,3 +54,20 @@
 | A12 | Magic numbers in night_detector.py and roi_assist.py → Config fields |
 | Phase 2 gate fix | Quality gate regression pack — IR GT clips integration and PASS/FAIL exit code fix |
 | .ai init | Created `.ai/` folder with CLAUDE.md, MEMORY.md, ARCHITECTURE_MAP.md, TASKS.md, CONTEXT7_GUIDE.md |
+
+---
+
+## Architectural Safety Classification
+
+### Safe NOW (low risk, < 3 import changes each)
+- TRACK-001, TRACK-002: move tracking components into tracking/
+- PCTL-001: move budget_controller into pipeline_control/
+
+### Deferred (requires caller audit first)
+- DISP-001..003: display cluster (overlay.py has GUI callers)
+- ROOT-DOC-001: root MD consolidation (risk: external references)
+
+### Blocked (breaking API or deep coupling)
+- BRIEF-030: Config nested groups (145 callers)
+- MAIN-GUI-001: main_gui.py split (QThread lifecycle coupling)
+- Hailo: platform-specific, hardware dependency

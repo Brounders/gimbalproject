@@ -103,6 +103,44 @@ tests/*             → src/uav_tracker/* (PYTHONPATH=src required)
 
 ---
 
+## Target Feature Architecture
+
+### Current vs Target Mapping
+
+| Cluster | Current Location | Target Subpackage | Status |
+|---------|-----------------|-------------------|--------|
+| Detection | `detectors/` | `detectors/` | Already grouped |
+| Tracking | `tracking/` + root | `tracking/` | Partial (lock_event_tracker being moved) |
+| Pipeline Control | root (flat) | `pipeline_control/` | Planned |
+| Display | root (flat) | `display/` | Planned |
+| Config | root (flat) | keep flat or `config/` | Risk: breaking imports |
+| Integrations | `runtime/` | `runtime/` | Already grouped |
+
+### Files per Cluster
+
+| Cluster | Files |
+|---------|-------|
+| Detection | `detectors/night_detector.py`, `detectors/roi_assist.py` |
+| Tracking | `tracking/target_manager.py`, `tracking/lock_tracker.py`, `tracking/lock_event_tracker.py`, `tracking/tracking_state_machine.py`*, `tracking/continuity_tracker.py`* |
+| Pipeline Control | `budget_controller.py`* → `pipeline_control/budget_controller.py` |
+| Display | `display_state_tracker.py`*, `overlay.py`*, `frame_result.py`* → `display/` |
+| Config | `config.py`, `profile_io.py`, `modes.py` (keep flat — imported broadly) |
+| Coordinator | `pipeline.py` (stays at root, imports all clusters) |
+
+*items with asterisk = planned moves, not yet executed
+
+### Risk Assessment
+
+| Change | Risk | Blocker |
+|--------|------|---------|
+| Move files into tracking/ | Low | 2-3 import lines per file |
+| Move files into pipeline_control/ | Low | ~3-5 import lines |
+| Move files into display/ | Medium | overlay.py imported by many callers |
+| Move config.py | High | 145+ callers, breaking change |
+| Split main_gui.py | High | UI+worker coupling, QThread lifecycle |
+
+---
+
 ## Full Repository Layout (key directories)
 
 | Directory | Purpose | AI-Zone |
