@@ -56,3 +56,55 @@
 2. **IR false_lock (IR_DRONE_001: 0.784)**: требует модельного решения — лучшая IR-trained модель. Runtime tuning даст лишь partial improvement.
 3. **Day GT**: `drone_closeup_mixkit_44644_360.mp4` нужен `label.json` для полноценного day gate.
 4. **Training strategy reset**: dataset audit drone-bird-yolo + новый training plan (одобрение Codex).
+
+---
+
+## 2026-03-14 — Сессия 2: Training Preparation — IR Finalization + Infrastructure + BRIEF
+
+### Что сделано
+
+**1. IR Hardening v2 — track_state_lost_frames sweep (окончательный вывод)**
+- Протестированы `track_state_lost_frames=12` и `track_state_lost_frames=16` — оба дали **ноль эффекта** (id_chg=63.26 без изменений)
+- Вывод: детекционные пропуски на Demo_IR_DRONE_146 длиннее 16 кадров (~0.73 сек)
+- **Все runtime levers исчерпаны** — 6 параметров протестированы в v1 + v2, ни один не дал эффекта
+- Отчёт: `orchestrator/reports/REPORT-ir-hardening-v2.md`
+- Commit: `IR hardening v2: track_state_lost_frames sweep — runtime lever exhausted`
+
+**2. Per-Context Model Infrastructure**
+- `models/README.md`: добавлена секция "Per-Context Model Slots" — документированы 4 slot-файла (baseline/night/ir/day)
+- `configs/night.yaml`, `configs/antiuav_thermal.yaml`, `configs/default.yaml`: добавлены комментарии к `model_path:` с указанием будущих специализированных слотов
+- `python_scripts/install_baseline.py`: добавлен `--context {baseline,night,ir,day}` — маршрутизирует установку в `night_model.pt`, `ir_model.pt`, `day_model.pt` с отдельными manifest-файлами
+- Commit: `feat: per-context model slots — README, preset comments, install_baseline --context`
+
+**3. Training BRIEF v2**
+- Создан: `orchestrator/briefs/BRIEF-training-v2-per-context.md`
+- Стратегия: три независимых модели (не unified dataset — drone-bird-yolo провалил именно из-за смешения)
+- Документированы: требования к датасету для каждого контекста, порядок обучения, early rejection threshold (chunk3), acceptance criteria
+- **БЛОКЕР для Day**: нужен GT-файл (`label.json`) для `drone_closeup_mixkit_44644_360.mp4` — без него day acceptance невозможен
+- Commit: `brief: training v2 — per-context model strategy, dataset reqs, early rejection`
+
+**4. TASK-033 и TASK-034 — Уже выполнены (подтверждено)**
+- `app/ui/theme.py`: уже существует с `APP_STYLESHEET`; `main_gui.py` уже импортирует из него
+- `src/uav_tracker/frame_result.py` и `overlay.py`: уже существуют; `pipeline.py` уже импортирует из них
+- Оба task выполнены в предыдущей сессии, не требуют дополнительной работы
+
+### Ключевые числа после сессии (без изменений по IR)
+
+| Контекст | Clip | false_lock | id_chg/min | Статус |
+|----------|------|-----------|------------|--------|
+| Night | large_drones | **0.510** | **12.23** | PASS (AP-025) |
+| Night | indicator_lights | **0.096** | 0.00 | PASS (AP-025) |
+| IR | Demo_IR_DRONE_146 | 0.840 | 63.26 | FAIL — **runtime exhausted** |
+| IR | IR_DRONE_001 | 0.784 | 5.98 | FAIL — требует модели |
+| IR | IR_BIRD_001 | **0.090** | 0.00 | PASS |
+| Day | drone_closeup | 1.000* | 0.00 | *no GT — FPS-only |
+
+### Что открыто для следующего цикла Codex
+
+1. **RTX: обучение night_model** — приоритет 1. Night dataset уже есть (2 клипа с GT). Запустить обучение на ночных visible-light данных. Early rejection threshold: chunk3 false_lock > 0.63 → REJECT. После acceptance: `install_baseline.py --context night`.
+
+2. **RTX: обучение ir_model** — приоритет 2. Нужны дополнительные IR-клипы для train-set (gate клипы не должны быть единственными обучающими данными). Gate target минимум: IR_BIRD_001 PASS (false_lock ≤ 0.15).
+
+3. **Day GT разметка** — **БЛОКЕР для day_model**. Пользователь должен разметить `drone_closeup_mixkit_44644_360.mp4` (LabelMe/CVAT или manual label.json). Без GT day acceptance невозможен.
+
+4. **Подробности в**: `orchestrator/briefs/BRIEF-training-v2-per-context.md`
