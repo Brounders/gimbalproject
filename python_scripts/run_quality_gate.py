@@ -113,6 +113,10 @@ def _resolve_source_path(raw_source: str) -> str:
 
 
 def _score_row(row: dict[str, Any]) -> float:
+    # Skip false_lock penalty when there is no GT data (gt_frames=0 means false_lock_rate
+    # is structurally 1.0 for any active tracker, not a real model quality signal).
+    has_gt = int(row.get("gt_frames", 0)) > 0
+    false_lock_penalty = 18.0 * float(row.get("false_lock_rate", 0.0)) if has_gt else 0.0
     return (
         40.0 * float(row.get("lock_rate", 0.0))
         + 15.0 * float(row.get("continuity_score", 0.0))
@@ -120,7 +124,7 @@ def _score_row(row: dict[str, Any]) -> float:
         + 20.0 * min(float(row.get("avg_fps", 0.0)) / 30.0, 1.0)
         - 6.0 * float(row.get("lock_switches_per_min", 0.0))
         - 8.0 * float(row.get("active_id_changes_per_min", 0.0))
-        - 18.0 * float(row.get("false_lock_rate", 0.0))
+        - false_lock_penalty
     )
 
 
@@ -129,6 +133,7 @@ def _csv_write(path: Path, rows: list[dict[str, Any]]) -> None:
         "source",
         "scene",
         "frames",
+        "gt_frames",
         "avg_fps",
         "lock_rate",
         "continuity_score",
@@ -242,10 +247,12 @@ def main() -> int:
             continue
 
         total_frames = max(1, int(report.get("total_frames", 0)))
+        gt_frames = int(report.get("gt_frames", 0))
         row = {
             "source": str(source),
             "scene": scene,
             "frames": int(report.get("total_frames", 0)),
+            "gt_frames": gt_frames,
             "avg_fps": round(float(report.get("avg_fps", 0.0)), 3),
             "lock_rate": round(float(report.get("lock_frames", 0)) / total_frames, 4),
             "continuity_score": round(float(report.get("continuity_score", 0.0)), 4),
@@ -276,9 +283,11 @@ def main() -> int:
             if float(row["active_id_changes_per_min"]) > float(args.max_id_changes_per_min):
                 row_failures.append(f"idchg/min>{args.max_id_changes_per_min}")
 
-        false_lock_limit = float(args.max_noise_false_lock_rate if is_noise else args.max_false_lock_rate)
-        if float(row["false_lock_rate"]) > false_lock_limit:
-            row_failures.append(f"false_lock_rate>{false_lock_limit}")
+        if gt_frames > 0:
+            false_lock_limit = float(args.max_noise_false_lock_rate if is_noise else args.max_false_lock_rate)
+            if float(row["false_lock_rate"]) > false_lock_limit:
+                row_failures.append(f"false_lock_rate>{false_lock_limit}")
+        # else: no GT data — false_lock_rate is structurally 1.0 and not a valid signal; skip check.
 
         if not is_noise:
             if float(row["continuity_score"]) < float(args.min_continuity):
