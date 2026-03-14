@@ -1,5 +1,6 @@
 import json
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -71,14 +72,14 @@ class TrackerWorker(QThread):
         self.output_path = output_path
         self.small_target_mode = small_target_mode
         self.lock_log_path = lock_log_path.strip()
-        self._stop_requested = False
-        self._switch_target_requested = False
+        self._stop_event = threading.Event()
+        self._switch_event = threading.Event()
 
     def stop(self):
-        self._stop_requested = True
+        self._stop_event.set()
 
     def request_switch_target(self):
-        self._switch_target_requested = True
+        self._switch_event.set()
 
     def run(self):
         reason = 'stopped'
@@ -101,11 +102,11 @@ class TrackerWorker(QThread):
 
             pipeline = TrackerPipeline(self.cfg)
             while True:
-                if self._stop_requested:
+                if self._stop_event.is_set():
                     reason = 'stopped'
                     break
-                if self._switch_target_requested:
-                    self._switch_target_requested = False
+                if self._switch_event.is_set():
+                    self._switch_event.clear()
                     pipeline.manager.switch_target()
                 ret, frame, meta = session.read()
                 if not ret:
@@ -192,10 +193,10 @@ class EvaluationWorker(QThread):
         self.small_target_mode = small_target_mode
         self.report_path = report_path
         self.max_frames = max_frames
-        self._stop_requested = False
+        self._stop_event = threading.Event()
 
     def stop(self):
-        self._stop_requested = True
+        self._stop_event.set()
 
     def run(self):
         try:
@@ -206,11 +207,11 @@ class EvaluationWorker(QThread):
                 small_target_mode=self.small_target_mode,
                 max_frames=self.max_frames,
                 report_path=self.report_path,
-                stop_checker=lambda: self._stop_requested,
+                stop_checker=self._stop_event.is_set,
             )
             self.report_ready.emit(report.to_dict())
             self.log_ready.emit(f'Отчет оценки сохранен: {self.report_path}')
-            reason = 'stopped' if self._stop_requested else 'done'
+            reason = 'stopped' if self._stop_event.is_set() else 'done'
             self.finished.emit(reason)
         except Exception as exc:
             self.failed.emit(str(exc))

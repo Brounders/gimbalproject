@@ -83,6 +83,11 @@ class Config:
     SHOW_ONLY_ACTIVE_ON_LOCK: bool = True
 
     NIGHT_ENABLED: bool = True
+    NIGHT_MOG2_HISTORY: int = 50
+    NIGHT_MOG2_VAR_THRESH: int = 25
+    NIGHT_BLUR_KERNEL: int = 5
+    NIGHT_MORPH_KERNEL: int = 3
+    NIGHT_GRID_CELL: int = 8
     NIGHT_MIN_AREA: int = 3
     NIGHT_MAX_AREA: int = 200
     NIGHT_MOT_THRESH: int = 18

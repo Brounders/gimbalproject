@@ -24,6 +24,7 @@ IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff'}
 
 
 from uav_tracker.frame_result import FrameOutput
+from uav_tracker.overlay import _draw_active_reticle, _draw_target, _target_class_label, draw_frame
 
 
 class SequenceGroundTruth:
@@ -962,9 +963,6 @@ class VideoSession:
             self.writer.release()
         if self.manage_cv_windows:
             cv2.destroyAllWindows()
-
-
-from uav_tracker.overlay import _draw_active_reticle, _draw_target, _target_class_label, draw_frame
 
 
 def run_tracker(

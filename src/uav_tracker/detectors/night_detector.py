@@ -10,7 +10,7 @@ class NightSmallTargetDetector:
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.bg_subtractor = cv2.createBackgroundSubtractorMOG2(
-            history=50, varThreshold=25, detectShadows=False
+            history=cfg.NIGHT_MOG2_HISTORY, varThreshold=cfg.NIGHT_MOG2_VAR_THRESH, detectShadows=False
         )
         self._candidates: dict[tuple, int] = {}
         self._prev_gray: Optional[np.ndarray] = None
@@ -18,7 +18,7 @@ class NightSmallTargetDetector:
 
     def detect(self, frame: np.ndarray) -> list[dict]:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray = cv2.GaussianBlur(gray, (5, 5), 0)
+        gray = cv2.GaussianBlur(gray, (self.cfg.NIGHT_BLUR_KERNEL, self.cfg.NIGHT_BLUR_KERNEL), 0)
 
         fg_mask = self.bg_subtractor.apply(gray)
         if self._prev_gray is None:
@@ -34,7 +34,7 @@ class NightSmallTargetDetector:
         if self._warmup < self.cfg.NIGHT_HIST_LEN:
             return []
 
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (self.cfg.NIGHT_MORPH_KERNEL, self.cfg.NIGHT_MORPH_KERNEL))
         fg_mask = cv2.bitwise_and(fg_mask, diff_mask)
         fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, kernel)
         fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_CLOSE, kernel)
@@ -68,7 +68,7 @@ class NightSmallTargetDetector:
                 continue
 
             cx, cy = x + w // 2, y + h // 2
-            key = (cx // 8, cy // 8)
+            key = (cx // self.cfg.NIGHT_GRID_CELL, cy // self.cfg.NIGHT_GRID_CELL)
             current_keys.add(key)
             self._candidates[key] = self._candidates.get(key, 0) + 1
             if self._candidates[key] >= self.cfg.NIGHT_CONFIRM:
