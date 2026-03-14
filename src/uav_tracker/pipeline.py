@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from collections import deque
 from pathlib import Path
@@ -15,6 +16,8 @@ from uav_tracker.runtime.base import Detection
 from uav_tracker.tracking.lock_tracker import TemplateLockTracker
 from uav_tracker.tracking.target_manager import TargetManager, TrackedTarget
 
+
+logger = logging.getLogger(__name__)
 
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff'}
 
@@ -1000,7 +1003,7 @@ def run_tracker(
         while True:
             ret, frame, meta = session.read()
             if not ret:
-                print('Кадр не получен. Конец потока или ошибка камеры.')
+                logger.warning('Кадр не получен. Конец потока или ошибка камеры.')
                 break
             frame_idx += 1
 
@@ -1042,26 +1045,26 @@ def run_tracker(
                     pipeline.lock_tracker.reset()
 
             if max_frames > 0 and frame_idx >= max_frames:
-                print(f'Достигнут лимит кадров: {frame_idx}')
+                logger.info('Достигнут лимит кадров: %d', frame_idx)
                 break
     finally:
         session.close()
         if event_log_handle is not None:
             event_log_handle.close()
         if output_path:
-            print(f'Сохранён результат: {output_path}')
-        print(
-            'Lock telemetry: '
-            f"events={pipeline.lock_event_counts} "
-            f"switches={pipeline.lock_switch_count} "
-            f"sw/min={pipeline._lock_switches_per_min():.2f}"
+            logger.info('Сохранён результат: %s', output_path)
+        logger.info(
+            'Lock telemetry: events=%s switches=%s sw/min=%.2f',
+            pipeline.lock_event_counts,
+            pipeline.lock_switch_count,
+            pipeline._lock_switches_per_min(),
         )
-        print(
-            'Budget telemetry: '
-            f"level={pipeline._budget_level} "
-            f"load={pipeline._budget_load_ema:.2f} "
-            f"frame_ms={pipeline._last_frame_budget_ms:.1f} "
-            f"roi={pipeline._last_roi_budget_candidates} "
-            f"nskip={pipeline._last_night_skip}"
+        logger.info(
+            'Budget telemetry: level=%s load=%.2f frame_ms=%.1f roi=%s nskip=%s',
+            pipeline._budget_level,
+            pipeline._budget_load_ema,
+            pipeline._last_frame_budget_ms,
+            pipeline._last_roi_budget_candidates,
+            pipeline._last_night_skip,
         )
-        print('Трекер остановлен.')
+        logger.info('Трекер остановлен.')
