@@ -11,7 +11,7 @@ import numpy as np
 from uav_tracker.pipeline_control.budget_controller import BudgetController
 from uav_tracker.config import Config
 from uav_tracker.tracking.continuity_tracker import ContinuityTracker
-from uav_tracker.display_state_tracker import DisplayStateTracker
+from uav_tracker.display.display_state_tracker import DisplayStateTracker
 from uav_tracker.tracking.lock_event_tracker import LockEventTracker
 from uav_tracker.tracking.tracking_state_machine import TrackingStateMachine
 from uav_tracker.detectors.night_detector import NightSmallTargetDetector
