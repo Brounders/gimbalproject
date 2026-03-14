@@ -13,7 +13,7 @@ from uav_tracker.config import Config
 from uav_tracker.tracking.continuity_tracker import ContinuityTracker
 from uav_tracker.display_state_tracker import DisplayStateTracker
 from uav_tracker.tracking.lock_event_tracker import LockEventTracker
-from uav_tracker.tracking_state_machine import TrackingStateMachine
+from uav_tracker.tracking.tracking_state_machine import TrackingStateMachine
 from uav_tracker.detectors.night_detector import NightSmallTargetDetector
 from uav_tracker.detectors.roi_assist import MotionROIProposer
 from uav_tracker.runtime import create_detector_backend
