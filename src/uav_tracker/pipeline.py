@@ -8,7 +8,9 @@ from typing import Optional, Union
 import cv2
 import numpy as np
 
+from uav_tracker.budget_controller import BudgetController
 from uav_tracker.config import Config
+from uav_tracker.continuity_tracker import ContinuityTracker
 from uav_tracker.detectors.night_detector import NightSmallTargetDetector
 from uav_tracker.detectors.roi_assist import MotionROIProposer
 from uav_tracker.runtime import create_detector_backend
@@ -180,23 +182,13 @@ class TrackerPipeline:
         self._prev_active_id: Optional[int] = None
         self._video_elapsed_sec = 0.0
         self._fallback_fps = 25.0
-        self._budget_level = 0
-        self._budget_load_ema = 1.0
-        self._last_frame_budget_ms = 0.0
-        self._last_roi_budget_candidates = max(1, int(cfg.ROI_MAX_CANDIDATES))
-        self._last_night_skip = 1
+        self.budget = BudgetController(cfg, initial_roi_candidates=max(1, int(cfg.ROI_MAX_CANDIDATES)))
+        self.continuity = ContinuityTracker()
         self._confidence_ema = 0.0
         self._display_confidence = 0.0
         self._confidence_last_update_sec = 0.0
         self._reticle_center: Optional[tuple[float, float]] = None
         self._reticle_missing_streak = 0
-        self._continuity_prev_active_id: Optional[int] = None
-        self._continuity_transitions = 0
-        self._continuity_same_id_transitions = 0
-        self._continuity_id_changes = 0
-        self._continuity_active_frames = 0
-        self._continuity_lost_run = 0
-        self._continuity_reacquire_gaps: list[int] = []
         self._tracking_state = 'SCAN'
         self._tracking_present_streak = 0
         self._tracking_missing_streak = 0
@@ -285,42 +277,6 @@ class TrackerPipeline:
         if self._reticle_center is None:
             return None
         return int(self._reticle_center[0]), int(self._reticle_center[1])
-
-    def _update_continuity_metrics(self, active_id: Optional[int]) -> None:
-        if active_id is not None:
-            self._continuity_active_frames += 1
-
-        prev = self._continuity_prev_active_id
-        if prev is not None and active_id is not None:
-            self._continuity_transitions += 1
-            if prev == active_id:
-                self._continuity_same_id_transitions += 1
-            else:
-                self._continuity_id_changes += 1
-
-        if active_id is None:
-            self._continuity_lost_run += 1
-        else:
-            if self._continuity_lost_run > 0:
-                self._continuity_reacquire_gaps.append(self._continuity_lost_run)
-                self._continuity_lost_run = 0
-
-        self._continuity_prev_active_id = active_id
-
-    def _continuity_score(self) -> float:
-        if self._continuity_transitions <= 0:
-            return 1.0 if self._continuity_active_frames > 0 else 0.0
-        return float(self._continuity_same_id_transitions) / float(self._continuity_transitions)
-
-    def _active_presence_rate(self) -> float:
-        if self.frame_counter <= 0:
-            return 0.0
-        return float(self._continuity_active_frames) / float(self.frame_counter)
-
-    def _median_reacquire_frames(self) -> float:
-        if not self._continuity_reacquire_gaps:
-            return 0.0
-        return float(np.median(self._continuity_reacquire_gaps))
 
     def _update_tracking_state(self, active: Optional[TrackedTarget]) -> str:
         present = active is not None and int(active.lost_frames) <= int(self.cfg.LOCK_LOST_GRACE)
@@ -491,78 +447,6 @@ class TrackerPipeline:
         sy2 = int(scy + sh * 0.5)
         return sx1, sy1, sx2, sy2
 
-    def _effective_global_scan_interval(self) -> int:
-        base = max(1, int(self.cfg.GLOBAL_SCAN_INTERVAL))
-        if not self.cfg.BUDGET_ENABLED:
-            return base
-        boost = max(0, int(self.cfg.BUDGET_SCAN_INTERVAL_BOOST_PER_LEVEL))
-        return max(1, base + boost * self._budget_level)
-
-    def _effective_local_validate_interval(self) -> int:
-        base = max(1, int(self.cfg.LOCAL_VALIDATE_INTERVAL))
-        if not self.cfg.BUDGET_ENABLED:
-            return base
-        boost = max(0, int(self.cfg.BUDGET_LOCAL_VALIDATE_BOOST_PER_LEVEL))
-        return max(1, base + boost * self._budget_level)
-
-    def _effective_roi_max_candidates(self) -> int:
-        base = max(1, int(self.cfg.ROI_MAX_CANDIDATES))
-        if not self.cfg.BUDGET_ENABLED:
-            return base
-        min_candidates = max(1, int(self.cfg.BUDGET_ROI_MIN_CANDIDATES))
-        return max(min_candidates, base - self._budget_level)
-
-    def _effective_night_skip(self) -> int:
-        if not self.cfg.BUDGET_ENABLED:
-            return 1
-        if self._budget_level <= 0:
-            return 1
-        if self._budget_level == 1:
-            return max(1, int(self.cfg.BUDGET_NIGHT_SKIP_LEVEL1))
-        return max(1, int(self.cfg.BUDGET_NIGHT_SKIP_LEVEL2))
-
-    def _should_run_night_with_budget(self) -> bool:
-        night_skip = self._effective_night_skip()
-        self._last_night_skip = night_skip
-        if night_skip <= 1:
-            return True
-        return (self.frame_counter % night_skip) == 0
-
-    def _should_run_roi_with_budget(self) -> bool:
-        if not self.cfg.BUDGET_ENABLED:
-            return True
-        skip = max(1, int(self.cfg.BUDGET_ROI_SKIP_LEVEL2))
-        if self._budget_level < 2 or skip <= 1:
-            return True
-        return (self.frame_counter % skip) == 0
-
-    def _update_budget_state(self, timings_ms: dict[str, float]) -> None:
-        self._last_frame_budget_ms = (
-            float(timings_ms.get('global', 0.0))
-            + float(timings_ms.get('lock', 0.0))
-            + float(timings_ms.get('local', 0.0))
-            + float(timings_ms.get('roi', 0.0))
-            + float(timings_ms.get('night', 0.0))
-            + float(timings_ms.get('draw', 0.0))
-        )
-        if not self.cfg.BUDGET_ENABLED:
-            self._budget_level = 0
-            self._budget_load_ema = 1.0
-            return
-
-        target_fps = max(5.0, float(self.cfg.BUDGET_TARGET_FPS))
-        target_ms = 1000.0 / target_fps
-        load = self._last_frame_budget_ms / max(target_ms, 1.0)
-        self._budget_load_ema = 0.86 * self._budget_load_ema + 0.14 * load
-
-        max_level = max(0, int(self.cfg.BUDGET_LEVEL_MAX))
-        high = float(self.cfg.BUDGET_HIGH_LOAD)
-        low = float(self.cfg.BUDGET_LOW_LOAD)
-        if self._budget_load_ema > high and self._budget_level < max_level:
-            self._budget_level += 1
-        elif self._budget_load_ema < low and self._budget_level > 0:
-            self._budget_level -= 1
-
     def _update_lock_events(self) -> list[str]:
         events: list[str] = []
         focus_mode = self.manager.is_focus_mode()
@@ -604,7 +488,7 @@ class TrackerPipeline:
             return True, 'GLOBAL-SCAN'
         if active.lost_frames > self.cfg.LOCK_LOST_GRACE:
             return True, 'GLOBAL-RECOVERY'
-        interval = self._effective_global_scan_interval()
+        interval = self.budget.effective_global_scan_interval(self.frame_counter)
         if self.frame_counter % interval == 0:
             return True, 'GLOBAL-RESCAN'
         return False, 'LOCK-TRACK'
@@ -678,7 +562,7 @@ class TrackerPipeline:
             conf = min(conf, float(self.cfg.LOCAL_SMALL_CONF))
 
         # Under heavy budget load keep full boost only for truly tiny targets.
-        if self.cfg.BUDGET_ENABLED and self._budget_level >= 2 and not is_small_target:
+        if self.cfg.BUDGET_ENABLED and self.budget.level >= 2 and not is_small_target:
             imgsz = int(self.cfg.LOCAL_TRACK_IMG_SIZE)
             conf = float(self.cfg.LOCAL_TRACK_CONF)
         return imgsz, conf
@@ -792,7 +676,7 @@ class TrackerPipeline:
                 and (
                     not lock_ids
                     or lock_score < max(self.cfg.LOCK_TRACKER_MIN_SCORE + 0.12, 0.55)
-                    or self.frame_counter % self._effective_local_validate_interval() == 0
+                    or self.frame_counter % self.budget.effective_local_validate_interval(self.frame_counter) == 0
                 )
             )
             if need_local_validate:
@@ -812,12 +696,11 @@ class TrackerPipeline:
             self.cfg.ROI_ASSIST_ENABLED
             and (not self.cfg.ROI_ASSIST_ON_SMALL_TARGET_ONLY or small_target_mode)
             and not self.manager.is_focus_mode()
-            and self._should_run_roi_with_budget()
+            and self.budget.should_run_roi(self.frame_counter)
         )
         if run_roi_assist:
             t0 = time.perf_counter()
-            roi_max_candidates = self._effective_roi_max_candidates()
-            self._last_roi_budget_candidates = roi_max_candidates
+            roi_max_candidates = self.budget.effective_roi_max_candidates()
             roi_regions = self.roi.propose(frame, max_candidates=roi_max_candidates)
             roi_dets = self.backend.predict_crops(
                 frame,
@@ -830,12 +713,12 @@ class TrackerPipeline:
             timings_ms['roi'] = (time.perf_counter() - t0) * 1000.0
             roi_ids = self.manager.update_from_roi_yolo(roi_dets, global_ids | lock_ids | local_ids)
         else:
-            self._last_roi_budget_candidates = self._effective_roi_max_candidates()
+            self.budget.effective_roi_max_candidates()
 
         primary_seen_ids = global_ids | lock_ids | local_ids | roi_ids
         self.manager.note_primary_seen(bool(primary_seen_ids))
 
-        night_budget_gate = self._should_run_night_with_budget()
+        night_budget_gate = self.budget.should_run_night(self.frame_counter)
         if self.manager.should_run_night_detector() and night_budget_gate:
             t0 = time.perf_counter()
             night_dets = self.night.detect(frame)
@@ -856,14 +739,14 @@ class TrackerPipeline:
 
         gt_iou = self._compute_gt_iou(gt_bbox)
         active = self.manager.get_active_target()
-        self._update_continuity_metrics(self.manager.active_id)
+        self.continuity.update(self.manager.active_id)
         active_bbox = active.raw_bbox if active is not None else None
         display_confidence = self._update_display_confidence(active, lock_score)
         reticle_center = self._update_reticle_center(active)
-        continuity_score = self._continuity_score()
-        active_presence_rate = self._active_presence_rate()
-        active_id_changes = int(self._continuity_id_changes)
-        median_reacquire_frames = self._median_reacquire_frames()
+        continuity_score = self.continuity.score()
+        active_presence_rate = self.continuity.presence_rate(self.frame_counter)
+        active_id_changes = int(self.continuity.id_changes)
+        median_reacquire_frames = self.continuity.median_reacquire_frames()
         tracking_mode = self._update_tracking_state(active)
         display_tracking_mode = self._get_display_tracking_state(tracking_mode)
         self._adapt_auto_scene(frame)
@@ -889,16 +772,16 @@ class TrackerPipeline:
                 display_confidence=display_confidence,
                 lock_switches_per_min=self._lock_switches_per_min(),
                 lock_switch_count=self.lock_switch_count,
-                budget_level=self._budget_level,
-                budget_load=self._budget_load_ema,
-                roi_budget_candidates=self._last_roi_budget_candidates,
-                night_skip=self._last_night_skip,
+                budget_level=self.budget.level,
+                budget_load=self.budget.load_ema,
+                roi_budget_candidates=self.budget.last_roi_candidates,
+                night_skip=self.budget.last_night_skip,
                 reticle_center=reticle_center,
                 smooth_active_bbox=smooth_active_bbox,
             )
             timings_ms['draw'] = (time.perf_counter() - t0) * 1000.0
 
-        self._update_budget_state(timings_ms)
+        self.budget.update(timings_ms)
 
         visible = len(self.manager.display_targets())
         active_source = active.source if active is not None else '-'
@@ -925,11 +808,11 @@ class TrackerPipeline:
             lock_switch_count=self.lock_switch_count,
             lock_switches_per_min=self._lock_switches_per_min(),
             lock_event_counts=dict(self.lock_event_counts),
-            budget_level=self._budget_level,
-            budget_load=self._budget_load_ema,
-            budget_frame_ms=self._last_frame_budget_ms,
-            roi_budget_candidates=self._last_roi_budget_candidates,
-            night_skip=self._last_night_skip,
+            budget_level=self.budget.level,
+            budget_load=self.budget.load_ema,
+            budget_frame_ms=self.budget.last_frame_ms,
+            roi_budget_candidates=self.budget.last_roi_candidates,
+            night_skip=self.budget.last_night_skip,
             timings_ms=timings_ms,
         )
 
@@ -1087,10 +970,10 @@ def run_tracker(
         )
         logger.info(
             'Budget telemetry: level=%s load=%.2f frame_ms=%.1f roi=%s nskip=%s',
-            pipeline._budget_level,
-            pipeline._budget_load_ema,
-            pipeline._last_frame_budget_ms,
-            pipeline._last_roi_budget_candidates,
-            pipeline._last_night_skip,
+            pipeline.budget.level,
+            pipeline.budget.load_ema,
+            pipeline.budget.last_frame_ms,
+            pipeline.budget.last_roi_candidates,
+            pipeline.budget.last_night_skip,
         )
         logger.info('Трекер остановлен.')
