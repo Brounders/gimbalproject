@@ -39,6 +39,11 @@ budget_roi_min_candidates: 1
 budget_night_skip_level1: 2
 budget_night_skip_level2: 3
 budget_roi_skip_level2: 2
+# [IR hardening — id_chg reduction] session-2026-03-13
+active_id_switch_cooldown_frames: 60   # default 30: double cooldown between ID switches
+track_state_acquire_frames: 4          # default 3: require 4 consecutive hits to acquire track
+lock_mode_acquire_frames: 3            # default 2: require 3 confirm-frames to enter lock mode
+active_id_switch_allow_if_lost_frames: 12  # default 6: hold longer before cooldown bypass
 show_gt_overlay: true
 show_debug_timings: true
 show_trails: true
