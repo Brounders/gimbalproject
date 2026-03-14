@@ -12,6 +12,7 @@ import unittest
 from uav_tracker.config import Config
 from uav_tracker.budget_controller import BudgetController
 from uav_tracker.continuity_tracker import ContinuityTracker
+from uav_tracker.lock_event_tracker import LockEventTracker
 from uav_tracker.tracking_state_machine import TrackingStateMachine
 
 
@@ -249,6 +250,74 @@ class TestTrackingStateMachineTransitions(unittest.TestCase):
         sm.update_display()
         # Upgrade SCAN→TRACK applied immediately
         self.assertEqual(sm.display_state, 'TRACK')
+
+
+# ---------------------------------------------------------------------------
+# LockEventTracker
+# ---------------------------------------------------------------------------
+
+class TestLockEventTrackerAcquire(unittest.TestCase):
+    def test_initial_state(self):
+        lt = LockEventTracker()
+        self.assertEqual(lt.switch_count, 0)
+        self.assertEqual(lt.event_counts['acquired'], 0)
+
+    def test_acquire_event_on_first_focus(self):
+        lt = LockEventTracker()
+        events = lt.update(focus_mode=True, active_id=1)
+        self.assertIn('LOCK_ACQUIRED id=1', events)
+        self.assertEqual(lt.event_counts['acquired'], 1)
+
+    def test_reacquire_after_lost(self):
+        lt = LockEventTracker()
+        lt.update(True, 1)   # acquired
+        lt.update(False, None)  # lost
+        events = lt.update(True, 1)
+        self.assertIn('LOCK_REACQUIRED id=1', events)
+        self.assertEqual(lt.event_counts['reacquired'], 1)
+
+    def test_lost_event_on_focus_exit(self):
+        lt = LockEventTracker()
+        lt.update(True, 1)
+        events = lt.update(False, None)
+        self.assertIn('LOCK_LOST id=1', events)
+        self.assertEqual(lt.event_counts['lost'], 1)
+
+    def test_switch_event_on_id_change(self):
+        lt = LockEventTracker()
+        lt.update(True, 1)
+        events = lt.update(True, 2)
+        self.assertIn('LOCK_SWITCH 1->2', events)
+        self.assertEqual(lt.switch_count, 1)
+        self.assertEqual(lt.event_counts['switch'], 1)
+
+    def test_no_switch_same_id(self):
+        lt = LockEventTracker()
+        lt.update(True, 1)
+        events = lt.update(True, 1)
+        self.assertFalse(any('SWITCH' in e for e in events))
+        self.assertEqual(lt.switch_count, 0)
+
+    def test_switches_per_min_warmup(self):
+        lt = LockEventTracker()
+        lt.update(True, 1)
+        lt.update(True, 2)  # switch
+        # elapsed < 5s → should return 0
+        self.assertEqual(lt.switches_per_min(3.0), 0.0)
+
+    def test_switches_per_min_calculation(self):
+        lt = LockEventTracker()
+        lt.update(True, 1)
+        for i in range(2, 7):
+            lt.update(True, i)  # 5 switches
+        result = lt.switches_per_min(elapsed_sec=60.0)
+        self.assertAlmostEqual(result, 5.0, places=1)
+
+    def test_no_event_while_not_in_focus(self):
+        lt = LockEventTracker()
+        events = lt.update(False, None)
+        events += lt.update(False, None)
+        self.assertEqual(events, [])
 
 
 if __name__ == '__main__':

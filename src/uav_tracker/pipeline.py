@@ -12,6 +12,7 @@ from uav_tracker.budget_controller import BudgetController
 from uav_tracker.config import Config
 from uav_tracker.continuity_tracker import ContinuityTracker
 from uav_tracker.display_state_tracker import DisplayStateTracker
+from uav_tracker.lock_event_tracker import LockEventTracker
 from uav_tracker.tracking_state_machine import TrackingStateMachine
 from uav_tracker.detectors.night_detector import NightSmallTargetDetector
 from uav_tracker.detectors.roi_assist import MotionROIProposer
@@ -177,11 +178,7 @@ class TrackerPipeline:
         self.fps_buf = deque(maxlen=30)
         self.t_prev = time.perf_counter()
         self.frame_counter = 0
-        self.lock_switch_count = 0
-        self.lock_event_counts = {'acquired': 0, 'lost': 0, 'reacquired': 0, 'switch': 0}
-        self._had_lock_before = False
-        self._prev_focus_mode = False
-        self._prev_active_id: Optional[int] = None
+        self.lock_telemetry = LockEventTracker()
         self._video_elapsed_sec = 0.0
         self._fallback_fps = 25.0
         self.budget = BudgetController(cfg, initial_roi_candidates=max(1, int(cfg.ROI_MAX_CANDIDATES)))
@@ -206,11 +203,6 @@ class TrackerPipeline:
         fallback = self.fps_buf[-1] if self.fps_buf else self._fallback_fps
         fallback = max(1.0, float(fallback))
         self._video_elapsed_sec += 1.0 / fallback
-
-    def _lock_switches_per_min(self) -> float:
-        if self._video_elapsed_sec < 5.0:
-            return 0.0
-        return self.lock_switch_count * 60.0 / self._video_elapsed_sec
 
     def _adapt_auto_scene(self, frame: np.ndarray) -> None:
         """Auto scene detection: Day / Night / IR (TASK-020 + TASK-026).
@@ -289,39 +281,6 @@ class TrackerPipeline:
             self.cfg.NIGHT_DIFF_THRESH = self._auto_scene_orig_diff
             self.cfg.LOCK_CONFIRM_FRAMES = self._auto_scene_orig_lock_confirm
             self.cfg.DRONE_LOCK_SCORE_MIN = self._auto_scene_orig_drone_lock_score
-
-    def _update_lock_events(self) -> list[str]:
-        events: list[str] = []
-        focus_mode = self.manager.is_focus_mode()
-        active_id = self.manager.active_id
-
-        if not self._prev_focus_mode and focus_mode:
-            if self._had_lock_before:
-                self.lock_event_counts['reacquired'] += 1
-                events.append(f'LOCK_REACQUIRED id={active_id}')
-            else:
-                self._had_lock_before = True
-                self.lock_event_counts['acquired'] += 1
-                events.append(f'LOCK_ACQUIRED id={active_id}')
-
-        if self._prev_focus_mode and not focus_mode:
-            self.lock_event_counts['lost'] += 1
-            events.append(f'LOCK_LOST id={self._prev_active_id}')
-
-        if (
-            self._prev_focus_mode
-            and focus_mode
-            and self._prev_active_id is not None
-            and active_id is not None
-            and self._prev_active_id != active_id
-        ):
-            self.lock_switch_count += 1
-            self.lock_event_counts['switch'] += 1
-            events.append(f'LOCK_SWITCH {self._prev_active_id}->{active_id}')
-
-        self._prev_focus_mode = focus_mode
-        self._prev_active_id = active_id
-        return events
 
     def _should_run_global_scan(self) -> tuple[bool, str]:
         active = self.manager.get_active_target()
@@ -572,7 +531,7 @@ class TrackerPipeline:
         self.manager.age_targets(all_seen)
         self.manager.select_active()
         self.manager.update_focus_mode()
-        lock_events = self._update_lock_events()
+        lock_events = self.lock_telemetry.update(self.manager.is_focus_mode(), self.manager.active_id)
         self._sync_lock_tracker(frame)
 
         t_now = time.perf_counter()
@@ -615,8 +574,8 @@ class TrackerPipeline:
                 lock_search_roi=lock_search_roi,
                 lock_score=lock_score,
                 display_confidence=display_confidence,
-                lock_switches_per_min=self._lock_switches_per_min(),
-                lock_switch_count=self.lock_switch_count,
+                lock_switches_per_min=self.lock_telemetry.switches_per_min(self._video_elapsed_sec),
+                lock_switch_count=self.lock_telemetry.switch_count,
                 budget_level=self.budget.level,
                 budget_load=self.budget.load_ema,
                 roi_budget_candidates=self.budget.last_roi_candidates,
@@ -650,9 +609,9 @@ class TrackerPipeline:
             active_id_changes=active_id_changes,
             median_reacquire_frames=median_reacquire_frames,
             lock_events=lock_events,
-            lock_switch_count=self.lock_switch_count,
-            lock_switches_per_min=self._lock_switches_per_min(),
-            lock_event_counts=dict(self.lock_event_counts),
+            lock_switch_count=self.lock_telemetry.switch_count,
+            lock_switches_per_min=self.lock_telemetry.switches_per_min(self._video_elapsed_sec),
+            lock_event_counts=dict(self.lock_telemetry.event_counts),
             budget_level=self.budget.level,
             budget_load=self.budget.load_ema,
             budget_frame_ms=self.budget.last_frame_ms,
@@ -809,9 +768,9 @@ def run_tracker(
             logger.info('Сохранён результат: %s', output_path)
         logger.info(
             'Lock telemetry: events=%s switches=%s sw/min=%.2f',
-            pipeline.lock_event_counts,
-            pipeline.lock_switch_count,
-            pipeline._lock_switches_per_min(),
+            pipeline.lock_telemetry.event_counts,
+            pipeline.lock_telemetry.switch_count,
+            pipeline.lock_telemetry.switches_per_min(pipeline._video_elapsed_sec),
         )
         logger.info(
             'Budget telemetry: level=%s load=%.2f frame_ms=%.1f roi=%s nskip=%s',
