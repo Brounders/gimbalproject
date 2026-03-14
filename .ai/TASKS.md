@@ -57,6 +57,7 @@
 | TRACK-000 | `lock_event_tracker.py` → `tracking/` subpackage |
 | TRACK-001 | `continuity_tracker.py` → `tracking/` subpackage |
 | TRACK-002 | `tracking_state_machine.py` → `tracking/` subpackage |
+| PCTL-001 | Создан `pipeline_control/` + `budget_controller.py` перемещён туда |
 
 ---
 

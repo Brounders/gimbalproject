@@ -109,9 +109,9 @@ tests/*             → src/uav_tracker/* (PYTHONPATH=src required)
 
 | Cluster | Current Location | Target Subpackage | Status |
 |---------|-----------------|-------------------|--------|
-| Detection | `detectors/` | `detectors/` | Already grouped |
-| Tracking | `tracking/` + root | `tracking/` | Partial (lock_event_tracker being moved) |
-| Pipeline Control | root (flat) | `pipeline_control/` | Planned |
+| Detection | `detectors/` | `detectors/` | ✅ Already grouped |
+| Tracking | `tracking/` | `tracking/` | ✅ Complete (5 files) |
+| Pipeline Control | `pipeline_control/` | `pipeline_control/` | 🔄 Partial (budget_controller done; auto_scene_adapter pending BRIEF-031) |
 | Display | root (flat) | `display/` | Planned |
 | Config | root (flat) | keep flat or `config/` | Risk: breaking imports |
 | Integrations | `runtime/` | `runtime/` | Already grouped |
