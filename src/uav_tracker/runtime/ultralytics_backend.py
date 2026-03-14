@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Iterable
 
 import numpy as np
@@ -7,6 +8,8 @@ from ultralytics import YOLO
 
 from uav_tracker.config import Config
 from uav_tracker.runtime.base import Detection
+
+logger = logging.getLogger(__name__)
 
 
 class UltralyticsBackend:
@@ -66,7 +69,11 @@ class UltralyticsBackend:
         )
 
     def track_frame(self, frame: np.ndarray, cfg: Config) -> list[Detection]:
-        results = self._predict_impl(frame, cfg, conf=cfg.CONF_THRESH, imgsz=cfg.IMG_SIZE, track=True)
+        try:
+            results = self._predict_impl(frame, cfg, conf=cfg.CONF_THRESH, imgsz=cfg.IMG_SIZE, track=True)
+        except Exception:
+            logger.exception('track_frame: ошибка при вызове YOLO track')
+            return []
         if not results or results[0].boxes is None:
             return []
         return [self._box_to_detection(box, 'yolo') for box in results[0].boxes if getattr(box, 'id', None) is not None]
@@ -80,7 +87,11 @@ class UltralyticsBackend:
         imgsz: int | None = None,
         source: str = 'local',
     ) -> list[Detection]:
-        results = self._predict_impl(frame, cfg, conf=conf or cfg.CONF_THRESH, imgsz=imgsz or cfg.IMG_SIZE, track=False)
+        try:
+            results = self._predict_impl(frame, cfg, conf=conf or cfg.CONF_THRESH, imgsz=imgsz or cfg.IMG_SIZE, track=False)
+        except Exception:
+            logger.exception('predict_frame: ошибка при вызове YOLO predict')
+            return []
         if not results or results[0].boxes is None:
             return []
         return [self._box_to_detection(box, source) for box in results[0].boxes]
