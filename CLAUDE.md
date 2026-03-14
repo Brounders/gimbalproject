@@ -1,5 +1,72 @@
 # CLAUDE ROLE — Implementation Lead
 
+## Project Overview
+
+UAV tracking system: YOLO detection + night MOG2 detector + template lock tracker + gimbal control.
+Runtimes: Mac M1 (Ultralytics/MPS) and RPi5 + Hailo (stub). PySide6 GUI + CLI entry points.
+
+## Tech Stack
+
+Python 3.11 · ultralytics (YOLOv8) · opencv-python · numpy · PySide6 · torch/MPS · dataclasses
+
+## Repository Structure
+
+```
+src/uav_tracker/       # core pipeline (pipeline.py, config.py, modes.py)
+  budget_controller.py / continuity_tracker.py / tracking_state_machine.py / display_state_tracker.py
+  detectors/           # night_detector.py, roi_assist.py
+  tracking/            # target_manager.py, lock_tracker.py
+  runtime/             # base.py, ultralytics_backend.py, hailo_backend.py (stub)
+app/                   # main_gui.py (PySide6), main_cli.py, ui/
+tests/                 # unittest suite (15 tests, coverage ~10%)
+orchestrator/          # state/active_plan.md, reports/, briefs/, tasks/
+.claude/playbooks/     # routing playbooks (DO NOT EDIT in agent-team mode)
+python_scripts/        # run_quality_gate.py, training helpers
+configs/               # regression_pack.csv, preset YAMLs
+```
+
+## Development Rules (Token Efficiency)
+
+**Чтение файлов:**
+- НЕ перечитывай файл, если он уже в контексте сессии
+- Файлы >200 строк читай с offset/limit (частично)
+- Предпочитай Grep/Glob перед Read для поиска
+- Не выводи полный файл без явного требования
+
+**Изменения:**
+- Всегда Edit (patch) вместо Write (полная перезапись)
+- Минимальный diff — только затронутые строки
+- Один коммит на одно логическое изменение
+
+**Context7 MCP:**
+- `resolve-library-id` → `query-docs` только по конкретной теме
+- Не загружай документацию целиком — только нужный раздел
+
+## Agent Workflow
+
+1. Проверить `orchestrator/state/active_plan.md` — найти текущую задачу
+2. Grep/Glob для поиска затронутых файлов (не Read)
+3. Read только нужные файлы, частично (offset/limit)
+4. Edit (patch) — минимальные изменения
+5. compileall + unittest discover — проверка
+6. Commit с префиксом `[agent-team][модуль]`
+7. Отчёт в `orchestrator/reports/`
+
+## Output Policy
+
+**Запрещено:** полный вывод файла · дублирование кода · verbose-объяснения
+**Разрешено:** snippets · короткие diff · статус одной строкой
+
+## Agent Efficiency Techniques
+
+- Структуру проекта анализируй через Glob, а не через последовательный Read
+- Grep по паттерну до открытия файла — убедись что он нужен
+- Для незнакомой библиотеки → Context7 вместо чтения исходников
+- Smoke-test: `PYTHONPATH=src python3 -m compileall -q src` + `python3 -m unittest discover -s tests -q`
+- Запуск проверок: `source tracker_env/bin/activate` перед командами
+
+---
+
 ## Роль
 
 Claude реализует задачи, созданные orchestrator-слоем.
