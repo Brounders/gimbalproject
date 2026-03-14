@@ -100,3 +100,33 @@ runtime/ultralytics → config, torch/ultralytics
 runtime/hailo       → config (stub only)
 tests/*             → src/uav_tracker/* (PYTHONPATH=src required)
 ```
+
+---
+
+## Full Repository Layout (key directories)
+
+| Directory | Purpose | AI-Zone |
+|-----------|---------|---------|
+| `src/uav_tracker/` | Core tracker pipeline and components | core |
+| `src/utils/` | Shared math utilities (iou, geometry) | shared |
+| `app/` | GUI entry point, CLI entry point | app |
+| `app/ui/` | PySide6 panels, theme, state machine | ui |
+| `tests/` | Unit test suite (48 tests, ~15% coverage) | tests |
+| `configs/` | Preset YAMLs, regression packs | shared/config |
+| `python_scripts/` | Training, evaluation, benchmarking scripts | tooling |
+| `datasets/` | Training datasets (should be in .gitignore) | data |
+| `automation/` | AI workflow prompts + state JSONs | orchestrator |
+| `orchestrator/` | Active plan, reports, briefs for agent team | orchestrator |
+| `arduino_sketches/` | Hardware gimbal control firmware (C++) | hardware |
+| `agents/` | Agent team role definitions | ai-memory |
+| `.ai/` | AI-native memory and architectural snapshots | ai-memory |
+
+---
+
+## Root MD Proliferation (known issue)
+
+12+ MD files at repo root: AGENTS, CLAUDE, CODEX_ROLE, CURRENT_PHASE, DEVELOPMENT_NEXT_STEPS,
+ENGINEERING_CODEX, ENGINEERING_DECISIONS, OPERATOR_BASELINE, PROJECT_ARCHITECTURE,
+PROJECT_COMPASS, QUICKSTART, RUNBOOK.
+
+Status: tracked as ROOT-DOC-001. Do not add more root MDs — use `.ai/` or `docs/` instead.

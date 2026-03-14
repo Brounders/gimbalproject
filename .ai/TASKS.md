@@ -12,7 +12,8 @@
 |----|-------------|------|----------------|
 | BRIEF-031 | AutoSceneAdapter extraction — currently mutates `cfg` in-place, risky decoupling | High: cfg mutation side-effects must be isolated | `src/uav_tracker/pipeline.py`, new `src/uav_tracker/auto_scene_adapter.py` |
 | A10 | Test coverage from ~15% → >30% — add tests for pipeline, config, detectors, target_manager | Medium: test isolation for stateful classes | `tests/`, `src/uav_tracker/pipeline.py`, `src/uav_tracker/config.py`, detectors |
-| TASK-033 | APP_STYLESHEET extraction — move inline stylesheet out of `main_gui.py` into `app/ui/theme.py` | Low: UI-only, no logic change | `app/main_gui.py`, new `app/ui/theme.py` |
+| TASK-033 | Verify APP_STYLESHEET extraction — `app/ui/theme.py` exists; audit whether it's fully used by `main_gui.py` or still has inline remnants | Low | `app/main_gui.py`, `app/ui/theme.py` |
+| SCRIPTS-001 | Organize `python_scripts/` into subdirs: `training/`, `evaluation/`, `tools/` — no code changes, just directory structure | Low | `python_scripts/` |
 
 ## P2 — Future
 
@@ -20,6 +21,8 @@
 |----|-------------|------|----------------|
 | BRIEF-030 | Config nested groups — restructure 145-field flat dataclass into grouped sections; breaking API change | High: all callers use `cfg.<field>` flat access | `src/uav_tracker/config.py`, `pipeline.py`, `main_gui.py`, all callers |
 | Hailo impl | HailoBackend real implementation for RPi5 — replace stub with actual Hailo SDK calls | High: hardware dependency, platform-specific | `src/uav_tracker/runtime/hailo_backend.py` |
+| ROOT-DOC-001 | Root MD proliferation — 12+ MD files at root; consolidate/move to `docs/` without breaking existing references | Low | root `*.md` files |
+| MAIN-GUI-001 | Split `app/main_gui.py` (1600 lines) — extract TrackerWorker business logic from UI layer | High | `app/main_gui.py`, new `app/workers/tracker_worker.py` |
 
 ---
 
@@ -44,3 +47,4 @@
 | A11 | try/except added to UltralyticsBackend track_frame and predict_frame |
 | A12 | Magic numbers in night_detector.py and roi_assist.py → Config fields |
 | Phase 2 gate fix | Quality gate regression pack — IR GT clips integration and PASS/FAIL exit code fix |
+| .ai init | Created `.ai/` folder with CLAUDE.md, MEMORY.md, ARCHITECTURE_MAP.md, TASKS.md, CONTEXT7_GUIDE.md |
