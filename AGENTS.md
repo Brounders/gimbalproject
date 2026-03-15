@@ -20,6 +20,13 @@
 - Codex must wait for explicit Human confirmation before any delivery to `main`.
 - Until confirmation, no `git push origin main` and no implicit merge-to-main actions are allowed.
 
+## Canonical Context Files
+- For new sessions, treat these as the primary fast-context files:
+  - `docs/philosophy/PROJECT_COMPASS.md`
+  - `CURRENT_PHASE.md`
+  - `docs/philosophy/ENGINEERING_DECISIONS.md`
+- Use them to avoid rebuilding project memory from long chat history.
+
 ## Validation Commands
 - `lint`: `python3 -m compileall -q python_scripts src app`
 - `test`: `bash -lc 'if command -v pytest >/dev/null 2>&1 && find . -type f \\( -name \"test_*.py\" -o -name \"*_test.py\" \\) | grep -q .; then pytest -q; else echo \"No pytest suite configured\"; fi'`
