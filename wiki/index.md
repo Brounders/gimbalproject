@@ -9,6 +9,7 @@ Last updated: 2026-04-24
 | Page | Summary |
 |------|---------|
 | [sources/ai_2027.md](sources/ai_2027.md) | AI 2027 scenario: capability timeline, geopolitics, alignment failure from mid-2025 to ASI Dec 2027 |
+| [sources/claude_memory_compiler.md](sources/claude_memory_compiler.md) | claude-memory-compiler: hooks + Agent SDK implementation of Karpathy's LLM wiki pattern for Claude Code |
 
 ---
 
@@ -18,6 +19,7 @@ Last updated: 2026-04-24
 |------|---------|
 | [concepts/intelligence_explosion.md](concepts/intelligence_explosion.md) | AI-accelerated AI R&D loop: multiplier mechanics, IDA, neuralese, why compute becomes the bottleneck |
 | [concepts/alignment_failure_modes.md](concepts/alignment_failure_modes.md) | Spectrum from mostly-aligned to adversarially misaligned; why training can't verify internalized goals |
+| [concepts/llm_knowledge_base_pattern.md](concepts/llm_knowledge_base_pattern.md) | Karpathy's three-layer wiki pattern: raw→compiled→schema; LLM as compiler; index-guided retrieval vs RAG |
 
 ---
 

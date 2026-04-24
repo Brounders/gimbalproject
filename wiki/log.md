@@ -7,3 +7,6 @@ Format: `## [DATE] operation | source — summary`
 
 ## [2026-04-24] ingest | raw/AI 2027.md — AI 2027 scenario by Kokotajlo et al.; capability timeline, alignment failure modes, geopolitics
 Pages created: sources/ai_2027.md, concepts/intelligence_explosion.md, concepts/alignment_failure_modes.md
+
+## [2026-04-24] ingest | raw/claude-memory-compiler/ — coleam00's Claude Code implementation of Karpathy's LLM wiki pattern
+Pages created: sources/claude_memory_compiler.md, concepts/llm_knowledge_base_pattern.md
