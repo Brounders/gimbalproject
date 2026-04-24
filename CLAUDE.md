@@ -103,6 +103,23 @@ Claude обязан использовать project playbooks из `.claude/pla
 - training prompt / training cycle / thermal safety -> `.claude/playbooks/training_ops.md`
 - PySide6 UI / operator flow / panels -> `.claude/playbooks/pyside6_ui.md`
 
+## Wiki — Накопленные знания о домене
+
+Wiki живёт в `wiki/`. Это постоянная база знаний о домене (не session state).
+
+**Когда использовать:**
+- Вопросы о ночном детекторе, lock policy, качественных порогах → `wiki/index.md` → drill-down
+- Вопросы о модели, пресетах, тест-клипах → `wiki/entities/`
+- История дефектов → `wiki/synthesis/night_defect_history.md`
+- Открытые вопросы → `wiki/synthesis/open_questions.md`
+
+**Когда обновлять:**
+- После принятия нового отчёта из `orchestrator/reports/` — обновить затронутые страницы + `wiki/log.md`
+- Если найдено противоречие — пометить `> ⚠️ CONTRADICTION:` в обоих местах
+- После Lint-прохода — обновить устаревшие факты
+
+**Структура:** `wiki/SCHEMA.md` содержит полные правила обслуживания.
+
 ## Context7 MCP — Документация библиотек
 
 Плагин `context7@claude-plugins-official` установлен глобально. **Аутентификация не нужна.**

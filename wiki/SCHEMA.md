@@ -1,51 +1,116 @@
-# Wiki Schema
+# Wiki Schema — GimbalProject
 
 ## Purpose
 
-Persistent domain knowledge base. LLM maintains; human reads and directs.
+Единая постоянная база знаний: доменные знания о проекте + внешние источники.
+LLM поддерживает wiki; Bround читает и направляет.
 
-**Raw sources**: `raw/` — immutable originals (articles, papers, etc.)
-**Wiki**: `wiki/` — LLM-maintained markdown pages
-**Schema**: this file
+**Сырые источники (immutable):**
+- Доменные: `orchestrator/reports/`, `orchestrator/briefs/`, `orchestrator/state/`, `OPERATOR_BASELINE.md`
+- Внешние: `memory/` — статьи, инструменты, исследования
+
+**Wiki** (LLM-maintained): `wiki/` — этот каталог
+
+**Schema** (этот файл): соглашения, форматы страниц, операции
+
+---
 
 ## Directory Structure
 
 ```
 wiki/
-  SCHEMA.md       ← this file
-  index.md        ← catalog of all pages
-  log.md          ← append-only operation log
+  SCHEMA.md          ← этот файл
+  index.md           ← каталог всех страниц
+  log.md             ← append-only хронологический лог
 
-  sources/        ← one page per ingested source (summary + key claims)
-  concepts/       ← how things work (mechanisms, models, frameworks)
-  entities/       ← what things are (people, orgs, technologies)
-  synthesis/      ← cross-cutting analysis and open questions
+  concepts/          ← как что-то работает (механизмы, алгоритмы, политики, паттерны)
+    detection_pipeline.md
+    lock_policy.md
+    quality_gates.md
+    runtime_hardening.md
+    training_strategy.md
+    intelligence_explosion.md
+    alignment_failure_modes.md
+    llm_knowledge_base_pattern.md
+
+  entities/          ← что что-то представляет собой (модели, конфиги, данные)
+    models.md
+    presets.md
+    test_clips.md
+
+  decisions/         ← зафиксированные решения и их обоснование
+    model_decisions.md
+
+  synthesis/         ← сквозной анализ и открытые вопросы
+    current_state.md
+    open_questions.md
+    night_defect_history.md
+
+  sources/           ← краткие сводки внешних источников
+    ai_2027.md
+    claude_memory_compiler.md
 ```
+
+---
+
+## Page Format
+
+```markdown
+# Title
+
+> One-line summary (используется в index.md)
+
+## Section
+...content...
+
+## Related
+- [page](../concepts/page.md) — почему связано
+```
+
+---
 
 ## Operations
 
-### Ingest (when new file appears in raw/)
-1. Read the source.
-2. Check `index.md` for related existing pages.
-3. Write a summary page in `sources/`.
-4. Write or update concept/entity pages for key ideas introduced.
-5. Update `index.md`.
-6. Append to `log.md`: `## [DATE] ingest | raw/filename — one-line summary`.
+### Ingest — новый отчёт из orchestrator/
+1. Прочитать отчёт.
+2. Определить затронутые страницы вики (через index.md).
+3. Обновить каждую страницу — исправить факты, добавить измерения, отметить противоречия.
+4. Добавить запись в `log.md`: `## [DATE] ingest | REPORT-ID — one-line summary`.
+5. Обновить `index.md` если созданы новые страницы.
+
+### Ingest — новый внешний источник из memory/
+1. Прочитать источник.
+2. Написать страницу-сводку в `sources/`.
+3. Написать или обновить концепт-страницы для ключевых идей.
+4. Обновить `index.md`.
+5. Добавить запись в `log.md`.
 
 ### Query
-1. Read `index.md` to find relevant pages.
-2. Read those pages.
-3. Synthesize answer with citations.
-4. If the answer is reusable, save it as a synthesis page.
-5. Append to `log.md`.
+1. Прочитать `index.md`, найти релевантные страницы.
+2. Прочитать их.
+3. Синтезировать ответ со ссылками.
+4. Если ответ ценный — сохранить как страницу synthesis/.
 
-### Lint (periodic)
-Check for: contradictions, stale claims, orphan pages, missing cross-references.
+### Lint (периодически)
+Проверить: противоречия между страницами, устаревшие факты, orphan-страницы,
+открытые вопросы которые уже закрыты, важные концепты без страниц.
+
+---
 
 ## Conventions
 
-- Dates: ISO `YYYY-MM-DD`
-- Contradictions: `> ⚠️ CONTRADICTION:`
-- Open questions: `> ❓ OPEN:`
-- Stale facts: `> ~~stale~~`
-- Cross-links: relative markdown links
+- **Даты**: ISO `YYYY-MM-DD`
+- **AP-ссылки**: всегда полный ID, например `AP-025`
+- **Числовые значения**: всегда с контекстом (какой клип, какой режим)
+- **Противоречия**: `> ⚠️ CONTRADICTION:`
+- **Устаревшие факты**: `> ~~stale as of AP-XXX~~`
+- **Открытые вопросы**: `> ❓ OPEN:`
+- **Перекрёстные ссылки**: markdown-ссылки `[text](../entities/models.md)`
+
+---
+
+## Authorship
+
+LLM пишет и поддерживает wiki. Bround читает.
+Bround: поставляет новые артефакты, задаёт вопросы, одобряет стратегию.
+Claude: извлекает, синтезирует, поддерживает актуальность.
