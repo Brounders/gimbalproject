@@ -38,10 +38,10 @@ automation/state/next_training_chunk.json
 logs/security/
 
 # claude-memory-compiler — auto-generated, not for git
-raw/claude-memory-compiler/daily/
-raw/claude-memory-compiler/knowledge/
-raw/claude-memory-compiler/scripts/state.json
-raw/claude-memory-compiler/scripts/last-flush.json
-raw/claude-memory-compiler/scripts/session-flush-*.md
-raw/claude-memory-compiler/scripts/flush.log
-raw/claude-memory-compiler/.venv/
+memory/claude-memory-compiler/daily/
+memory/claude-memory-compiler/knowledge/
+memory/claude-memory-compiler/scripts/state.json
+memory/claude-memory-compiler/scripts/last-flush.json
+memory/claude-memory-compiler/scripts/session-flush-*.md
+memory/claude-memory-compiler/scripts/flush.log
+memory/claude-memory-compiler/.venv/
