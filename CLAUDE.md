@@ -105,20 +105,21 @@ Claude обязан использовать project playbooks из `.claude/pla
 
 ## Wiki — Накопленные знания о домене
 
-Wiki живёт в `wiki/`. Это постоянная база знаний о домене (не session state).
+Wiki живёт в `../wiki/` (то есть `Projects/wiki/`) — вне git, общая для всех проектов.
+Это постоянная база знаний: доменные знания GimbalProject + общие концепты AI/методологии.
 
 **Когда использовать:**
-- Вопросы о ночном детекторе, lock policy, качественных порогах → `wiki/index.md` → drill-down
-- Вопросы о модели, пресетах, тест-клипах → `wiki/entities/`
-- История дефектов → `wiki/synthesis/night_defect_history.md`
-- Открытые вопросы → `wiki/synthesis/open_questions.md`
+- Вопросы о ночном детекторе, lock policy, качественных порогах → `../wiki/index.md` → drill-down
+- Вопросы о модели, пресетах, тест-клипах → `../wiki/entities/`
+- История дефектов → `../wiki/synthesis/night_defect_history.md`
+- Открытые вопросы → `../wiki/synthesis/open_questions.md`
 
 **Когда обновлять:**
-- После принятия нового отчёта из `orchestrator/reports/` — обновить затронутые страницы + `wiki/log.md`
+- После принятия нового отчёта из `orchestrator/reports/` — обновить затронутые страницы + `../wiki/log.md`
 - Если найдено противоречие — пометить `> ⚠️ CONTRADICTION:` в обоих местах
 - После Lint-прохода — обновить устаревшие факты
 
-**Структура:** `wiki/SCHEMA.md` содержит полные правила обслуживания.
+**Структура:** `../wiki/SCHEMA.md` содержит полные правила обслуживания.
 
 ## Команда "Синхронизируйся"
 
@@ -127,21 +128,21 @@ Wiki живёт в `wiki/`. Это постоянная база знаний о
 **Шаг 1 — Cheap scan (всегда, без чтения файлов):**
 1. Прочитать `Projects/.last-sync` — если файл отсутствует, считать что синхронизации не было
 2. Найти файлы в `/Users/bround/Documents/Projects/Clippings/` новее last-sync (только mtime)
-3. Проверить `git status` — есть ли изменения в `wiki/` или `memory/` с прошлой синхронизации
+3. Проверить изменения в `../wiki/` (mtime файлов с прошлой синхронизации)
 4. Проверить есть ли новые файлы в `memory/claude-memory-compiler/daily/` (необработанные compile.py)
 
 **Шаг 2 — Отчёт:**
 ```
 Синхронизация с [дата last-sync или "никогда"]:
 📎 Новые клипинги (N): [список имён файлов]
-📝 Изменения wiki/: [есть / нет]
+📝 Изменения ../wiki/: [есть / нет]
 📚 Daily logs для compile: [N необработанных]
 
 Что сделать?
 ```
 
 **Шаг 3 — По подтверждению:**
-- Клипинги → читать по одному → страница в `wiki/sources/` → обновить `wiki/index.md` + `wiki/log.md`
+- Клипинги → читать по одному → страница в `../wiki/sources/` → обновить `../wiki/index.md` + `../wiki/log.md`
 - compile.py → напомнить команду: `uv run --directory memory/claude-memory-compiler python scripts/compile.py`
 - Завершить → записать текущее время в `/Users/bround/Documents/Projects/.last-sync` (ISO формат)
 

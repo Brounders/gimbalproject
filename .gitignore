@@ -37,6 +37,9 @@ automation/state/next_training_chunk.json
 .security-key
 logs/security/
 
+# wiki — перенесена в Projects/wiki/ (вне git, общая для всех проектов)
+wiki/
+
 # claude-memory-compiler — auto-generated, not for git
 memory/claude-memory-compiler/daily/
 memory/claude-memory-compiler/knowledge/
