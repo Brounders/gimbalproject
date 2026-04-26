@@ -410,5 +410,115 @@ class TestAgeTargetsExpiry(unittest.TestCase):
         self.assertEqual(len(mgr.targets), 0)
 
 
+# ---------------------------------------------------------------------------
+# update_from_roi_yolo
+# ---------------------------------------------------------------------------
+
+class TestUpdateFromRoiYolo(unittest.TestCase):
+
+    def test_new_roi_det_creates_aux_target(self):
+        """ROI detection with no nearby track creates a new aux-ID target."""
+        mgr = TargetManager(_cfg())
+        det = _det(tid=None, cx=300.0, cy=300.0, source='roi')
+        det = Detection(bbox=det.bbox, conf=det.conf, cls_id=det.cls_id,
+                        cx=det.cx, cy=det.cy, source='roi', track_id=None)
+        result = mgr.update_from_roi_yolo([det], primary_ids=set())
+        self.assertEqual(len(result), 1)
+        self.assertTrue(any(t.source == 'roi' for t in mgr.targets.values()))
+
+    def test_roi_det_overlapping_primary_is_suppressed(self):
+        """ROI detection that overlaps a primary bbox must be ignored."""
+        mgr = TargetManager(_cfg())
+        # Primary target at (100,100)
+        _inject(mgr, 1, cx=100.0, cy=100.0, w=50.0, h=50.0, source='yolo')
+        # ROI det at nearly the same position — should overlap
+        roi_det = Detection(
+            bbox=(76, 76, 124, 124), conf=0.7, cls_id=0,
+            cx=100.0, cy=100.0, source='roi', track_id=None,
+        )
+        result = mgr.update_from_roi_yolo([roi_det], primary_ids={1})
+        self.assertEqual(len(result), 0)
+
+    def test_roi_det_in_focus_mode_outside_gate_is_skipped(self):
+        """In focus mode, ROI dets outside the reacquire radius must be dropped."""
+        cfg = _cfg(LOCK_REACQUIRE_DIST=50)
+        mgr = TargetManager(cfg)
+        active = _inject(mgr, 1, cx=100.0, cy=100.0, source='yolo',
+                         drone_score=0.8, hit_streak=10)
+        mgr.active_id = 1
+        mgr._focus_mode = True
+
+        far_det = Detection(
+            bbox=(400, 400, 450, 450), conf=0.7, cls_id=0,
+            cx=425.0, cy=425.0, source='roi', track_id=None,
+        )
+        result = mgr.update_from_roi_yolo([far_det], primary_ids=set())
+        self.assertEqual(len(result), 0)
+
+
+# ---------------------------------------------------------------------------
+# update_from_night — additional edge cases
+# ---------------------------------------------------------------------------
+
+class TestUpdateFromNightEdgeCases(unittest.TestCase):
+
+    def test_focus_mode_skips_all_night_dets(self):
+        """update_from_night must return empty set when in focus mode."""
+        mgr = TargetManager(_cfg())
+        mgr._focus_mode = True
+        night = _night(cx=200.0, cy=200.0)
+        result = mgr.update_from_night([night], primary_ids=set())
+        self.assertEqual(result, set())
+        self.assertEqual(len(mgr.targets), 0)
+
+    def test_night_det_creates_aux_track(self):
+        mgr = TargetManager(_cfg())
+        night = _night(cx=200.0, cy=200.0)
+        result = mgr.update_from_night([night], primary_ids=set())
+        self.assertEqual(len(result), 1)
+        self.assertTrue(any(t.source == 'night' for t in mgr.targets.values()))
+
+    def test_night_det_overlapping_primary_is_suppressed(self):
+        mgr = TargetManager(_cfg())
+        _inject(mgr, 1, cx=200.0, cy=200.0, w=50.0, h=50.0, source='yolo')
+        night = _night(cx=200.0, cy=200.0, w=40.0, h=40.0)
+        result = mgr.update_from_night([night], primary_ids={1})
+        self.assertEqual(len(result), 0)
+
+
+# ---------------------------------------------------------------------------
+# _try_reacquire_active_from_primary
+# ---------------------------------------------------------------------------
+
+class TestTryReacquireActive(unittest.TestCase):
+
+    def test_reacquire_merges_nearby_candidate(self):
+        """A seen primary target close to the lost active should become active."""
+        cfg = _cfg(LOCK_REACQUIRE_DIST=100, DRONE_REACQUIRE_SCORE_MIN=0.4)
+        mgr = TargetManager(cfg)
+        # Active target — lost
+        active = _inject(mgr, 1, cx=100.0, cy=100.0, source='yolo',
+                         drone_score=0.8, hit_streak=5, lost_frames=3)
+        mgr.active_id = 1
+        # Candidate close by
+        candidate = _inject(mgr, 2, cx=130.0, cy=115.0, source='yolo',
+                            drone_score=0.7, hit_streak=3)
+        mgr._try_reacquire_active_from_primary({2})
+        # After reacquire, active_id should shift to candidate (merged)
+        self.assertEqual(mgr.active_id, 2)
+
+    def test_no_reacquire_when_candidate_too_far(self):
+        """A candidate outside the reacquire radius must not trigger merge."""
+        cfg = _cfg(LOCK_REACQUIRE_DIST=50, DRONE_REACQUIRE_SCORE_MIN=0.4)
+        mgr = TargetManager(cfg)
+        active = _inject(mgr, 1, cx=100.0, cy=100.0, source='yolo',
+                         drone_score=0.8, hit_streak=5, lost_frames=1)
+        mgr.active_id = 1
+        _inject(mgr, 2, cx=600.0, cy=600.0, source='yolo',
+                drone_score=0.7, hit_streak=3)
+        mgr._try_reacquire_active_from_primary({2})
+        self.assertEqual(mgr.active_id, 1)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -19,7 +19,8 @@ from uav_tracker.detectors.roi_assist import MotionROIProposer
 from uav_tracker.runtime import create_detector_backend
 from uav_tracker.runtime.base import Detection
 from uav_tracker.tracking.lock_tracker import TemplateLockTracker
-from uav_tracker.tracking.target_manager import TargetManager, TrackedTarget
+from uav_tracker.tracking.target_manager import TargetManager
+from uav_tracker.tracking.tracked_target import TrackedTarget
 from utils.geometry import iou
 
 
