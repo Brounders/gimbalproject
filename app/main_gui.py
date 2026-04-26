@@ -15,12 +15,8 @@ from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
-    QDialog,
-    QDoubleSpinBox,
     QFileDialog,
     QFrame,
-    QGridLayout,
-    QGroupBox,
     QHBoxLayout,
     QInputDialog,
     QLabel,
@@ -29,7 +25,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QPlainTextEdit,
-    QScrollArea,
     QSizePolicy,
     QSpinBox,
     QSplitter,
@@ -38,12 +33,12 @@ from PySide6.QtWidgets import (
 )
 
 from uav_tracker.config import Config
-from uav_tracker.modes import RUNTIME_MODES, apply_runtime_mode
+from uav_tracker.modes import apply_runtime_mode
 from uav_tracker.pipeline import apply_runtime_preset, parse_video_source
 from uav_tracker.profile_io import apply_overrides, available_presets
 from app.ui import UIState, UIStateMachine, VideoStage
 from app.ui.theme import APP_STYLESHEET, refresh_widget_style
-from app.ui.cards import build_inspector_card, build_target_info_card
+from app.ui.cards import build_target_info_card
 from app.app_settings import load_app_settings as _load_app_settings_impl, save_app_settings as _save_app_settings_impl
 from app.profile_controller import (
     CANONICAL_OPERATOR_MODES,
@@ -58,6 +53,7 @@ from app.profile_controller import (
     set_controls_from_profile as _set_controls_from_profile_impl,
 )
 from app.job_state_machine import refresh_header_state as _refresh_header_state_impl, set_job_state as _set_job_state_impl
+from app.source_controller import on_source_type_changed as _on_source_type_changed_impl, source_from_controls as _source_from_controls_impl, split_source as _split_source_impl
 from app.stats_renderer import update_stats as _update_stats_impl
 from app.ui.expert_dialog import build_expert_dialog as _build_expert_dialog
 from app.ui.layout_builders import build_header as _build_header, build_inspector_drawer as _build_inspector_drawer, build_left_rail as _build_left_rail
@@ -332,49 +328,13 @@ class MainWindow(QMainWindow):
         )
 
     def _split_source(self, source: Any) -> tuple[str, int, str]:
-        if isinstance(source, int):
-            return 'camera', int(source), ''
-        text = str(source).strip()
-        if text.isdigit():
-            return 'camera', int(text), ''
-        lowered = text.lower()
-        if lowered.startswith(('rtsp://', 'http://', 'https://', 'udp://', 'tcp://')):
-            return 'stream', 0, text
-        return 'video', 0, text
+        return _split_source_impl(source)
 
     def _source_from_controls(self):
-        source_type = self.source_type_combo.currentData()
-        if source_type == 'camera':
-            return int(self.camera_index_spin.value())
-        return self.source_path_edit.text().strip()
+        return _source_from_controls_impl(self)
 
     def _on_source_type_changed(self):
-        if self._updating_controls:
-            return
-        source_type = self.source_type_combo.currentData()
-        is_camera = source_type == 'camera'
-        controls_enabled = self._job_state == 'idle'
-        self.camera_index_spin.setEnabled(is_camera and controls_enabled)
-        self.camera_index_spin.setVisible(is_camera)
-        show_path = source_type in {'video', 'stream'}
-        self.source_path_label.setVisible(show_path)
-        self.source_path_edit.setVisible(show_path)
-        self.source_browse_btn.setVisible(show_path)
-        self.source_path_edit.setEnabled(show_path and controls_enabled)
-        self.source_browse_btn.setEnabled(show_path and controls_enabled)
-        if is_camera:
-            self.source_path_edit.setPlaceholderText('Для камеры путь не нужен')
-            self.source_browse_btn.setText('Выбрать...')
-        elif source_type == 'video':
-            self.source_path_label.setText('Видео файл')
-            self.source_path_edit.setPlaceholderText('/путь/к/видео.mp4')
-            self.source_browse_btn.setText('Выбрать...')
-        else:
-            self.source_path_label.setText('URL потока')
-            self.source_path_edit.setPlaceholderText('rtsp://...')
-            self.source_browse_btn.setText('Подключить...')
-        self._refresh_header_state()
-        self._refresh_workspace_overviews()
+        _on_source_type_changed_impl(self)
 
     def _browse_source(self):
         source_type = self.source_type_combo.currentData()
