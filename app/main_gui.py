@@ -57,9 +57,10 @@ from app.profile_controller import (
     save_profile_to_disk as _save_profile_to_disk_impl,
     set_controls_from_profile as _set_controls_from_profile_impl,
 )
+from app.job_state_machine import refresh_header_state as _refresh_header_state_impl, set_job_state as _set_job_state_impl
 from app.stats_renderer import update_stats as _update_stats_impl
 from app.ui.expert_dialog import build_expert_dialog as _build_expert_dialog
-from app.ui.layout_builders import build_header as _build_header, build_left_rail as _build_left_rail
+from app.ui.layout_builders import build_header as _build_header, build_inspector_drawer as _build_inspector_drawer, build_left_rail as _build_left_rail
 from app.workers import EvaluationWorker, TrackerWorker
 
 
@@ -167,42 +168,7 @@ class MainWindow(QMainWindow):
         return bar
 
     def build_inspector_drawer(self) -> QWidget:
-        body = QGroupBox('Диагностика')
-        body.setObjectName('InspectorModule')
-        body_layout = QVBoxLayout(body)
-        body_layout.setContentsMargins(8, 8, 8, 8)
-        body_layout.setSpacing(8)
-
-        target_card, self.panel_target_summary = build_inspector_card('Цель')
-        quality_card, self.panel_quality_summary = build_inspector_card('Качество')
-        runtime_card, self.panel_monitoring_summary = build_inspector_card('Runtime health')
-        params_card, self.panel_params_summary = build_inspector_card('Параметры')
-        eval_card, self.eval_summary_label = build_inspector_card('Оценка')
-        self.eval_summary_hint = QLabel('-')
-        self.eval_summary_hint.setObjectName('InspectorValue')
-        eval_card.layout().addWidget(self.eval_summary_hint)
-
-        events_card = QFrame()
-        events_card.setObjectName('InspectorCard')
-        events_layout = QVBoxLayout(events_card)
-        events_layout.setContentsMargins(8, 8, 8, 8)
-        events_layout.setSpacing(4)
-        events_title = QLabel('События')
-        events_title.setObjectName('InspectorTitle')
-        events_layout.addWidget(events_title)
-        self.panel_events_view = QPlainTextEdit()
-        self.panel_events_view.setReadOnly(True)
-        self.panel_events_view.setMaximumBlockCount(120)
-        self.panel_events_view.setMaximumHeight(180)
-        events_layout.addWidget(self.panel_events_view)
-
-        body_layout.addWidget(target_card)
-        body_layout.addWidget(quality_card)
-        body_layout.addWidget(runtime_card)
-        body_layout.addWidget(params_card)
-        body_layout.addWidget(eval_card)
-        body_layout.addWidget(events_card, 1)
-        return body
+        return _build_inspector_drawer(self)
 
     def build_expert_dialog(self) -> None:
         _build_expert_dialog(self)
@@ -344,69 +310,7 @@ class MainWindow(QMainWindow):
             return
 
     def _refresh_header_state(self):
-        scenario_key = str(self.scenario_combo.currentData() or 'custom')
-        scenario_label = SCENARIO_LABELS.get(scenario_key, scenario_key)
-
-        source_type = str(self.source_type_combo.currentData() or 'camera')
-        if source_type == 'camera':
-            source_display = f"CAM {self.camera_index_spin.value()}"
-        elif source_type == 'stream':
-            source_display = 'ПОТОК'
-        else:
-            source_display = 'ВИДЕО'
-        source_hint = str(self.source_path_edit.text().strip() or source_display)
-        if source_type == 'video':
-            source_short = Path(source_hint).name or source_display
-        elif source_type == 'stream':
-            source_short = source_hint[:48]
-        else:
-            source_short = source_display
-
-        self.top_scenario_label.setText(f"Источник: {source_short} | Сцена: {scenario_label}")
-
-        state_map = {
-            UIState.IDLE: ('IDLE', 'idle'),
-            UIState.CHECKING: ('CHECK', 'stopping'),
-            UIState.RUNNING: ('RUNNING', 'running'),
-            UIState.LOCK: ('LOCK', 'lock'),
-            UIState.LOST: ('LOST', 'lost'),
-            UIState.EVALUATION: ('EVALUATE', 'evaluating'),
-            UIState.ERROR: ('ERROR', 'error'),
-        }
-        state_text, state_name = state_map.get(self._state_machine.state, ('IDLE', 'idle'))
-        self.top_state_badge.setText(state_text)
-        self.top_state_badge.setProperty('state', state_name)
-        refresh_widget_style(self.top_state_badge)
-
-        readable_state = {
-            UIState.IDLE: 'Ожидание',
-            UIState.CHECKING: 'Остановка',
-            UIState.RUNNING: 'Сканирование',
-            UIState.LOCK: 'Захват',
-            UIState.LOST: 'Потеря',
-            UIState.EVALUATION: 'Оценка',
-            UIState.ERROR: 'Ошибка',
-        }
-        self.console_status_label.setText(
-            f"$ {readable_state.get(self._state_machine.state, 'Ожидание').lower()} // {source_display.lower()} // {source_hint}"
-        )
-
-        recording = self._job_state in {'tracking', 'stopping'} and self.record_check.isChecked()
-        if recording:
-            self.record_indicator_label.setText('REC ON')
-        elif self.record_check.isChecked():
-            self.record_indicator_label.setText('REC READY')
-        else:
-            self.record_indicator_label.setText('REC OFF')
-        self.record_indicator_label.setProperty('recording', recording)
-        refresh_widget_style(self.record_indicator_label)
-
-        self.panel_params_summary.setText(
-            'Сценарий: '
-            f"{scenario_label}\n"
-            f"Источник: {self.source_type_combo.currentText()} | device: {self.device_combo.currentText()}\n"
-            f"imgsz/conf: {self.imgsz_spin.value()} / {self.conf_spin.value():.2f}"
-        )
+        _refresh_header_state_impl(self)
 
     def _video_idle_text(self, detail: str | None = None) -> str:
         base = 'Операторская сцена пока не активна'
@@ -590,48 +494,7 @@ class MainWindow(QMainWindow):
         return cfg, source, small_target_mode, output_path
 
     def _set_job_state(self, state: str):
-        self._job_state = state
-        if state == 'idle':
-            self._state_machine.set(UIState.IDLE)
-        elif state == 'tracking':
-            self._state_machine.set(UIState.RUNNING)
-        elif state == 'stopping':
-            self._state_machine.set(UIState.CHECKING)
-        elif state == 'evaluating':
-            self._state_machine.set(UIState.EVALUATION)
-
-        tracking_active = state in {'tracking', 'stopping'}
-        evaluating_active = state == 'evaluating'
-        busy = tracking_active or evaluating_active
-
-        self.start_btn.setEnabled(self._state_machine.can_start() and not busy)
-        self.eval_btn.setEnabled(self._state_machine.can_evaluate() and not busy)
-        self.stop_btn.setEnabled(self._state_machine.can_stop())
-
-        for widget in [
-            self.scenario_combo,
-            self.quick_day_btn,
-            self.quick_night_btn,
-            self.quick_ir_btn,
-            self.source_type_combo,
-            self.camera_index_spin,
-            self.source_path_edit,
-            self.source_browse_btn,
-            self.record_check,
-            self.output_edit,
-            self.output_browse_btn,
-            self.expert_btn,
-        ]:
-            widget.setEnabled(not busy)
-        self._refresh_record_controls()
-
-        if state == 'idle':
-            self._target_present_latched = False
-            self._target_missing_streak = 0
-            self._had_target_in_session = False
-
-        self._on_source_type_changed()
-        self._refresh_header_state()
+        _set_job_state_impl(self, state)
 
     def _start(self):
         if self.worker is not None and self.worker.isRunning():

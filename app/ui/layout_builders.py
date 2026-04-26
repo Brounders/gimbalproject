@@ -11,9 +11,11 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFrame,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QPlainTextEdit,
     QPushButton,
     QSpinBox,
     QVBoxLayout,
@@ -159,9 +161,50 @@ def build_left_rail(window) -> QWidget:
     window.eval_btn = QPushButton('Оценка')
     layout.addWidget(window.eval_btn)
 
-    window.inspector_module = window.build_inspector_drawer()
+    window.inspector_module = build_inspector_drawer(window)
     window.inspector_module.setVisible(False)
     layout.addWidget(window.inspector_module, 1)
 
     layout.addStretch(1)
     return rail
+
+
+def build_inspector_drawer(window) -> QWidget:
+    from app.ui.cards import build_inspector_card
+
+    body = QGroupBox('Диагностика')
+    body.setObjectName('InspectorModule')
+    body_layout = QVBoxLayout(body)
+    body_layout.setContentsMargins(8, 8, 8, 8)
+    body_layout.setSpacing(8)
+
+    target_card, window.panel_target_summary = build_inspector_card('Цель')
+    quality_card, window.panel_quality_summary = build_inspector_card('Качество')
+    runtime_card, window.panel_monitoring_summary = build_inspector_card('Runtime health')
+    params_card, window.panel_params_summary = build_inspector_card('Параметры')
+    eval_card, window.eval_summary_label = build_inspector_card('Оценка')
+    window.eval_summary_hint = QLabel('-')
+    window.eval_summary_hint.setObjectName('InspectorValue')
+    eval_card.layout().addWidget(window.eval_summary_hint)
+
+    events_card = QFrame()
+    events_card.setObjectName('InspectorCard')
+    events_layout = QVBoxLayout(events_card)
+    events_layout.setContentsMargins(8, 8, 8, 8)
+    events_layout.setSpacing(4)
+    events_title = QLabel('События')
+    events_title.setObjectName('InspectorTitle')
+    events_layout.addWidget(events_title)
+    window.panel_events_view = QPlainTextEdit()
+    window.panel_events_view.setReadOnly(True)
+    window.panel_events_view.setMaximumBlockCount(120)
+    window.panel_events_view.setMaximumHeight(180)
+    events_layout.addWidget(window.panel_events_view)
+
+    body_layout.addWidget(target_card)
+    body_layout.addWidget(quality_card)
+    body_layout.addWidget(runtime_card)
+    body_layout.addWidget(params_card)
+    body_layout.addWidget(eval_card)
+    body_layout.addWidget(events_card, 1)
+    return body
