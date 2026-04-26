@@ -40,25 +40,27 @@ from PySide6.QtWidgets import (
 from uav_tracker.config import Config
 from uav_tracker.modes import RUNTIME_MODES, apply_runtime_mode
 from uav_tracker.pipeline import apply_runtime_preset, parse_video_source
-from uav_tracker.profile_io import apply_overrides, available_presets, load_preset, load_profile, save_profile
+from uav_tracker.profile_io import apply_overrides, available_presets
 from app.ui import UIState, UIStateMachine, VideoStage
-from app.ui.theme import APP_STYLESHEET, SCENARIO_LABELS, refresh_widget_style
+from app.ui.theme import APP_STYLESHEET, refresh_widget_style
 from app.ui.cards import build_inspector_card, build_target_info_card
 from app.app_settings import load_app_settings as _load_app_settings_impl, save_app_settings as _save_app_settings_impl
+from app.profile_controller import (
+    CANONICAL_OPERATOR_MODES,
+    apply_canonical_operator_mode as _apply_canonical_operator_mode_impl,
+    apply_quick_profile as _apply_quick_profile_impl,
+    apply_runtime_mode_controls as _apply_runtime_mode_controls_impl,
+    apply_scenario_preset as _apply_scenario_preset_impl,
+    apply_selected_preset as _apply_selected_preset_impl,
+    collect_profile as _collect_profile_impl,
+    load_profile_from_disk as _load_profile_from_disk_impl,
+    save_profile_to_disk as _save_profile_to_disk_impl,
+    set_controls_from_profile as _set_controls_from_profile_impl,
+)
 from app.stats_renderer import update_stats as _update_stats_impl
 from app.ui.expert_dialog import build_expert_dialog as _build_expert_dialog
 from app.ui.layout_builders import build_header as _build_header, build_left_rail as _build_left_rail
 from app.workers import EvaluationWorker, TrackerWorker
-
-# Canonical operator modes: shown as quick-access buttons in the left rail.
-# Mapping: label → (preset_key, night_enabled_override)
-# None override means "keep preset default".
-CANONICAL_OPERATOR_MODES: dict[str, tuple[str, bool | None]] = {
-    'auto':  ('default', None),   # full adaptive detection (night on per default.yaml)
-    'day':   ('default', False),  # explicit day-only (night detector disabled)
-    'night': ('night', None),     # night preset (force operator display mode)
-    'ir':    ('antiuav_thermal', None),  # thermal / anti-UAV preset
-}
 
 
 class MainWindow(QMainWindow):
@@ -523,202 +525,31 @@ class MainWindow(QMainWindow):
         self._apply_scenario_preset(key)
 
     def _apply_quick_profile(self, preset_key: str):
-        idx = self.scenario_combo.findData(preset_key)
-        if idx >= 0:
-            self.scenario_combo.setCurrentIndex(idx)
-            return
-        self._log(f'Preset недоступен: {preset_key}')
+        _apply_quick_profile_impl(self, preset_key)
 
     def _apply_canonical_operator_mode(self, mode_key: str) -> None:
-        """Apply one of the 4 canonical operator modes: auto/day/night/ir.
-
-        Each mode loads the mapped preset and applies operator-safe display
-        overrides so that operator buttons never activate research-mode HUD.
-        """
-        entry = CANONICAL_OPERATOR_MODES.get(mode_key)
-        if entry is None:
-            self._log(f'Неизвестный канонический режим: {mode_key}')
-            return
-        preset_key, night_override = entry
-        self._apply_scenario_preset(preset_key)
-        # Force operator display settings (suppress research-only overlays)
-        if not self._updating_controls:
-            self._updating_controls = True
-            try:
-                if self.mode_combo.findText('operator') >= 0:
-                    self.mode_combo.setCurrentText('operator')
-                self.show_gt_check.setChecked(False)
-                self.timing_check.setChecked(False)
-                self.show_trails_check.setChecked(False)
-                if night_override is not None:
-                    self.night_check.setChecked(night_override)
-            finally:
-                self._updating_controls = False
-        self._auto_scene_detect_enabled = (mode_key == 'auto')
-        labels = {'auto': 'Авто', 'day': 'День', 'night': 'Ночь', 'ir': 'IR'}
-        self._log(f'Режим оператора: {labels.get(mode_key, mode_key)}')
-        # Highlight active mode button (TASK-024)
-        mode_btns = {
-            'auto': self.quick_auto_btn, 'day': self.quick_day_btn,
-            'night': self.quick_night_btn, 'ir': self.quick_ir_btn,
-        }
-        for key, btn in mode_btns.items():
-            btn.setProperty('active', key == mode_key)
-            refresh_widget_style(btn)
+        _apply_canonical_operator_mode_impl(self, mode_key)
 
     def _apply_scenario_preset(self, preset_key: str):
-        cfg, data = load_preset(preset_key, Config())
-        profile = {
-            'preset': preset_key,
-            'runtime_mode': cfg.RUNTIME_MODE,
-            'model_path': cfg.MODEL_PATH,
-            'device': cfg.DEVICE,
-            'imgsz': cfg.IMG_SIZE,
-            'conf_thresh': cfg.CONF_THRESH,
-            'small_target_mode': bool(data.get('small_target_mode', False)),
-            'adaptive_scan_enabled': cfg.ADAPTIVE_SCAN_ENABLED,
-            'global_scan_interval': cfg.GLOBAL_SCAN_INTERVAL,
-            'lock_tracker_enabled': cfg.LOCK_TRACKER_ENABLED,
-            'night_enabled': cfg.NIGHT_ENABLED,
-            'roi_assist_enabled': cfg.ROI_ASSIST_ENABLED,
-            'show_gt_overlay': cfg.SHOW_GT_OVERLAY,
-            'show_debug_timings': cfg.SHOW_DEBUG_TIMINGS,
-            'show_trails': cfg.SHOW_TRAILS,
-        }
-        profile.update({k: v for k, v in data.items() if k not in profile})
-        self._set_controls_from_profile(profile, preserve_source=True)
-        self._log(f'Сценарий применен: {SCENARIO_LABELS.get(preset_key, preset_key)}')
+        _apply_scenario_preset_impl(self, preset_key)
 
     def _apply_runtime_mode_controls(self, mode: str):
-        if self._updating_controls:
-            return
-        cfg = apply_runtime_mode(Config(), mode)
-        self.show_gt_check.setChecked(cfg.SHOW_GT_OVERLAY)
-        self.timing_check.setChecked(cfg.SHOW_DEBUG_TIMINGS)
-        self.show_trails_check.setChecked(cfg.SHOW_TRAILS)
-        self.adaptive_scan_check.setChecked(cfg.ADAPTIVE_SCAN_ENABLED)
-        self.lock_tracker_check.setChecked(cfg.LOCK_TRACKER_ENABLED)
-        self.night_check.setChecked(cfg.NIGHT_ENABLED)
-        self.roi_check.setChecked(cfg.ROI_ASSIST_ENABLED)
-        self.rescan_spin.setValue(cfg.GLOBAL_SCAN_INTERVAL)
+        _apply_runtime_mode_controls_impl(self, mode)
 
     def _set_controls_from_profile(self, profile: dict[str, Any], preserve_source: bool = False):
-        self._updating_controls = True
-        try:
-            preset = profile.get('preset', 'custom')
-            pidx = self.preset_combo.findText(str(preset))
-            if pidx >= 0:
-                self.preset_combo.setCurrentIndex(pidx)
-            else:
-                custom_pidx = self.preset_combo.findText('custom')
-                if custom_pidx >= 0:
-                    self.preset_combo.setCurrentIndex(custom_pidx)
-            scenario_idx = self.scenario_combo.findData(preset if preset is not None else 'custom')
-            if scenario_idx >= 0:
-                self.scenario_combo.setCurrentIndex(scenario_idx)
-            else:
-                custom_idx = self.scenario_combo.findData('custom')
-                if custom_idx >= 0:
-                    self.scenario_combo.setCurrentIndex(custom_idx)
-
-            if not preserve_source:
-                source_type, cam_idx, source_path = self._split_source(profile.get('source', 0))
-                st_idx = self.source_type_combo.findData(source_type)
-                if st_idx >= 0:
-                    self.source_type_combo.setCurrentIndex(st_idx)
-                self.camera_index_spin.setValue(cam_idx)
-                self.source_path_edit.setText(source_path)
-
-            mode = str(profile.get('runtime_mode', self.mode_combo.currentText()))
-            if self.mode_combo.findText(mode) >= 0:
-                self.mode_combo.setCurrentText(mode)
-
-            device = str(profile.get('device', self.device_combo.currentText()))
-            if self.device_combo.findText(device) >= 0:
-                self.device_combo.setCurrentText(device)
-
-            self.model_edit.setText(str(profile.get('model_path', self.model_edit.text())))
-            self.imgsz_spin.setValue(int(profile.get('imgsz', self.imgsz_spin.value())))
-            self.conf_spin.setValue(float(profile.get('conf_thresh', self.conf_spin.value())))
-            self.rescan_spin.setValue(int(profile.get('global_scan_interval', self.rescan_spin.value())))
-
-            self.small_target_check.setChecked(bool(profile.get('small_target_mode', self.small_target_check.isChecked())))
-            self.adaptive_scan_check.setChecked(bool(profile.get('adaptive_scan_enabled', self.adaptive_scan_check.isChecked())))
-            self.lock_tracker_check.setChecked(bool(profile.get('lock_tracker_enabled', self.lock_tracker_check.isChecked())))
-            self.night_check.setChecked(bool(profile.get('night_enabled', self.night_check.isChecked())))
-            self.roi_check.setChecked(bool(profile.get('roi_assist_enabled', self.roi_check.isChecked())))
-            self.show_gt_check.setChecked(bool(profile.get('show_gt_overlay', self.show_gt_check.isChecked())))
-            self.timing_check.setChecked(bool(profile.get('show_debug_timings', self.timing_check.isChecked())))
-            self.show_trails_check.setChecked(bool(profile.get('show_trails', self.show_trails_check.isChecked())))
-
-            self.record_check.setChecked(bool(profile.get('record_output', self.record_check.isChecked())))
-            self.output_edit.setText(str(profile.get('output_path', self.output_edit.text())))
-
-            ignored = {
-                'preset', 'runtime_mode', 'source', 'model_path', 'device', 'imgsz', 'conf_thresh',
-                'small_target_mode', 'adaptive_scan_enabled', 'global_scan_interval', 'lock_tracker_enabled',
-                'night_enabled', 'roi_assist_enabled', 'show_gt_overlay', 'show_debug_timings', 'show_trails',
-                'record_output', 'output_path'
-            }
-            self._profile_extras = {k: v for k, v in profile.items() if k not in ignored}
-        finally:
-            self._updating_controls = False
-            self._refresh_record_controls()
-            self._on_source_type_changed()
-            self._refresh_workspace_overviews()
-            self._refresh_sidebar_meta()
-            self._refresh_header_state()
+        _set_controls_from_profile_impl(self, profile, preserve_source)
 
     def _apply_selected_preset(self):
-        if self._updating_controls:
-            return
-        preset_name = self.preset_combo.currentText()
-        if preset_name == 'custom':
-            self._profile_extras = {}
-            self._log('Preset: custom')
-            return
-        self._apply_scenario_preset(preset_name)
+        _apply_selected_preset_impl(self)
 
     def _collect_profile(self) -> dict[str, Any]:
-        source = self._source_from_controls()
-        preset_key = self.scenario_combo.currentData() or 'custom'
-        profile = {
-            'preset': preset_key,
-            'runtime_mode': self.mode_combo.currentText(),
-            'source': str(source),
-            'model_path': self.model_edit.text().strip(),
-            'device': self.device_combo.currentText(),
-            'imgsz': int(self.imgsz_spin.value()),
-            'conf_thresh': float(self.conf_spin.value()),
-            'small_target_mode': self.small_target_check.isChecked(),
-            'adaptive_scan_enabled': self.adaptive_scan_check.isChecked(),
-            'global_scan_interval': int(self.rescan_spin.value()),
-            'lock_tracker_enabled': self.lock_tracker_check.isChecked(),
-            'night_enabled': self.night_check.isChecked(),
-            'roi_assist_enabled': self.roi_check.isChecked(),
-            'show_gt_overlay': self.show_gt_check.isChecked(),
-            'show_debug_timings': self.timing_check.isChecked(),
-            'show_trails': self.show_trails_check.isChecked(),
-            'record_output': self.record_check.isChecked(),
-            'output_path': self.output_edit.text().strip(),
-        }
-        profile.update(self._profile_extras)
-        return profile
+        return _collect_profile_impl(self)
 
     def _load_profile_from_disk(self):
-        path, _ = QFileDialog.getOpenFileName(self, 'Загрузить профиль', str(ROOT / 'configs'), 'YAML (*.yaml *.yml)')
-        if not path:
-            return
-        profile = load_profile(path)
-        self._set_controls_from_profile(profile)
-        self._log(f'Профиль загружен: {path}')
+        _load_profile_from_disk_impl(self)
 
     def _save_profile_to_disk(self):
-        path, _ = QFileDialog.getSaveFileName(self, 'Сохранить профиль', str(ROOT / 'configs' / 'custom_profile.yaml'), 'YAML (*.yaml *.yml)')
-        if not path:
-            return
-        save_profile(path, self._collect_profile())
-        self._log(f'Профиль сохранен: {path}')
+        _save_profile_to_disk_impl(self)
 
     def _build_config(self) -> tuple[Config, Any, bool, str]:
         source = parse_video_source(self._source_from_controls())
