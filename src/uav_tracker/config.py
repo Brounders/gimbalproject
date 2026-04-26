@@ -1,3 +1,4 @@
+import warnings
 from dataclasses import dataclass
 from typing import Optional, Union
 
@@ -27,6 +28,9 @@ class Config:
     # ── Source & Runtime ────────────────────────────────────────────────────
     VIDEO_SOURCE: Union[int, str] = 0
     RUNTIME_MODE: str = 'research'
+    FALLBACK_FPS: float = 25.0          # used when source FPS is unknown
+    SOURCE_FPS_MIN_VALID: float = 1.0   # below this source FPS is treated as unknown
+    OUTPUT_FPS_FALLBACK: float = 20.0   # video writer FPS when source FPS is unknown
 
     # ── Model ───────────────────────────────────────────────────────────────
     MODEL_PATH: str = 'runs/detect/runs/drone_bird_probe_fast/weights/best.pt'
@@ -175,3 +179,38 @@ class Config:
     SMOOTH_BBOX_SIZE_ALPHA: float = 0.20        # EMA alpha for width/height (softer)
     SMOOTH_BBOX_HOLD_FRAMES: int = 4            # hold last bbox N frames after target dropout
     DISPLAY_STATE_HOLD_FRAMES: int = 3          # hold display tracking state N frames on downgrade
+
+    def __post_init__(self) -> None:
+        # Detection thresholds must be strictly in (0, 1)
+        for name in ('CONF_THRESH', 'IOU_THRESH'):
+            v = getattr(self, name)
+            if not (0.0 < v < 1.0):
+                raise ValueError(f"Config.{name}={v!r} must be in (0, 1)")
+        # EMA alpha fields must be in [0, 1] (1.0 = instant snap, valid in tests)
+        for name in (
+            'SMOOTH_ALPHA', 'VELOCITY_ALPHA', 'CLASS_EMA_ALPHA',
+            'CONFIDENCE_EMA_ALPHA', 'SMOOTH_BBOX_ALPHA', 'SMOOTH_BBOX_SIZE_ALPHA',
+            'LOCK_TRACKER_UPDATE_ALPHA', 'RETICLE_CENTER_ALPHA',
+        ):
+            v = getattr(self, name)
+            if not (0.0 <= v <= 1.0):
+                raise ValueError(f"Config.{name}={v!r} must be in [0, 1]")
+        if self.IMG_SIZE <= 0:
+            raise ValueError(f"Config.IMG_SIZE={self.IMG_SIZE!r} must be > 0")
+        if self.BUDGET_HIGH_LOAD <= self.BUDGET_LOW_LOAD:
+            raise ValueError(
+                f"Config.BUDGET_HIGH_LOAD={self.BUDGET_HIGH_LOAD!r} must be > "
+                f"BUDGET_LOW_LOAD={self.BUDGET_LOW_LOAD!r}"
+            )
+        if self.TRACK_STATE_ACQUIRE_FRAMES < 1:
+            raise ValueError(
+                f"Config.TRACK_STATE_ACQUIRE_FRAMES={self.TRACK_STATE_ACQUIRE_FRAMES!r} must be >= 1"
+            )
+        if self.LOCK_LOST_GRACE < 0:
+            raise ValueError(f"Config.LOCK_LOST_GRACE={self.LOCK_LOST_GRACE!r} must be >= 0")
+        if self.IMG_SIZE % 32 != 0:
+            warnings.warn(
+                f"Config.IMG_SIZE={self.IMG_SIZE} is not a multiple of 32 (YOLO stride).",
+                UserWarning,
+                stacklevel=2,
+            )

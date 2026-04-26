@@ -346,5 +346,46 @@ class TestConfigSectionPresence(unittest.TestCase):
         _ = self.cfg.DISPLAY_STATE_HOLD_FRAMES
 
 
+# ---------------------------------------------------------------------------
+# __post_init__ validation
+# ---------------------------------------------------------------------------
+
+class TestConfigValidation(unittest.TestCase):
+    """Config.__post_init__ must raise ValueError for hard invariant violations."""
+
+    def test_conf_thresh_zero_raises(self):
+        with self.assertRaises(ValueError):
+            Config(CONF_THRESH=0.0)
+
+    def test_conf_thresh_one_raises(self):
+        with self.assertRaises(ValueError):
+            Config(CONF_THRESH=1.0)
+
+    def test_iou_thresh_above_one_raises(self):
+        with self.assertRaises(ValueError):
+            Config(IOU_THRESH=1.5)
+
+    def test_img_size_zero_raises(self):
+        with self.assertRaises(ValueError):
+            Config(IMG_SIZE=0)
+
+    def test_budget_load_inverted_raises(self):
+        """BUDGET_HIGH_LOAD <= BUDGET_LOW_LOAD must be rejected."""
+        with self.assertRaises(ValueError):
+            Config(BUDGET_HIGH_LOAD=0.7, BUDGET_LOW_LOAD=0.9)
+
+    def test_track_acquire_frames_zero_raises(self):
+        with self.assertRaises(ValueError):
+            Config(TRACK_STATE_ACQUIRE_FRAMES=0)
+
+    def test_img_size_non_multiple_of_32_warns(self):
+        import warnings as _warnings
+        with _warnings.catch_warnings(record=True) as caught:
+            _warnings.simplefilter("always")
+            Config(IMG_SIZE=600)
+        msgs = [str(w.message) for w in caught if issubclass(w.category, UserWarning)]
+        self.assertTrue(any("multiple of 32" in m for m in msgs))
+
+
 if __name__ == '__main__':
     unittest.main()
