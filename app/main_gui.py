@@ -44,6 +44,7 @@ from uav_tracker.profile_io import apply_overrides, available_presets, load_pres
 from app.ui import UIState, UIStateMachine, VideoStage
 from app.ui.theme import APP_STYLESHEET, SCENARIO_LABELS, refresh_widget_style
 from app.ui.cards import build_inspector_card, build_target_info_card
+from app.ui.expert_dialog import build_expert_dialog as _build_expert_dialog
 from app.ui.layout_builders import build_header as _build_header, build_left_rail as _build_left_rail
 from app.workers import EvaluationWorker, TrackerWorker
 
@@ -200,115 +201,7 @@ class MainWindow(QMainWindow):
         return body
 
     def build_expert_dialog(self) -> None:
-        self.expert_dialog = QDialog(self)
-        self.expert_dialog.setWindowTitle('Экспертные настройки')
-        self.expert_dialog.resize(860, 620)
-        self.expert_dialog.finished.connect(self._on_expert_dialog_closed)
-
-        root = QVBoxLayout(self.expert_dialog)
-        root.setContentsMargins(10, 10, 10, 10)
-        root.setSpacing(8)
-
-        scroller = QScrollArea()
-        scroller.setWidgetResizable(True)
-        root.addWidget(scroller, 1)
-
-        content = QWidget()
-        scroller.setWidget(content)
-        layout = QGridLayout(content)
-        layout.setHorizontalSpacing(8)
-        layout.setVerticalSpacing(8)
-
-        self.scenario_combo = QComboBox()
-        self._fill_scenarios()
-        self.preset_combo = QComboBox()
-        self.preset_combo.addItems(available_presets() + ['custom'])
-        self.apply_preset_btn = QPushButton('Применить preset')
-        self.profile_load_btn = QPushButton('Загрузить профиль')
-        self.profile_save_btn = QPushButton('Сохранить профиль')
-
-        self.model_edit = QLineEdit('runs/detect/runs/drone_bird_probe_fast/weights/best.pt')
-        self.model_browse_btn = QPushButton('Модель...')
-
-        self.mode_combo = QComboBox()
-        self.mode_combo.addItems(list(RUNTIME_MODES))
-        self.device_combo = QComboBox()
-        self.device_combo.addItems(['mps', 'cpu', 'hailo'])
-
-        self.imgsz_spin = QSpinBox()
-        self.imgsz_spin.setRange(160, 2048)
-        self.imgsz_spin.setSingleStep(32)
-        self.imgsz_spin.setValue(640)
-        self.conf_spin = QDoubleSpinBox()
-        self.conf_spin.setRange(0.01, 0.99)
-        self.conf_spin.setSingleStep(0.01)
-        self.conf_spin.setDecimals(2)
-        self.conf_spin.setValue(0.30)
-        self.rescan_spin = QSpinBox()
-        self.rescan_spin.setRange(1, 60)
-        self.rescan_spin.setValue(6)
-
-        self.small_target_check = QCheckBox('Малые цели')
-        self.adaptive_scan_check = QCheckBox('Adaptive scan')
-        self.adaptive_scan_check.setChecked(True)
-        self.lock_tracker_check = QCheckBox('Lock tracker')
-        self.lock_tracker_check.setChecked(True)
-        self.night_check = QCheckBox('Night detector')
-        self.night_check.setChecked(True)
-        self.roi_check = QCheckBox('ROI assist')
-        self.roi_check.setChecked(True)
-        self.show_gt_check = QCheckBox('Показывать GT')
-        self.show_gt_check.setChecked(True)
-        self.timing_check = QCheckBox('Показывать timing')
-        self.timing_check.setChecked(True)
-        self.show_trails_check = QCheckBox('Показывать траектории')
-        self.show_trails_check.setChecked(True)
-
-        row = 0
-        layout.addWidget(QLabel('Сценарий'), row, 0)
-        layout.addWidget(self.scenario_combo, row, 1, 1, 3)
-        row += 1
-
-        layout.addWidget(QLabel('Профиль'), row, 0)
-        layout.addWidget(self.preset_combo, row, 1)
-        layout.addWidget(self.apply_preset_btn, row, 2)
-        layout.addWidget(self.profile_load_btn, row, 3)
-        layout.addWidget(self.profile_save_btn, row, 4)
-        row += 1
-
-        layout.addWidget(QLabel('Модель'), row, 0)
-        layout.addWidget(self.model_edit, row, 1, 1, 3)
-        layout.addWidget(self.model_browse_btn, row, 4)
-        row += 1
-
-        layout.addWidget(QLabel('Mode'), row, 0)
-        layout.addWidget(self.mode_combo, row, 1)
-        layout.addWidget(QLabel('Device'), row, 2)
-        layout.addWidget(self.device_combo, row, 3)
-        row += 1
-
-        layout.addWidget(QLabel('imgsz'), row, 0)
-        layout.addWidget(self.imgsz_spin, row, 1)
-        layout.addWidget(QLabel('conf'), row, 2)
-        layout.addWidget(self.conf_spin, row, 3)
-        layout.addWidget(QLabel('rescan'), row, 4)
-        layout.addWidget(self.rescan_spin, row, 5)
-        row += 1
-
-        layout.addWidget(self.small_target_check, row, 0)
-        layout.addWidget(self.adaptive_scan_check, row, 1)
-        layout.addWidget(self.lock_tracker_check, row, 2)
-        layout.addWidget(self.night_check, row, 3)
-        layout.addWidget(self.roi_check, row, 4)
-        row += 1
-
-        layout.addWidget(self.show_gt_check, row, 0)
-        layout.addWidget(self.timing_check, row, 1)
-        layout.addWidget(self.show_trails_check, row, 2)
-
-        close_btn = QPushButton('Закрыть')
-        close_btn.clicked.connect(self._hide_expert_dialog)
-        root.addWidget(close_btn, 0, Qt.AlignRight)
+        _build_expert_dialog(self)
 
     def _on_expert_dialog_closed(self):
         self.expert_badge.setVisible(False)
