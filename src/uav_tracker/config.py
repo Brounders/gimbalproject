@@ -2,6 +2,8 @@ import warnings
 from dataclasses import dataclass
 from typing import Optional, Union
 
+# RuntimeConfigView is defined at the bottom of this module (after Config).
+
 
 @dataclass
 class Config:
@@ -214,3 +216,45 @@ class Config:
                 UserWarning,
                 stacklevel=2,
             )
+
+
+@dataclass(frozen=True)
+class RuntimeConfigView:
+    """Immutable snapshot of the hot-path config fields read during process_frame.
+
+    Constructed via ``from_config(cfg)`` so pipeline code can capture a stable
+    view of Config at frame-start, independent of mid-frame mutations by
+    AutoSceneAdapter.  Not yet wired into pipeline.py — introduced here for
+    future use and to allow isolated unit testing.
+    """
+    CONF_THRESH: float
+    IMG_SIZE: int
+    DEVICE: str
+    ADAPTIVE_SCAN_ENABLED: bool
+    GLOBAL_SCAN_INTERVAL: int
+    LOCK_TRACKER_ENABLED: bool
+    LOCK_CONFIRM_FRAMES: int
+    NIGHT_ENABLED: bool
+    NIGHT_MOT_THRESH: int
+    NIGHT_DIFF_THRESH: int
+    ROI_ASSIST_ENABLED: bool
+    DRONE_LOCK_SCORE_MIN: float
+    BUDGET_ENABLED: bool
+
+    @classmethod
+    def from_config(cls, cfg: 'Config') -> 'RuntimeConfigView':
+        return cls(
+            CONF_THRESH=cfg.CONF_THRESH,
+            IMG_SIZE=cfg.IMG_SIZE,
+            DEVICE=cfg.DEVICE,
+            ADAPTIVE_SCAN_ENABLED=cfg.ADAPTIVE_SCAN_ENABLED,
+            GLOBAL_SCAN_INTERVAL=cfg.GLOBAL_SCAN_INTERVAL,
+            LOCK_TRACKER_ENABLED=cfg.LOCK_TRACKER_ENABLED,
+            LOCK_CONFIRM_FRAMES=cfg.LOCK_CONFIRM_FRAMES,
+            NIGHT_ENABLED=cfg.NIGHT_ENABLED,
+            NIGHT_MOT_THRESH=cfg.NIGHT_MOT_THRESH,
+            NIGHT_DIFF_THRESH=cfg.NIGHT_DIFF_THRESH,
+            ROI_ASSIST_ENABLED=cfg.ROI_ASSIST_ENABLED,
+            DRONE_LOCK_SCORE_MIN=cfg.DRONE_LOCK_SCORE_MIN,
+            BUDGET_ENABLED=cfg.BUDGET_ENABLED,
+        )
