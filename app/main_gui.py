@@ -44,6 +44,7 @@ from uav_tracker.profile_io import apply_overrides, available_presets, load_pres
 from app.ui import UIState, UIStateMachine, VideoStage
 from app.ui.theme import APP_STYLESHEET, SCENARIO_LABELS, refresh_widget_style
 from app.ui.cards import build_inspector_card, build_target_info_card
+from app.ui.layout_builders import build_header as _build_header, build_left_rail as _build_left_rail
 from app.workers import EvaluationWorker, TrackerWorker
 
 # Canonical operator modes: shown as quick-access buttons in the left rail.
@@ -132,146 +133,10 @@ class MainWindow(QMainWindow):
         self.menuBar().addAction(quit_action)
 
     def build_header(self) -> QFrame:
-        header = QFrame()
-        header.setObjectName('HeaderBar')
-        header.setMinimumHeight(60)
-        header.setMaximumHeight(66)
-
-        layout = QHBoxLayout(header)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(8)
-
-        self.header_title_label = QLabel('Система сопровождения БПЛА')
-        self.header_title_label.setObjectName('WindowTitle')
-        layout.addWidget(self.header_title_label)
-
-        layout.addSpacing(6)
-        self.top_state_badge = QLabel('IDLE')
-        self.top_state_badge.setObjectName('HeaderStatus')
-        self.top_state_badge.setProperty('state', 'idle')
-        layout.addWidget(self.top_state_badge)
-
-        self.header_source_label = QLabel('Источник: CAM 0')
-        self.header_source_label.setObjectName('HeaderMeta')
-        layout.addWidget(self.header_source_label, 1)
-
-        self.record_indicator_label = QLabel('REC OFF')
-        self.record_indicator_label.setObjectName('RecordIndicator')
-        self.record_indicator_label.setProperty('recording', False)
-        layout.addWidget(self.record_indicator_label)
-
-        self.next_target_btn = QPushButton('Следующая цель')
-        self.next_target_btn.setProperty('variant', 'ghost')
-        self.next_target_btn.setToolTip('Переключить на следующую доступную цель')
-        self.next_target_btn.setEnabled(False)
-        layout.addWidget(self.next_target_btn)
-
-        self.expert_btn = QPushButton('Эксперт')
-        self.expert_btn.setProperty('variant', 'ghost')
-        layout.addWidget(self.expert_btn)
-
-        self.expert_badge = QLabel('EXP')
-        self.expert_badge.setObjectName('HeaderMeta')
-        self.expert_badge.setVisible(False)
-        layout.addWidget(self.expert_badge)
-
-        self.fullscreen_btn = QPushButton('⛶')
-        self.fullscreen_btn.setFixedWidth(34)
-        self.fullscreen_btn.setProperty('variant', 'ghost')
-        self.fullscreen_btn.setToolTip('Полный экран')
-        layout.addWidget(self.fullscreen_btn)
-
-        self.start_btn = QPushButton('Старт')
-        self.start_btn.setProperty('variant', 'primary')
-        layout.addWidget(self.start_btn)
-
-        self.stop_btn = QPushButton('Стоп')
-        self.stop_btn.setProperty('variant', 'destructive')
-        self.stop_btn.setEnabled(False)
-        layout.addWidget(self.stop_btn)
-
-        return header
+        return _build_header(self)
 
     def build_left_rail(self) -> QWidget:
-        rail = QFrame()
-        rail.setObjectName('LeftControlRail')
-        rail.setMinimumWidth(280)
-        rail.setMaximumWidth(310)
-        layout = QVBoxLayout(rail)
-        layout.setContentsMargins(10, 10, 10, 10)
-        layout.setSpacing(10)
-
-        title = QLabel('Операционное управление')
-        title.setObjectName('RailSectionTitle')
-        layout.addWidget(title)
-
-        self.quick_auto_btn = QPushButton('Авто')
-        self.quick_auto_btn.setProperty('variant', 'ghost')
-        self.quick_day_btn = QPushButton('День')
-        self.quick_day_btn.setProperty('variant', 'ghost')
-        self.quick_night_btn = QPushButton('Ночь')
-        self.quick_night_btn.setProperty('variant', 'ghost')
-        self.quick_ir_btn = QPushButton('IR')
-        self.quick_ir_btn.setProperty('variant', 'ghost')
-        self.quick_auto_btn.setToolTip('Авто: адаптивный день/ночь (default preset, ночной детектор вкл.)')
-        self.quick_day_btn.setToolTip('День: только дневной режим (ночной детектор выкл.)')
-        self.quick_night_btn.setToolTip('Ночь: ночной preset в операторском режиме')
-        self.quick_ir_btn.setToolTip('IR: thermal / Anti-UAV preset')
-
-        quick_row = QHBoxLayout()
-        quick_row.setContentsMargins(0, 0, 0, 0)
-        quick_row.setSpacing(4)
-        quick_row.addWidget(self.quick_auto_btn)
-        quick_row.addWidget(self.quick_day_btn)
-        quick_row.addWidget(self.quick_night_btn)
-        quick_row.addWidget(self.quick_ir_btn)
-        layout.addLayout(quick_row)
-
-        self.source_type_combo = QComboBox()
-        self.source_type_combo.addItem('Камера', 'camera')
-        self.source_type_combo.addItem('Видео', 'video')
-        self.source_type_combo.addItem('Поток', 'stream')
-        layout.addWidget(self.source_type_combo)
-
-        self.camera_index_spin = QSpinBox()
-        self.camera_index_spin.setRange(0, 16)
-        self.camera_index_spin.setValue(0)
-        layout.addWidget(self.camera_index_spin)
-
-        self.source_path_label = QLabel('Видео файл')
-        self.source_path_label.setObjectName('RailSectionTitle')
-        layout.addWidget(self.source_path_label)
-
-        self.source_path_edit = QLineEdit('')
-        self.source_path_edit.setPlaceholderText('/путь/к/видео.mp4')
-        layout.addWidget(self.source_path_edit)
-
-        self.source_browse_btn = QPushButton('Выбрать...')
-        layout.addWidget(self.source_browse_btn)
-
-        self.record_check = QCheckBox('Сохранять видео')
-        self.record_check.setChecked(True)
-        layout.addWidget(self.record_check)
-
-        self.output_path_label = QLabel('Выход')
-        self.output_path_label.setObjectName('RailSectionTitle')
-        layout.addWidget(self.output_path_label)
-
-        self.output_edit = QLineEdit(str(ROOT / 'runs' / 'gui_output.mp4'))
-        layout.addWidget(self.output_edit)
-
-        self.output_browse_btn = QPushButton('Куда сохранить...')
-        layout.addWidget(self.output_browse_btn)
-
-        self.eval_btn = QPushButton('Оценка')
-        layout.addWidget(self.eval_btn)
-
-        self.inspector_module = self.build_inspector_drawer()
-        self.inspector_module.setVisible(False)
-        layout.addWidget(self.inspector_module, 1)
-
-        layout.addStretch(1)
-        return rail
+        return _build_left_rail(self)
 
     def build_video_stage(self) -> QWidget:
         self.video_stage = VideoStage()
