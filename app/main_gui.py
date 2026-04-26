@@ -44,6 +44,7 @@ from uav_tracker.profile_io import apply_overrides, available_presets, load_pres
 from app.ui import UIState, UIStateMachine, VideoStage
 from app.ui.theme import APP_STYLESHEET, SCENARIO_LABELS, refresh_widget_style
 from app.ui.cards import build_inspector_card, build_target_info_card
+from app.app_settings import load_app_settings as _load_app_settings_impl, save_app_settings as _save_app_settings_impl
 from app.ui.expert_dialog import build_expert_dialog as _build_expert_dialog
 from app.ui.layout_builders import build_header as _build_header, build_left_rail as _build_left_rail
 from app.workers import EvaluationWorker, TrackerWorker
@@ -1105,59 +1106,10 @@ class MainWindow(QMainWindow):
             self._render_preview_pixmap()
 
     def _save_app_settings(self):
-        self.settings.setValue('window/geometry', self.saveGeometry())
-        self.settings.setValue('ui/scenario', self.scenario_combo.currentData())
-        self.settings.setValue('ui/workspace', self._current_workspace_key())
-        self.settings.setValue('ui/source_type', self.source_type_combo.currentData())
-        self.settings.setValue('ui/camera_index', self.camera_index_spin.value())
-        self.settings.setValue('ui/source_path', self.source_path_edit.text())
-        self.settings.setValue('ui/record_output', self.record_check.isChecked())
-        self.settings.setValue('ui/output_path', self.output_edit.text())
-        self.settings.setValue('ui/profile_json', json.dumps(self._collect_profile(), ensure_ascii=False))
-        self.settings.sync()
+        _save_app_settings_impl(self)
 
     def _load_app_settings(self):
-        geometry = self.settings.value('window/geometry')
-        if geometry is not None:
-            self.restoreGeometry(geometry)
-
-        profile_json = self.settings.value('ui/profile_json', '')
-        if profile_json:
-            try:
-                profile = json.loads(str(profile_json))
-                self._set_controls_from_profile(profile)
-            except Exception:
-                pass
-
-        self._updating_controls = True
-        try:
-            source_type = self.settings.value('ui/source_type', self.source_type_combo.currentData())
-            idx = self.source_type_combo.findData(source_type)
-            if idx >= 0:
-                self.source_type_combo.setCurrentIndex(idx)
-
-            self.camera_index_spin.setValue(int(self.settings.value('ui/camera_index', self.camera_index_spin.value())))
-            self.source_path_edit.setText(str(self.settings.value('ui/source_path', self.source_path_edit.text())))
-            self.record_check.setChecked(str(self.settings.value('ui/record_output', 'true')).lower() == 'true')
-            self.output_edit.setText(str(self.settings.value('ui/output_path', self.output_edit.text())))
-
-            scenario = self.settings.value('ui/scenario', None)
-            if scenario is not None:
-                sidx = self.scenario_combo.findData(scenario)
-                if sidx >= 0:
-                    self.scenario_combo.setCurrentIndex(sidx)
-        finally:
-            self._updating_controls = False
-            self._refresh_record_controls()
-            self._on_source_type_changed()
-            self._refresh_workspace_overviews()
-            self._refresh_sidebar_meta()
-            self._refresh_header_state()
-            workspace_key = str(self.settings.value('ui/workspace', 'operator'))
-            if workspace_key not in self.workspace_indexes:
-                workspace_key = 'operator'
-            self._on_workspace_selected(workspace_key)
-            self.inspector_module.setVisible(False)  # always hidden in operator layer
+        _load_app_settings_impl(self)
 
     def closeEvent(self, event):
         self._is_closing = True
