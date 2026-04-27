@@ -1,0 +1,26 @@
+# Heavy data — never needed in context
+datasets/
+tracker_env/
+imports/
+exports/
+runs/
+safety_snapshots/
+test_videos/
+logs/
+models/checkpoints/
+
+# Build artifacts
+__pycache__/
+.pytest_cache/
+ui_web/node_modules/
+ui_web/dist/
+*.pyc
+
+# Memory tool internals (index.md is loaded via SessionStart hook)
+memory/claude-memory-compiler/daily/
+memory/claude-memory-compiler/.venv/
+memory/claude-memory-compiler/scripts/session-flush-*.md
+
+# Claude worktrees (not project code)
+.claude/worktrees/
+.auto-claude/
