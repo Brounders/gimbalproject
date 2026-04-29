@@ -320,5 +320,36 @@ class TestLockEventTrackerAcquire(unittest.TestCase):
         self.assertEqual(events, [])
 
 
+# ---------------------------------------------------------------------------
+# TrackingState Enum
+# ---------------------------------------------------------------------------
+
+class TestTrackingStateEnum(unittest.TestCase):
+    """TrackingState must remain backward-compatible with bare string comparisons."""
+
+    def test_values_match_strings(self):
+        from uav_tracker.tracking.tracking_state_machine import TrackingState
+        self.assertEqual(TrackingState.SCAN, 'SCAN')
+        self.assertEqual(TrackingState.TRACK, 'TRACK')
+        self.assertEqual(TrackingState.LOST, 'LOST')
+
+    def test_str_comparison_symmetric(self):
+        from uav_tracker.tracking.tracking_state_machine import TrackingState
+        self.assertTrue(TrackingState.TRACK == 'TRACK')
+        self.assertTrue('TRACK' == TrackingState.TRACK)
+
+    def test_state_machine_returns_enum(self):
+        from uav_tracker.tracking.tracking_state_machine import TrackingState, TrackingStateMachine
+        sm = TrackingStateMachine(Config())
+        result = sm.update(None)
+        self.assertIsInstance(result, TrackingState)
+
+    def test_initial_state_is_scan(self):
+        from uav_tracker.tracking.tracking_state_machine import TrackingState, TrackingStateMachine
+        sm = TrackingStateMachine(Config())
+        self.assertEqual(sm.state, TrackingState.SCAN)
+        self.assertEqual(sm.state, 'SCAN')  # backward compat
+
+
 if __name__ == '__main__':
     unittest.main()

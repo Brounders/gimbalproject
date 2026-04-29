@@ -6,11 +6,22 @@ plus a display-smoothed state that suppresses momentary downgrade flicker.
 """
 from __future__ import annotations
 
+from enum import Enum
 from typing import Optional
 
 from uav_tracker.config import Config
 
-_STATE_ORDER = {'SCAN': 0, 'LOST': 1, 'TRACK': 2}
+
+class TrackingState(str, Enum):
+    """Pipeline tracking state.  Inherits str so existing string comparisons work:
+    ``TrackingState.TRACK == 'TRACK'`` is True.
+    """
+    SCAN = 'SCAN'
+    TRACK = 'TRACK'
+    LOST = 'LOST'
+
+
+_STATE_ORDER = {TrackingState.SCAN: 0, TrackingState.LOST: 1, TrackingState.TRACK: 2}
 
 
 class TrackingStateMachine:
@@ -22,14 +33,14 @@ class TrackingStateMachine:
 
     def __init__(self, cfg: Config) -> None:
         self._cfg = cfg
-        self.state: str = 'SCAN'
+        self.state: TrackingState = TrackingState.SCAN
         self._present_streak: int = 0
         self._missing_streak: int = 0
         self._had_target: bool = False
-        self._display_state: str = 'SCAN'
+        self._display_state: TrackingState = TrackingState.SCAN
         self._display_state_hold: int = 0
 
-    def update(self, lost_frames: Optional[int]) -> str:
+    def update(self, lost_frames: Optional[int]) -> TrackingState:
         """Register one frame.  Returns the updated logical state.
 
         Args:
@@ -51,26 +62,26 @@ class TrackingStateMachine:
             self._present_streak += 1
             self._missing_streak = 0
             self._had_target = True
-            if self.state != 'TRACK' and self._present_streak >= acquire_frames:
-                self.state = 'TRACK'
+            if self.state != TrackingState.TRACK and self._present_streak >= acquire_frames:
+                self.state = TrackingState.TRACK
         else:
             self._present_streak = 0
             self._missing_streak += 1
-            if self.state == 'TRACK' and self._missing_streak >= lost_threshold:
-                self.state = 'LOST'
-            elif self.state == 'LOST' and self._missing_streak >= reset_frames:
-                self.state = 'SCAN'
+            if self.state == TrackingState.TRACK and self._missing_streak >= lost_threshold:
+                self.state = TrackingState.LOST
+            elif self.state == TrackingState.LOST and self._missing_streak >= reset_frames:
+                self.state = TrackingState.SCAN
                 self._had_target = False
             elif not self._had_target:
-                self.state = 'SCAN'
+                self.state = TrackingState.SCAN
 
-        if self.state == 'LOST' and present and self._present_streak >= acquire_frames:
-            self.state = 'TRACK'
+        if self.state == TrackingState.LOST and present and self._present_streak >= acquire_frames:
+            self.state = TrackingState.TRACK
 
         return self.state
 
     @property
-    def display_state(self) -> str:
+    def display_state(self) -> TrackingState:
         """Display-smoothed state.
 
         Upgrades (SCAN→TRACK) apply immediately.
@@ -79,7 +90,7 @@ class TrackingStateMachine:
         """
         return self._display_state
 
-    def update_display(self) -> str:
+    def update_display(self) -> TrackingState:
         """Sync display_state to current logical state.  Returns display_state."""
         hold = max(1, int(getattr(self._cfg, 'DISPLAY_STATE_HOLD_FRAMES', 3)))
         real_level = _STATE_ORDER.get(self.state, 0)

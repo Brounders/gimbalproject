@@ -21,7 +21,8 @@ from uav_tracker.detection_source import DetectionSource
 from uav_tracker.runtime.base import Detection
 from uav_tracker.runtime_config import RuntimeConfigView
 from uav_tracker.tracking.lock_tracker import TemplateLockTracker
-from uav_tracker.tracking.target_manager import TargetManager, TrackedTarget
+from uav_tracker.tracking.target_manager import TargetManager
+from uav_tracker.tracking.tracked_target import TrackedTarget
 from utils.geometry import iou
 
 
@@ -183,7 +184,7 @@ class TrackerPipeline:
         self.frame_counter = 0
         self.lock_telemetry = LockEventTracker()
         self._video_elapsed_sec = 0.0
-        self._fallback_fps = 25.0
+        self._fallback_fps = cfg.FALLBACK_FPS
         self.budget = BudgetController(cfg, initial_roi_candidates=max(1, int(cfg.ROI_MAX_CANDIDATES)))
         self.continuity = ContinuityTracker()
         self.tracking_sm = TrackingStateMachine(cfg)
@@ -199,11 +200,12 @@ class TrackerPipeline:
         self._auto_scene_frame_tick = 0
 
     def _update_video_time(self, source_fps: Optional[float]) -> None:
-        if source_fps is not None and source_fps > 1.0:
+        min_valid = self.cfg.SOURCE_FPS_MIN_VALID
+        if source_fps is not None and source_fps > min_valid:
             self._video_elapsed_sec += 1.0 / float(source_fps)
             return
         fallback = self.fps_buf[-1] if self.fps_buf else self._fallback_fps
-        fallback = max(1.0, float(fallback))
+        fallback = max(min_valid, float(fallback))
         self._video_elapsed_sec += 1.0 / fallback
 
     def _adapt_auto_scene(self, frame: np.ndarray) -> None:
@@ -642,14 +644,14 @@ class VideoSession:
             self.cap = ImageSequenceCapture(source_path)
             self.gt = SequenceGroundTruth(source_path)
             self.source_name = source_path.name
-            self.source_fps = 25.0
+            self.source_fps = self.cfg.FALLBACK_FPS
         else:
             self.cap = cv2.VideoCapture(self.source)
             if source_path is not None:
                 self.source_name = source_path.name
             if self.cap is not None:
                 src_fps = float(self.cap.get(cv2.CAP_PROP_FPS))
-                self.source_fps = src_fps if src_fps > 1.0 else 0.0
+                self.source_fps = src_fps if src_fps > self.cfg.SOURCE_FPS_MIN_VALID else 0.0
         if self.cap is None or not self.cap.isOpened():
             raise RuntimeError(f'Не удалось открыть источник: {self.source}')
         if self.output_path:
@@ -658,7 +660,7 @@ class VideoSession:
             width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 640
             height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 480
             src_fps = self.cap.get(cv2.CAP_PROP_FPS)
-            out_fps = src_fps if src_fps and src_fps > 1 else 20.0
+            out_fps = src_fps if src_fps and src_fps > self.cfg.SOURCE_FPS_MIN_VALID else self.cfg.OUTPUT_FPS_FALLBACK
             self.writer = cv2.VideoWriter(str(output), cv2.VideoWriter_fourcc(*'mp4v'), out_fps, (width, height))
             if not self.writer.isOpened():
                 raise RuntimeError(f'Не удалось открыть файл для записи: {output}')

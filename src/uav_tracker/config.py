@@ -1,5 +1,8 @@
+import warnings
 from dataclasses import dataclass
 from typing import Optional, Union
+
+# RuntimeConfigView is defined at the bottom of this module (after Config).
 
 
 @dataclass
@@ -27,6 +30,9 @@ class Config:
     # ── Source & Runtime ────────────────────────────────────────────────────
     VIDEO_SOURCE: Union[int, str] = 0
     RUNTIME_MODE: str = 'research'
+    FALLBACK_FPS: float = 25.0          # used when source FPS is unknown
+    SOURCE_FPS_MIN_VALID: float = 1.0   # below this source FPS is treated as unknown
+    OUTPUT_FPS_FALLBACK: float = 20.0   # video writer FPS when source FPS is unknown
 
     # ── Model ───────────────────────────────────────────────────────────────
     MODEL_PATH: str = 'runs/detect/runs/drone_bird_probe_fast/weights/best.pt'
@@ -176,25 +182,106 @@ class Config:
     SMOOTH_BBOX_HOLD_FRAMES: int = 4            # hold last bbox N frames after target dropout
     DISPLAY_STATE_HOLD_FRAMES: int = 3          # hold display tracking state N frames on downgrade
 
-    def validate(self) -> None:
-        """Raise ValueError for obviously invalid field values.
+    def __post_init__(self) -> None:
+        """Auto-validate on construction (Session 7 + A1d merge).
 
-        Called by TrackerPipeline.__init__ before pipeline construction.
-        Uses explicit ValueError instead of assert (assert is skipped with -O flag).
+        More comprehensive than validate() — checks EMA bounds, budget loads,
+        and stride alignment in addition to the basic range checks.
         """
-        if not (0.0 < self.CONF_THRESH < 1.0):
-            raise ValueError(f"CONF_THRESH={self.CONF_THRESH!r} must be in (0, 1)")
-        if not (0.0 < self.ROI_CONF_THRESH < 1.0):
-            raise ValueError(f"ROI_CONF_THRESH={self.ROI_CONF_THRESH!r} must be in (0, 1)")
+        # Detection thresholds must be strictly in (0, 1)
+        for name in ('CONF_THRESH', 'IOU_THRESH'):
+            v = getattr(self, name)
+            if not (0.0 < v < 1.0):
+                raise ValueError(f"Config.{name}={v!r} must be in (0, 1)")
+        # EMA alpha fields must be in [0, 1]
+        for name in (
+            'SMOOTH_ALPHA', 'VELOCITY_ALPHA', 'CLASS_EMA_ALPHA',
+            'CONFIDENCE_EMA_ALPHA', 'SMOOTH_BBOX_ALPHA', 'SMOOTH_BBOX_SIZE_ALPHA',
+            'LOCK_TRACKER_UPDATE_ALPHA', 'RETICLE_CENTER_ALPHA',
+        ):
+            v = getattr(self, name)
+            if not (0.0 <= v <= 1.0):
+                raise ValueError(f"Config.{name}={v!r} must be in [0, 1]")
         if self.IMG_SIZE <= 0:
-            raise ValueError(f"IMG_SIZE={self.IMG_SIZE!r} must be > 0")
+            raise ValueError(f"Config.IMG_SIZE={self.IMG_SIZE!r} must be > 0")
         if self.ROI_IMG_SIZE <= 0:
             raise ValueError(f"ROI_IMG_SIZE={self.ROI_IMG_SIZE!r} must be > 0")
+        if not (0.0 < self.ROI_CONF_THRESH < 1.0):
+            raise ValueError(f"ROI_CONF_THRESH={self.ROI_CONF_THRESH!r} must be in (0, 1)")
         if self.NIGHT_CONFIRM < 1:
             raise ValueError(f"NIGHT_CONFIRM={self.NIGHT_CONFIRM!r} must be >= 1")
         if self.LOCK_CONFIRM_FRAMES < 1:
             raise ValueError(f"LOCK_CONFIRM_FRAMES={self.LOCK_CONFIRM_FRAMES!r} must be >= 1")
         if self.BUDGET_TARGET_FPS <= 0:
             raise ValueError(f"BUDGET_TARGET_FPS={self.BUDGET_TARGET_FPS!r} must be > 0")
-        if not (0.0 <= self.SMOOTH_BBOX_ALPHA <= 1.0):
-            raise ValueError(f"SMOOTH_BBOX_ALPHA={self.SMOOTH_BBOX_ALPHA!r} must be in [0, 1]")
+        if self.BUDGET_HIGH_LOAD <= self.BUDGET_LOW_LOAD:
+            raise ValueError(
+                f"Config.BUDGET_HIGH_LOAD={self.BUDGET_HIGH_LOAD!r} must be > "
+                f"BUDGET_LOW_LOAD={self.BUDGET_LOW_LOAD!r}"
+            )
+        if self.TRACK_STATE_ACQUIRE_FRAMES < 1:
+            raise ValueError(
+                f"Config.TRACK_STATE_ACQUIRE_FRAMES={self.TRACK_STATE_ACQUIRE_FRAMES!r} must be >= 1"
+            )
+        if self.LOCK_LOST_GRACE < 0:
+            raise ValueError(f"Config.LOCK_LOST_GRACE={self.LOCK_LOST_GRACE!r} must be >= 0")
+        if self.IMG_SIZE % 32 != 0:
+            warnings.warn(
+                f"Config.IMG_SIZE={self.IMG_SIZE} is not a multiple of 32 (YOLO stride).",
+                UserWarning,
+                stacklevel=2,
+            )
+
+    def validate(self) -> None:
+        """Explicit validation shim — backward-compatible with A1d callers.
+
+        Most checks now run automatically in __post_init__. This method exists
+        so that pipeline.py and tests can call cfg.validate() explicitly after
+        potential post-construction field mutations.
+        """
+        self.__post_init__()
+
+
+@dataclass(frozen=True)
+class RuntimeConfigSnapshot:
+    """Immutable snapshot of hot-path config fields captured at frame-start.
+
+    Captures a stable view of Config at the start of process_frame, independent
+    of any mid-frame overrides applied by AutoSceneAdapter.
+
+    See also: RuntimeConfigView (runtime_config.py) for the override-proxy approach.
+    """
+    CONF_THRESH: float
+    IMG_SIZE: int
+    DEVICE: str
+    ADAPTIVE_SCAN_ENABLED: bool
+    GLOBAL_SCAN_INTERVAL: int
+    LOCK_TRACKER_ENABLED: bool
+    LOCK_CONFIRM_FRAMES: int
+    NIGHT_ENABLED: bool
+    NIGHT_MOT_THRESH: int
+    NIGHT_DIFF_THRESH: int
+    ROI_ASSIST_ENABLED: bool
+    DRONE_LOCK_SCORE_MIN: float
+    BUDGET_ENABLED: bool
+
+    @classmethod
+    def from_config(cls, cfg: 'Config') -> 'RuntimeConfigSnapshot':
+        return cls(
+            CONF_THRESH=cfg.CONF_THRESH,
+            IMG_SIZE=cfg.IMG_SIZE,
+            DEVICE=cfg.DEVICE,
+            ADAPTIVE_SCAN_ENABLED=cfg.ADAPTIVE_SCAN_ENABLED,
+            GLOBAL_SCAN_INTERVAL=cfg.GLOBAL_SCAN_INTERVAL,
+            LOCK_TRACKER_ENABLED=cfg.LOCK_TRACKER_ENABLED,
+            LOCK_CONFIRM_FRAMES=cfg.LOCK_CONFIRM_FRAMES,
+            NIGHT_ENABLED=cfg.NIGHT_ENABLED,
+            NIGHT_MOT_THRESH=cfg.NIGHT_MOT_THRESH,
+            NIGHT_DIFF_THRESH=cfg.NIGHT_DIFF_THRESH,
+            ROI_ASSIST_ENABLED=cfg.ROI_ASSIST_ENABLED,
+            DRONE_LOCK_SCORE_MIN=cfg.DRONE_LOCK_SCORE_MIN,
+            BUDGET_ENABLED=cfg.BUDGET_ENABLED,
+        )
+
+# Backward-compat alias — Session 7 tests import this name from config
+RuntimeConfigView = RuntimeConfigSnapshot

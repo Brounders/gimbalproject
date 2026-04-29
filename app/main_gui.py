@@ -1,6 +1,4 @@
-import json
 import sys
-import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -11,18 +9,14 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 import cv2
-from PySide6.QtCore import QSettings, QThread, Qt, Signal
+from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QAction, QImage, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
-    QDialog,
-    QDoubleSpinBox,
     QFileDialog,
     QFrame,
-    QGridLayout,
-    QGroupBox,
     QHBoxLayout,
     QInputDialog,
     QLabel,
@@ -31,7 +25,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QPlainTextEdit,
-    QScrollArea,
     QSizePolicy,
     QSpinBox,
     QSplitter,
@@ -40,181 +33,31 @@ from PySide6.QtWidgets import (
 )
 
 from uav_tracker.config import Config
-from uav_tracker.evaluation import evaluate_source
-from uav_tracker.modes import RUNTIME_MODES, apply_runtime_mode
-from uav_tracker.pipeline import TrackerPipeline, VideoSession, apply_runtime_preset, parse_video_source
-from uav_tracker.profile_io import apply_overrides, available_presets, load_preset, load_profile, save_profile
+from uav_tracker.modes import apply_runtime_mode
+from uav_tracker.pipeline import apply_runtime_preset, parse_video_source
+from uav_tracker.profile_io import apply_overrides, available_presets
 from app.ui import UIState, UIStateMachine, VideoStage
-from app.ui.theme import APP_STYLESHEET, SCENARIO_LABELS, refresh_widget_style
-from app.ui.cards import build_inspector_card, build_target_info_card
-
-# Canonical operator modes: shown as quick-access buttons in the left rail.
-# Mapping: label → (preset_key, night_enabled_override)
-# None override means "keep preset default".
-CANONICAL_OPERATOR_MODES: dict[str, tuple[str, bool | None]] = {
-    'auto':  ('default', None),   # full adaptive detection (night on per default.yaml)
-    'day':   ('default', False),  # explicit day-only (night detector disabled)
-    'night': ('night', None),     # night preset (force operator display mode)
-    'ir':    ('antiuav_thermal', None),  # thermal / anti-UAV preset
-}
-
-class TrackerWorker(QThread):
-    frame_ready = Signal(object)
-    stats_ready = Signal(dict)
-    log_ready = Signal(str)
-    finished = Signal(str)  # stopped | eof
-    failed = Signal(str)
-
-    def __init__(self, cfg: Config, source, output_path: str, small_target_mode: bool, lock_log_path: str = ''):
-        super().__init__()
-        self.cfg = cfg
-        self.source = source
-        self.output_path = output_path
-        self.small_target_mode = small_target_mode
-        self.lock_log_path = lock_log_path.strip()
-        self._stop_event = threading.Event()
-        self._switch_event = threading.Event()
-
-    def stop(self):
-        self._stop_event.set()
-
-    def request_switch_target(self):
-        self._switch_event.set()
-
-    def run(self):
-        reason = 'stopped'
-        session = VideoSession(self.cfg, self.source, output_path=self.output_path, manage_cv_windows=False)
-        event_log_handle = None
-        try:
-            resolved_lock_log = self.lock_log_path
-            if not resolved_lock_log and self.cfg.LOCK_EVENT_LOG_ENABLED and self.cfg.LOCK_EVENT_LOG_PATH:
-                resolved_lock_log = str(self.cfg.LOCK_EVENT_LOG_PATH)
-            if resolved_lock_log:
-                lock_log_file = Path(resolved_lock_log)
-                lock_log_file.parent.mkdir(parents=True, exist_ok=True)
-                event_log_handle = lock_log_file.open('a', encoding='utf-8')
-                self.log_ready.emit(f'Лог lock-событий: {resolved_lock_log}')
-
-            session.open()
-            self.log_ready.emit(f'Источник открыт: {self.source}')
-            if session.gt is not None and session.gt.label_path is not None:
-                self.log_ready.emit(f'Эталон GT подключен: {session.gt.label_path}')
-
-            pipeline = TrackerPipeline(self.cfg)
-            while True:
-                if self._stop_event.is_set():
-                    reason = 'stopped'
-                    break
-                if self._switch_event.is_set():
-                    self._switch_event.clear()
-                    pipeline.manager.switch_target()
-                ret, frame, meta = session.read()
-                if not ret:
-                    reason = 'eof'
-                    break
-
-                result = pipeline.process_frame(
-                    frame,
-                    frame_index=int(meta.get('frame_index', 0)),
-                    gt_bbox=meta.get('gt_bbox'),
-                    small_target_mode=self.small_target_mode,
-                    render=True,
-                    source_fps=meta.get('source_fps'),
-                )
-                if result.frame is not None:
-                    session.write(result.frame)
-                    self.frame_ready.emit(result.frame)
-
-                if event_log_handle is not None and result.lock_events:
-                    for event in result.lock_events:
-                        payload = {
-                            'frame_index': int(result.frame_index),
-                            'event': event,
-                            'active_id': result.active_id,
-                            'mode': result.mode,
-                            'lock_score': round(float(result.lock_score), 4),
-                            'lock_switches_per_min': round(float(result.lock_switches_per_min), 4),
-                            'budget_level': int(result.budget_level),
-                            'budget_load': round(float(result.budget_load), 4),
-                        }
-                        event_log_handle.write(json.dumps(payload, ensure_ascii=False) + '\n')
-
-                self.stats_ready.emit(
-                    {
-                        'fps': result.fps,
-                        'active_id': result.active_id,
-                        'active_source': result.active_source,
-                        'target_count': result.target_count,
-                        'visible_target_count': result.visible_target_count,
-                        'mode': result.mode,
-                        'frame_index': result.frame_index,
-                        'scan_strategy': result.scan_strategy,
-                        'gt_visible': result.gt_visible,
-                        'gt_iou': result.gt_iou,
-                        'lock_score': result.lock_score,
-                        'display_confidence': result.display_confidence,
-                        'continuity_score': result.continuity_score,
-                        'active_presence_rate': result.active_presence_rate,
-                        'active_id_changes': result.active_id_changes,
-                        'median_reacquire_frames': result.median_reacquire_frames,
-                        'lock_events': result.lock_events,
-                        'lock_switch_count': result.lock_switch_count,
-                        'lock_switches_per_min': result.lock_switches_per_min,
-                        'lock_event_counts': result.lock_event_counts,
-                        'budget_level': result.budget_level,
-                        'budget_load': result.budget_load,
-                        'budget_frame_ms': result.budget_frame_ms,
-                        'roi_budget_candidates': result.roi_budget_candidates,
-                        'night_skip': result.night_skip,
-                        'timings_ms': result.timings_ms,
-                    }
-                )
-        except Exception as exc:
-            self.failed.emit(str(exc))
-            return
-        finally:
-            if event_log_handle is not None:
-                event_log_handle.close()
-            session.close()
-
-        self.finished.emit(reason)
-
-
-class EvaluationWorker(QThread):
-    log_ready = Signal(str)
-    report_ready = Signal(dict)
-    finished = Signal(str)  # done | stopped
-    failed = Signal(str)
-
-    def __init__(self, cfg: Config, source, small_target_mode: bool, report_path: str, max_frames: int = 0):
-        super().__init__()
-        self.cfg = cfg
-        self.source = source
-        self.small_target_mode = small_target_mode
-        self.report_path = report_path
-        self.max_frames = max_frames
-        self._stop_event = threading.Event()
-
-    def stop(self):
-        self._stop_event.set()
-
-    def run(self):
-        try:
-            self.log_ready.emit(f'Оценка запущена: {self.source}')
-            report = evaluate_source(
-                self.cfg,
-                self.source,
-                small_target_mode=self.small_target_mode,
-                max_frames=self.max_frames,
-                report_path=self.report_path,
-                stop_checker=self._stop_event.is_set,
-            )
-            self.report_ready.emit(report.to_dict())
-            self.log_ready.emit(f'Отчет оценки сохранен: {self.report_path}')
-            reason = 'stopped' if self._stop_event.is_set() else 'done'
-            self.finished.emit(reason)
-        except Exception as exc:
-            self.failed.emit(str(exc))
+from app.ui.theme import APP_STYLESHEET, refresh_widget_style
+from app.ui.cards import build_target_info_card
+from app.app_settings import load_app_settings as _load_app_settings_impl, save_app_settings as _save_app_settings_impl
+from app.profile_controller import (
+    CANONICAL_OPERATOR_MODES,
+    apply_canonical_operator_mode as _apply_canonical_operator_mode_impl,
+    apply_quick_profile as _apply_quick_profile_impl,
+    apply_runtime_mode_controls as _apply_runtime_mode_controls_impl,
+    apply_scenario_preset as _apply_scenario_preset_impl,
+    apply_selected_preset as _apply_selected_preset_impl,
+    collect_profile as _collect_profile_impl,
+    load_profile_from_disk as _load_profile_from_disk_impl,
+    save_profile_to_disk as _save_profile_to_disk_impl,
+    set_controls_from_profile as _set_controls_from_profile_impl,
+)
+from app.job_state_machine import refresh_header_state as _refresh_header_state_impl, set_job_state as _set_job_state_impl
+from app.source_controller import on_source_type_changed as _on_source_type_changed_impl, source_from_controls as _source_from_controls_impl, split_source as _split_source_impl
+from app.stats_renderer import update_stats as _update_stats_impl
+from app.ui.expert_dialog import build_expert_dialog as _build_expert_dialog
+from app.ui.layout_builders import build_header as _build_header, build_inspector_drawer as _build_inspector_drawer, build_left_rail as _build_left_rail
+from app.workers import EvaluationWorker, TrackerWorker
 
 
 class MainWindow(QMainWindow):
@@ -682,153 +525,10 @@ class MainWindow(QMainWindow):
         return self.build_dock()
 
     def build_inspector_drawer(self) -> QWidget:
-        body = QGroupBox('Диагностика')
-        body.setObjectName('InspectorModule')
-        body_layout = QVBoxLayout(body)
-        body_layout.setContentsMargins(8, 8, 8, 8)
-        body_layout.setSpacing(8)
-
-        target_card, self.panel_target_summary = build_inspector_card('Цель')
-        quality_card, self.panel_quality_summary = build_inspector_card('Качество')
-        runtime_card, self.panel_monitoring_summary = build_inspector_card('Runtime health')
-        params_card, self.panel_params_summary = build_inspector_card('Параметры')
-        eval_card, self.eval_summary_label = build_inspector_card('Оценка')
-        self.eval_summary_hint = QLabel('-')
-        self.eval_summary_hint.setObjectName('InspectorValue')
-        eval_card.layout().addWidget(self.eval_summary_hint)
-
-        events_card = QFrame()
-        events_card.setObjectName('InspectorCard')
-        events_layout = QVBoxLayout(events_card)
-        events_layout.setContentsMargins(8, 8, 8, 8)
-        events_layout.setSpacing(4)
-        events_title = QLabel('События')
-        events_title.setObjectName('InspectorTitle')
-        events_layout.addWidget(events_title)
-        self.panel_events_view = QPlainTextEdit()
-        self.panel_events_view.setReadOnly(True)
-        self.panel_events_view.setMaximumBlockCount(120)
-        self.panel_events_view.setMaximumHeight(180)
-        events_layout.addWidget(self.panel_events_view)
-
-        body_layout.addWidget(target_card)
-        body_layout.addWidget(quality_card)
-        body_layout.addWidget(runtime_card)
-        body_layout.addWidget(params_card)
-        body_layout.addWidget(eval_card)
-        body_layout.addWidget(events_card, 1)
-        return body
+        return _build_inspector_drawer(self)
 
     def build_expert_dialog(self) -> None:
-        self.expert_dialog = QDialog(self)
-        self.expert_dialog.setWindowTitle('Экспертные настройки')
-        self.expert_dialog.resize(860, 620)
-        self.expert_dialog.finished.connect(self._on_expert_dialog_closed)
-
-        root = QVBoxLayout(self.expert_dialog)
-        root.setContentsMargins(10, 10, 10, 10)
-        root.setSpacing(8)
-
-        scroller = QScrollArea()
-        scroller.setWidgetResizable(True)
-        root.addWidget(scroller, 1)
-
-        content = QWidget()
-        scroller.setWidget(content)
-        layout = QGridLayout(content)
-        layout.setHorizontalSpacing(8)
-        layout.setVerticalSpacing(8)
-
-        self.scenario_combo = QComboBox()
-        self._fill_scenarios()
-        self.preset_combo = QComboBox()
-        self.preset_combo.addItems(available_presets() + ['custom'])
-        self.apply_preset_btn = QPushButton('Применить preset')
-        self.profile_load_btn = QPushButton('Загрузить профиль')
-        self.profile_save_btn = QPushButton('Сохранить профиль')
-
-        self.model_edit = QLineEdit('runs/detect/runs/drone_bird_probe_fast/weights/best.pt')
-        self.model_browse_btn = QPushButton('Модель...')
-
-        self.mode_combo = QComboBox()
-        self.mode_combo.addItems(list(RUNTIME_MODES))
-        self.device_combo = QComboBox()
-        self.device_combo.addItems(['mps', 'cpu', 'hailo'])
-
-        self.imgsz_spin = QSpinBox()
-        self.imgsz_spin.setRange(160, 2048)
-        self.imgsz_spin.setSingleStep(32)
-        self.imgsz_spin.setValue(640)
-        self.conf_spin = QDoubleSpinBox()
-        self.conf_spin.setRange(0.01, 0.99)
-        self.conf_spin.setSingleStep(0.01)
-        self.conf_spin.setDecimals(2)
-        self.conf_spin.setValue(0.30)
-        self.rescan_spin = QSpinBox()
-        self.rescan_spin.setRange(1, 60)
-        self.rescan_spin.setValue(6)
-
-        self.small_target_check = QCheckBox('Малые цели')
-        self.adaptive_scan_check = QCheckBox('Adaptive scan')
-        self.adaptive_scan_check.setChecked(True)
-        self.lock_tracker_check = QCheckBox('Lock tracker')
-        self.lock_tracker_check.setChecked(True)
-        self.night_check = QCheckBox('Night detector')
-        self.night_check.setChecked(True)
-        self.roi_check = QCheckBox('ROI assist')
-        self.roi_check.setChecked(True)
-        self.show_gt_check = QCheckBox('Показывать GT')
-        self.show_gt_check.setChecked(True)
-        self.timing_check = QCheckBox('Показывать timing')
-        self.timing_check.setChecked(True)
-        self.show_trails_check = QCheckBox('Показывать траектории')
-        self.show_trails_check.setChecked(True)
-
-        row = 0
-        layout.addWidget(QLabel('Сценарий'), row, 0)
-        layout.addWidget(self.scenario_combo, row, 1, 1, 3)
-        row += 1
-
-        layout.addWidget(QLabel('Профиль'), row, 0)
-        layout.addWidget(self.preset_combo, row, 1)
-        layout.addWidget(self.apply_preset_btn, row, 2)
-        layout.addWidget(self.profile_load_btn, row, 3)
-        layout.addWidget(self.profile_save_btn, row, 4)
-        row += 1
-
-        layout.addWidget(QLabel('Модель'), row, 0)
-        layout.addWidget(self.model_edit, row, 1, 1, 3)
-        layout.addWidget(self.model_browse_btn, row, 4)
-        row += 1
-
-        layout.addWidget(QLabel('Mode'), row, 0)
-        layout.addWidget(self.mode_combo, row, 1)
-        layout.addWidget(QLabel('Device'), row, 2)
-        layout.addWidget(self.device_combo, row, 3)
-        row += 1
-
-        layout.addWidget(QLabel('imgsz'), row, 0)
-        layout.addWidget(self.imgsz_spin, row, 1)
-        layout.addWidget(QLabel('conf'), row, 2)
-        layout.addWidget(self.conf_spin, row, 3)
-        layout.addWidget(QLabel('rescan'), row, 4)
-        layout.addWidget(self.rescan_spin, row, 5)
-        row += 1
-
-        layout.addWidget(self.small_target_check, row, 0)
-        layout.addWidget(self.adaptive_scan_check, row, 1)
-        layout.addWidget(self.lock_tracker_check, row, 2)
-        layout.addWidget(self.night_check, row, 3)
-        layout.addWidget(self.roi_check, row, 4)
-        row += 1
-
-        layout.addWidget(self.show_gt_check, row, 0)
-        layout.addWidget(self.timing_check, row, 1)
-        layout.addWidget(self.show_trails_check, row, 2)
-
-        close_btn = QPushButton('Закрыть')
-        close_btn.clicked.connect(self._hide_expert_dialog)
-        root.addWidget(close_btn, 0, Qt.AlignRight)
+        _build_expert_dialog(self)
 
     def _on_expert_dialog_closed(self):
         self.expert_badge.setVisible(False)
@@ -967,69 +667,7 @@ class MainWindow(QMainWindow):
             return
 
     def _refresh_header_state(self):
-        scenario_key = str(self.scenario_combo.currentData() or 'custom')
-        scenario_label = SCENARIO_LABELS.get(scenario_key, scenario_key)
-
-        source_type = str(self.source_type_combo.currentData() or 'camera')
-        if source_type == 'camera':
-            source_display = f"CAM {self.camera_index_spin.value()}"
-        elif source_type == 'stream':
-            source_display = 'ПОТОК'
-        else:
-            source_display = 'ВИДЕО'
-        source_hint = str(self.source_path_edit.text().strip() or source_display)
-        if source_type == 'video':
-            source_short = Path(source_hint).name or source_display
-        elif source_type == 'stream':
-            source_short = source_hint[:48]
-        else:
-            source_short = source_display
-
-        self.top_scenario_label.setText(f"Источник: {source_short} | Сцена: {scenario_label}")
-
-        state_map = {
-            UIState.IDLE: ('IDLE', 'idle'),
-            UIState.CHECKING: ('CHECK', 'stopping'),
-            UIState.RUNNING: ('RUNNING', 'running'),
-            UIState.LOCK: ('LOCK', 'lock'),
-            UIState.LOST: ('LOST', 'lost'),
-            UIState.EVALUATION: ('EVALUATE', 'evaluating'),
-            UIState.ERROR: ('ERROR', 'error'),
-        }
-        state_text, state_name = state_map.get(self._state_machine.state, ('IDLE', 'idle'))
-        self.top_state_badge.setText(state_text)
-        self.top_state_badge.setProperty('state', state_name)
-        refresh_widget_style(self.top_state_badge)
-
-        readable_state = {
-            UIState.IDLE: 'Ожидание',
-            UIState.CHECKING: 'Остановка',
-            UIState.RUNNING: 'Сканирование',
-            UIState.LOCK: 'Захват',
-            UIState.LOST: 'Потеря',
-            UIState.EVALUATION: 'Оценка',
-            UIState.ERROR: 'Ошибка',
-        }
-        self.console_status_label.setText(
-            f"$ {readable_state.get(self._state_machine.state, 'Ожидание').lower()} // {source_display.lower()} // {source_hint}"
-        )
-
-        recording = self._job_state in {'tracking', 'stopping'} and self.record_check.isChecked()
-        if recording:
-            self.record_indicator_label.setText('REC ON')
-        elif self.record_check.isChecked():
-            self.record_indicator_label.setText('REC READY')
-        else:
-            self.record_indicator_label.setText('REC OFF')
-        self.record_indicator_label.setProperty('recording', recording)
-        refresh_widget_style(self.record_indicator_label)
-
-        self.panel_params_summary.setText(
-            'Сценарий: '
-            f"{scenario_label}\n"
-            f"Источник: {self.source_type_combo.currentText()} | device: {self.device_combo.currentText()}\n"
-            f"imgsz/conf: {self.imgsz_spin.value()} / {self.conf_spin.value():.2f}"
-        )
+        _refresh_header_state_impl(self)
 
     def _video_idle_text(self, detail: str | None = None) -> str:
         base = 'Операторская сцена пока не активна'
@@ -1051,49 +689,13 @@ class MainWindow(QMainWindow):
         )
 
     def _split_source(self, source: Any) -> tuple[str, int, str]:
-        if isinstance(source, int):
-            return 'camera', int(source), ''
-        text = str(source).strip()
-        if text.isdigit():
-            return 'camera', int(text), ''
-        lowered = text.lower()
-        if lowered.startswith(('rtsp://', 'http://', 'https://', 'udp://', 'tcp://')):
-            return 'stream', 0, text
-        return 'video', 0, text
+        return _split_source_impl(source)
 
     def _source_from_controls(self):
-        source_type = self.source_type_combo.currentData()
-        if source_type == 'camera':
-            return int(self.camera_index_spin.value())
-        return self.source_path_edit.text().strip()
+        return _source_from_controls_impl(self)
 
     def _on_source_type_changed(self):
-        if self._updating_controls:
-            return
-        source_type = self.source_type_combo.currentData()
-        is_camera = source_type == 'camera'
-        controls_enabled = self._job_state == 'idle'
-        self.camera_index_spin.setEnabled(is_camera and controls_enabled)
-        self.camera_index_spin.setVisible(is_camera)
-        show_path = source_type in {'video', 'stream'}
-        self.source_path_label.setVisible(show_path)
-        self.source_path_edit.setVisible(show_path)
-        self.source_browse_btn.setVisible(show_path)
-        self.source_path_edit.setEnabled(show_path and controls_enabled)
-        self.source_browse_btn.setEnabled(show_path and controls_enabled)
-        if is_camera:
-            self.source_path_edit.setPlaceholderText('Для камеры путь не нужен')
-            self.source_browse_btn.setText('Выбрать...')
-        elif source_type == 'video':
-            self.source_path_label.setText('Видео файл')
-            self.source_path_edit.setPlaceholderText('/путь/к/видео.mp4')
-            self.source_browse_btn.setText('Выбрать...')
-        else:
-            self.source_path_label.setText('URL потока')
-            self.source_path_edit.setPlaceholderText('rtsp://...')
-            self.source_browse_btn.setText('Подключить...')
-        self._refresh_header_state()
-        self._refresh_workspace_overviews()
+        _on_source_type_changed_impl(self)
 
     def _browse_source(self):
         source_type = self.source_type_combo.currentData()
@@ -1148,202 +750,31 @@ class MainWindow(QMainWindow):
         self._apply_scenario_preset(key)
 
     def _apply_quick_profile(self, preset_key: str):
-        idx = self.scenario_combo.findData(preset_key)
-        if idx >= 0:
-            self.scenario_combo.setCurrentIndex(idx)
-            return
-        self._log(f'Preset недоступен: {preset_key}')
+        _apply_quick_profile_impl(self, preset_key)
 
     def _apply_canonical_operator_mode(self, mode_key: str) -> None:
-        """Apply one of the 4 canonical operator modes: auto/day/night/ir.
-
-        Each mode loads the mapped preset and applies operator-safe display
-        overrides so that operator buttons never activate research-mode HUD.
-        """
-        entry = CANONICAL_OPERATOR_MODES.get(mode_key)
-        if entry is None:
-            self._log(f'Неизвестный канонический режим: {mode_key}')
-            return
-        preset_key, night_override = entry
-        self._apply_scenario_preset(preset_key)
-        # Force operator display settings (suppress research-only overlays)
-        if not self._updating_controls:
-            self._updating_controls = True
-            try:
-                if self.mode_combo.findText('operator') >= 0:
-                    self.mode_combo.setCurrentText('operator')
-                self.show_gt_check.setChecked(False)
-                self.timing_check.setChecked(False)
-                self.show_trails_check.setChecked(False)
-                if night_override is not None:
-                    self.night_check.setChecked(night_override)
-            finally:
-                self._updating_controls = False
-        self._auto_scene_detect_enabled = (mode_key == 'auto')
-        labels = {'auto': 'Авто', 'day': 'День', 'night': 'Ночь', 'ir': 'IR'}
-        self._log(f'Режим оператора: {labels.get(mode_key, mode_key)}')
-        # Highlight active mode button (TASK-024)
-        mode_btns = {
-            'auto': self.quick_auto_btn, 'day': self.quick_day_btn,
-            'night': self.quick_night_btn, 'ir': self.quick_ir_btn,
-        }
-        for key, btn in mode_btns.items():
-            btn.setProperty('active', key == mode_key)
-            refresh_widget_style(btn)
+        _apply_canonical_operator_mode_impl(self, mode_key)
 
     def _apply_scenario_preset(self, preset_key: str):
-        cfg, data = load_preset(preset_key, Config())
-        profile = {
-            'preset': preset_key,
-            'runtime_mode': cfg.RUNTIME_MODE,
-            'model_path': cfg.MODEL_PATH,
-            'device': cfg.DEVICE,
-            'imgsz': cfg.IMG_SIZE,
-            'conf_thresh': cfg.CONF_THRESH,
-            'small_target_mode': bool(data.get('small_target_mode', False)),
-            'adaptive_scan_enabled': cfg.ADAPTIVE_SCAN_ENABLED,
-            'global_scan_interval': cfg.GLOBAL_SCAN_INTERVAL,
-            'lock_tracker_enabled': cfg.LOCK_TRACKER_ENABLED,
-            'night_enabled': cfg.NIGHT_ENABLED,
-            'roi_assist_enabled': cfg.ROI_ASSIST_ENABLED,
-            'show_gt_overlay': cfg.SHOW_GT_OVERLAY,
-            'show_debug_timings': cfg.SHOW_DEBUG_TIMINGS,
-            'show_trails': cfg.SHOW_TRAILS,
-        }
-        profile.update({k: v for k, v in data.items() if k not in profile})
-        self._set_controls_from_profile(profile, preserve_source=True)
-        self._log(f'Сценарий применен: {SCENARIO_LABELS.get(preset_key, preset_key)}')
+        _apply_scenario_preset_impl(self, preset_key)
 
     def _apply_runtime_mode_controls(self, mode: str):
-        if self._updating_controls:
-            return
-        cfg = apply_runtime_mode(Config(), mode)
-        self.show_gt_check.setChecked(cfg.SHOW_GT_OVERLAY)
-        self.timing_check.setChecked(cfg.SHOW_DEBUG_TIMINGS)
-        self.show_trails_check.setChecked(cfg.SHOW_TRAILS)
-        self.adaptive_scan_check.setChecked(cfg.ADAPTIVE_SCAN_ENABLED)
-        self.lock_tracker_check.setChecked(cfg.LOCK_TRACKER_ENABLED)
-        self.night_check.setChecked(cfg.NIGHT_ENABLED)
-        self.roi_check.setChecked(cfg.ROI_ASSIST_ENABLED)
-        self.rescan_spin.setValue(cfg.GLOBAL_SCAN_INTERVAL)
+        _apply_runtime_mode_controls_impl(self, mode)
 
     def _set_controls_from_profile(self, profile: dict[str, Any], preserve_source: bool = False):
-        self._updating_controls = True
-        try:
-            preset = profile.get('preset', 'custom')
-            pidx = self.preset_combo.findText(str(preset))
-            if pidx >= 0:
-                self.preset_combo.setCurrentIndex(pidx)
-            else:
-                custom_pidx = self.preset_combo.findText('custom')
-                if custom_pidx >= 0:
-                    self.preset_combo.setCurrentIndex(custom_pidx)
-            scenario_idx = self.scenario_combo.findData(preset if preset is not None else 'custom')
-            if scenario_idx >= 0:
-                self.scenario_combo.setCurrentIndex(scenario_idx)
-            else:
-                custom_idx = self.scenario_combo.findData('custom')
-                if custom_idx >= 0:
-                    self.scenario_combo.setCurrentIndex(custom_idx)
-
-            if not preserve_source:
-                source_type, cam_idx, source_path = self._split_source(profile.get('source', 0))
-                st_idx = self.source_type_combo.findData(source_type)
-                if st_idx >= 0:
-                    self.source_type_combo.setCurrentIndex(st_idx)
-                self.camera_index_spin.setValue(cam_idx)
-                self.source_path_edit.setText(source_path)
-
-            mode = str(profile.get('runtime_mode', self.mode_combo.currentText()))
-            if self.mode_combo.findText(mode) >= 0:
-                self.mode_combo.setCurrentText(mode)
-
-            device = str(profile.get('device', self.device_combo.currentText()))
-            if self.device_combo.findText(device) >= 0:
-                self.device_combo.setCurrentText(device)
-
-            self.model_edit.setText(str(profile.get('model_path', self.model_edit.text())))
-            self.imgsz_spin.setValue(int(profile.get('imgsz', self.imgsz_spin.value())))
-            self.conf_spin.setValue(float(profile.get('conf_thresh', self.conf_spin.value())))
-            self.rescan_spin.setValue(int(profile.get('global_scan_interval', self.rescan_spin.value())))
-
-            self.small_target_check.setChecked(bool(profile.get('small_target_mode', self.small_target_check.isChecked())))
-            self.adaptive_scan_check.setChecked(bool(profile.get('adaptive_scan_enabled', self.adaptive_scan_check.isChecked())))
-            self.lock_tracker_check.setChecked(bool(profile.get('lock_tracker_enabled', self.lock_tracker_check.isChecked())))
-            self.night_check.setChecked(bool(profile.get('night_enabled', self.night_check.isChecked())))
-            self.roi_check.setChecked(bool(profile.get('roi_assist_enabled', self.roi_check.isChecked())))
-            self.show_gt_check.setChecked(bool(profile.get('show_gt_overlay', self.show_gt_check.isChecked())))
-            self.timing_check.setChecked(bool(profile.get('show_debug_timings', self.timing_check.isChecked())))
-            self.show_trails_check.setChecked(bool(profile.get('show_trails', self.show_trails_check.isChecked())))
-
-            self.record_check.setChecked(bool(profile.get('record_output', self.record_check.isChecked())))
-            self.output_edit.setText(str(profile.get('output_path', self.output_edit.text())))
-
-            ignored = {
-                'preset', 'runtime_mode', 'source', 'model_path', 'device', 'imgsz', 'conf_thresh',
-                'small_target_mode', 'adaptive_scan_enabled', 'global_scan_interval', 'lock_tracker_enabled',
-                'night_enabled', 'roi_assist_enabled', 'show_gt_overlay', 'show_debug_timings', 'show_trails',
-                'record_output', 'output_path'
-            }
-            self._profile_extras = {k: v for k, v in profile.items() if k not in ignored}
-        finally:
-            self._updating_controls = False
-            self._refresh_record_controls()
-            self._on_source_type_changed()
-            self._refresh_workspace_overviews()
-            self._refresh_sidebar_meta()
-            self._refresh_header_state()
+        _set_controls_from_profile_impl(self, profile, preserve_source)
 
     def _apply_selected_preset(self):
-        if self._updating_controls:
-            return
-        preset_name = self.preset_combo.currentText()
-        if preset_name == 'custom':
-            self._profile_extras = {}
-            self._log('Preset: custom')
-            return
-        self._apply_scenario_preset(preset_name)
+        _apply_selected_preset_impl(self)
 
     def _collect_profile(self) -> dict[str, Any]:
-        source = self._source_from_controls()
-        preset_key = self.scenario_combo.currentData() or 'custom'
-        profile = {
-            'preset': preset_key,
-            'runtime_mode': self.mode_combo.currentText(),
-            'source': str(source),
-            'model_path': self.model_edit.text().strip(),
-            'device': self.device_combo.currentText(),
-            'imgsz': int(self.imgsz_spin.value()),
-            'conf_thresh': float(self.conf_spin.value()),
-            'small_target_mode': self.small_target_check.isChecked(),
-            'adaptive_scan_enabled': self.adaptive_scan_check.isChecked(),
-            'global_scan_interval': int(self.rescan_spin.value()),
-            'lock_tracker_enabled': self.lock_tracker_check.isChecked(),
-            'night_enabled': self.night_check.isChecked(),
-            'roi_assist_enabled': self.roi_check.isChecked(),
-            'show_gt_overlay': self.show_gt_check.isChecked(),
-            'show_debug_timings': self.timing_check.isChecked(),
-            'show_trails': self.show_trails_check.isChecked(),
-            'record_output': self.record_check.isChecked(),
-            'output_path': self.output_edit.text().strip(),
-        }
-        profile.update(self._profile_extras)
-        return profile
+        return _collect_profile_impl(self)
 
     def _load_profile_from_disk(self):
-        path, _ = QFileDialog.getOpenFileName(self, 'Загрузить профиль', str(ROOT / 'configs'), 'YAML (*.yaml *.yml)')
-        if not path:
-            return
-        profile = load_profile(path)
-        self._set_controls_from_profile(profile)
-        self._log(f'Профиль загружен: {path}')
+        _load_profile_from_disk_impl(self)
 
     def _save_profile_to_disk(self):
-        path, _ = QFileDialog.getSaveFileName(self, 'Сохранить профиль', str(ROOT / 'configs' / 'custom_profile.yaml'), 'YAML (*.yaml *.yml)')
-        if not path:
-            return
-        save_profile(path, self._collect_profile())
-        self._log(f'Профиль сохранен: {path}')
+        _save_profile_to_disk_impl(self)
 
     def _build_config(self) -> tuple[Config, Any, bool, str]:
         source = parse_video_source(self._source_from_controls())
@@ -1384,48 +815,7 @@ class MainWindow(QMainWindow):
         return cfg, source, small_target_mode, output_path
 
     def _set_job_state(self, state: str):
-        self._job_state = state
-        if state == 'idle':
-            self._state_machine.set(UIState.IDLE)
-        elif state == 'tracking':
-            self._state_machine.set(UIState.RUNNING)
-        elif state == 'stopping':
-            self._state_machine.set(UIState.CHECKING)
-        elif state == 'evaluating':
-            self._state_machine.set(UIState.EVALUATION)
-
-        tracking_active = state in {'tracking', 'stopping'}
-        evaluating_active = state == 'evaluating'
-        busy = tracking_active or evaluating_active
-
-        self.start_btn.setEnabled(self._state_machine.can_start() and not busy)
-        self.eval_btn.setEnabled(self._state_machine.can_evaluate() and not busy)
-        self.stop_btn.setEnabled(self._state_machine.can_stop())
-
-        for widget in [
-            self.scenario_combo,
-            self.quick_day_btn,
-            self.quick_night_btn,
-            self.quick_ir_btn,
-            self.source_type_combo,
-            self.camera_index_spin,
-            self.source_path_edit,
-            self.source_browse_btn,
-            self.record_check,
-            self.output_edit,
-            self.output_browse_btn,
-            self.expert_btn,
-        ]:
-            widget.setEnabled(not busy)
-        self._refresh_record_controls()
-
-        if state == 'idle':
-            self._target_present_latched = False
-            self._target_missing_streak = 0
-            self._had_target_in_session = False
-
-        self._on_source_type_changed()
-        self._refresh_header_state()
+        _set_job_state_impl(self, state)
 
     def _start(self):
         if self.worker is not None and self.worker.isRunning():
@@ -1772,59 +1162,10 @@ class MainWindow(QMainWindow):
             self._render_preview_pixmap()
 
     def _save_app_settings(self):
-        self.settings.setValue('window/geometry', self.saveGeometry())
-        self.settings.setValue('ui/scenario', self.scenario_combo.currentData())
-        self.settings.setValue('ui/workspace', self._current_workspace_key())
-        self.settings.setValue('ui/source_type', self.source_type_combo.currentData())
-        self.settings.setValue('ui/camera_index', self.camera_index_spin.value())
-        self.settings.setValue('ui/source_path', self.source_path_edit.text())
-        self.settings.setValue('ui/record_output', self.record_check.isChecked())
-        self.settings.setValue('ui/output_path', self.output_edit.text())
-        self.settings.setValue('ui/profile_json', json.dumps(self._collect_profile(), ensure_ascii=False))
-        self.settings.sync()
+        _save_app_settings_impl(self)
 
     def _load_app_settings(self):
-        geometry = self.settings.value('window/geometry')
-        if geometry is not None:
-            self.restoreGeometry(geometry)
-
-        profile_json = self.settings.value('ui/profile_json', '')
-        if profile_json:
-            try:
-                profile = json.loads(str(profile_json))
-                self._set_controls_from_profile(profile)
-            except Exception:
-                pass
-
-        self._updating_controls = True
-        try:
-            source_type = self.settings.value('ui/source_type', self.source_type_combo.currentData())
-            idx = self.source_type_combo.findData(source_type)
-            if idx >= 0:
-                self.source_type_combo.setCurrentIndex(idx)
-
-            self.camera_index_spin.setValue(int(self.settings.value('ui/camera_index', self.camera_index_spin.value())))
-            self.source_path_edit.setText(str(self.settings.value('ui/source_path', self.source_path_edit.text())))
-            self.record_check.setChecked(str(self.settings.value('ui/record_output', 'true')).lower() == 'true')
-            self.output_edit.setText(str(self.settings.value('ui/output_path', self.output_edit.text())))
-
-            scenario = self.settings.value('ui/scenario', None)
-            if scenario is not None:
-                sidx = self.scenario_combo.findData(scenario)
-                if sidx >= 0:
-                    self.scenario_combo.setCurrentIndex(sidx)
-        finally:
-            self._updating_controls = False
-            self._refresh_record_controls()
-            self._on_source_type_changed()
-            self._refresh_workspace_overviews()
-            self._refresh_sidebar_meta()
-            self._refresh_header_state()
-            workspace_key = str(self.settings.value('ui/workspace', 'operator'))
-            if workspace_key not in self.workspace_indexes:
-                workspace_key = 'operator'
-            self._on_workspace_selected(workspace_key)
-            self.inspector_module.setVisible(False)  # always hidden in operator layer
+        _load_app_settings_impl(self)
 
     def closeEvent(self, event):
         self._is_closing = True

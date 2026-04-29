@@ -39,6 +39,20 @@ jobs:
 
           python -m compileall -q "${targets[@]}"
 
+      - name: Install test dependencies
+        shell: bash
+        run: pip install pytest pytest-cov
+
+      - name: Run tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d "tests" ]; then
+            pytest --tb=short -q
+          else
+            echo "No tests directory found; skipping."
+          fi
+
       - name: Setup Node (if ui_web exists)
         if: ${{ hashFiles('ui_web/package.json') != '' }}
         uses: actions/setup-node@v4
