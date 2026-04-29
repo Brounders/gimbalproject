@@ -19,6 +19,7 @@ from uav_tracker.detectors.roi_assist import MotionROIProposer
 from uav_tracker.runtime import create_detector_backend
 from uav_tracker.detection_source import DetectionSource
 from uav_tracker.runtime.base import Detection
+from uav_tracker.runtime_config import RuntimeConfigView
 from uav_tracker.tracking.lock_tracker import TemplateLockTracker
 from uav_tracker.tracking.target_manager import TargetManager, TrackedTarget
 from utils.geometry import iou
@@ -187,14 +188,13 @@ class TrackerPipeline:
         self.tracking_sm = TrackingStateMachine(cfg)
         self.display_state = DisplayStateTracker(cfg)
 
+        # RuntimeConfigView: base cfg + per-scene overrides (BUG-001 fix).
+        # _adapt_auto_scene writes to _scene_overrides only; base cfg is never mutated.
+        self._runtime_cfg = RuntimeConfigView(cfg)
+
         # Auto scene detection state (TASK-020).
         self._auto_scene_state = 'day'       # 'day' or 'night'
         self._auto_scene_streak = 0          # consecutive frames in candidate state
-        self._auto_scene_orig_conf = float(cfg.CONF_THRESH)
-        self._auto_scene_orig_mot = int(cfg.NIGHT_MOT_THRESH)
-        self._auto_scene_orig_diff = int(cfg.NIGHT_DIFF_THRESH)
-        self._auto_scene_orig_lock_confirm = int(cfg.LOCK_CONFIRM_FRAMES)
-        self._auto_scene_orig_drone_lock_score = float(cfg.DRONE_LOCK_SCORE_MIN)
         self._auto_scene_frame_tick = 0
 
     def _update_video_time(self, source_fps: Optional[float]) -> None:
@@ -261,27 +261,27 @@ class TrackerPipeline:
         if self._auto_scene_streak < max(1, confirm // interval):
             return
 
-        # Scene confirmed — apply overrides
+        # Scene confirmed — update RuntimeConfigView overrides; base cfg is never mutated.
         self._auto_scene_state = candidate
         self._auto_scene_streak = 0
         if candidate == 'night':
-            self.cfg.CONF_THRESH = float(getattr(self.cfg, 'AUTO_SCENE_NIGHT_CONF', 0.12))
-            self.cfg.NIGHT_MOT_THRESH = int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_MOT_THRESH', 12))
-            self.cfg.NIGHT_DIFF_THRESH = int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_DIFF_THRESH', 8))
-            self.cfg.LOCK_CONFIRM_FRAMES = int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_LOCK_CONFIRM', 8))
-            self.cfg.DRONE_LOCK_SCORE_MIN = float(getattr(self.cfg, 'AUTO_SCENE_NIGHT_DRONE_LOCK_SCORE', 0.75))
+            self._runtime_cfg = self._runtime_cfg.with_overrides(
+                CONF_THRESH=float(getattr(self.cfg, 'AUTO_SCENE_NIGHT_CONF', 0.12)),
+                NIGHT_MOT_THRESH=int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_MOT_THRESH', 12)),
+                NIGHT_DIFF_THRESH=int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_DIFF_THRESH', 8)),
+                LOCK_CONFIRM_FRAMES=int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_LOCK_CONFIRM', 8)),
+                DRONE_LOCK_SCORE_MIN=float(getattr(self.cfg, 'AUTO_SCENE_NIGHT_DRONE_LOCK_SCORE', 0.75)),
+            )
         elif candidate == 'ir':
-            self.cfg.CONF_THRESH = float(getattr(self.cfg, 'AUTO_SCENE_IR_CONF', 0.10))
-            self.cfg.NIGHT_MOT_THRESH = int(getattr(self.cfg, 'AUTO_SCENE_IR_MOT_THRESH', 8))
-            self.cfg.NIGHT_DIFF_THRESH = int(getattr(self.cfg, 'AUTO_SCENE_IR_DIFF_THRESH', 6))
-            self.cfg.LOCK_CONFIRM_FRAMES = int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_LOCK_CONFIRM', 8))
-            self.cfg.DRONE_LOCK_SCORE_MIN = float(getattr(self.cfg, 'AUTO_SCENE_NIGHT_DRONE_LOCK_SCORE', 0.75))
-        else:  # day — restore originals
-            self.cfg.CONF_THRESH = self._auto_scene_orig_conf
-            self.cfg.NIGHT_MOT_THRESH = self._auto_scene_orig_mot
-            self.cfg.NIGHT_DIFF_THRESH = self._auto_scene_orig_diff
-            self.cfg.LOCK_CONFIRM_FRAMES = self._auto_scene_orig_lock_confirm
-            self.cfg.DRONE_LOCK_SCORE_MIN = self._auto_scene_orig_drone_lock_score
+            self._runtime_cfg = self._runtime_cfg.with_overrides(
+                CONF_THRESH=float(getattr(self.cfg, 'AUTO_SCENE_IR_CONF', 0.10)),
+                NIGHT_MOT_THRESH=int(getattr(self.cfg, 'AUTO_SCENE_IR_MOT_THRESH', 8)),
+                NIGHT_DIFF_THRESH=int(getattr(self.cfg, 'AUTO_SCENE_IR_DIFF_THRESH', 6)),
+                LOCK_CONFIRM_FRAMES=int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_LOCK_CONFIRM', 8)),
+                DRONE_LOCK_SCORE_MIN=float(getattr(self.cfg, 'AUTO_SCENE_NIGHT_DRONE_LOCK_SCORE', 0.75)),
+            )
+        else:  # day — clear overrides (restore base cfg values)
+            self._runtime_cfg = RuntimeConfigView(self.cfg)
 
     def _should_run_global_scan(self) -> tuple[bool, str]:
         active = self.manager.get_active_target()
@@ -450,7 +450,7 @@ class TrackerPipeline:
 
         if run_global_scan:
             t0 = time.perf_counter()
-            global_dets = self.backend.track_frame(frame, self.cfg)
+            global_dets = self.backend.track_frame(frame, self._runtime_cfg)
             timings_ms['global'] = (time.perf_counter() - t0) * 1000.0
             global_ids = self.manager.update_from_yolo(global_dets)
         else:
