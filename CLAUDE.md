@@ -205,3 +205,17 @@ Wiki живёт в `../wiki/` (то есть `Projects/wiki/`) — вне git, �
 ## Agent Team
 
 Правила безопасности для командных сессий: see `.claude/playbooks/agent_team_safety.md`
+
+---
+
+## Session Closing Protocol
+
+Обязателен в конце каждой сессии перед последним коммитом:
+
+1. `../wiki/synthesis/current_state.md` — обновить фазы и числа gate
+2. `memory/claude-memory-compiler/daily/YYYY-MM-DD.md` — что сделано, что изменилось
+3. `orchestrator/state/active_plan.md` — отметить выполненные задачи, указать следующую
+4. `git status` — worktree должен быть чистым или каждый файл классифицирован в worktree_review.md
+5. `git commit` — один коммит с описанием сессии
+
+Нарушение протокола = источник governance drift.
