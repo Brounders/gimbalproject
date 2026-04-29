@@ -175,3 +175,26 @@ class Config:
     SMOOTH_BBOX_SIZE_ALPHA: float = 0.20        # EMA alpha for width/height (softer)
     SMOOTH_BBOX_HOLD_FRAMES: int = 4            # hold last bbox N frames after target dropout
     DISPLAY_STATE_HOLD_FRAMES: int = 3          # hold display tracking state N frames on downgrade
+
+    def validate(self) -> None:
+        """Raise ValueError for obviously invalid field values.
+
+        Called by TrackerPipeline.__init__ before pipeline construction.
+        Uses explicit ValueError instead of assert (assert is skipped with -O flag).
+        """
+        if not (0.0 < self.CONF_THRESH < 1.0):
+            raise ValueError(f"CONF_THRESH={self.CONF_THRESH!r} must be in (0, 1)")
+        if not (0.0 < self.ROI_CONF_THRESH < 1.0):
+            raise ValueError(f"ROI_CONF_THRESH={self.ROI_CONF_THRESH!r} must be in (0, 1)")
+        if self.IMG_SIZE <= 0:
+            raise ValueError(f"IMG_SIZE={self.IMG_SIZE!r} must be > 0")
+        if self.ROI_IMG_SIZE <= 0:
+            raise ValueError(f"ROI_IMG_SIZE={self.ROI_IMG_SIZE!r} must be > 0")
+        if self.NIGHT_CONFIRM < 1:
+            raise ValueError(f"NIGHT_CONFIRM={self.NIGHT_CONFIRM!r} must be >= 1")
+        if self.LOCK_CONFIRM_FRAMES < 1:
+            raise ValueError(f"LOCK_CONFIRM_FRAMES={self.LOCK_CONFIRM_FRAMES!r} must be >= 1")
+        if self.BUDGET_TARGET_FPS <= 0:
+            raise ValueError(f"BUDGET_TARGET_FPS={self.BUDGET_TARGET_FPS!r} must be > 0")
+        if not (0.0 <= self.SMOOTH_BBOX_ALPHA <= 1.0):
+            raise ValueError(f"SMOOTH_BBOX_ALPHA={self.SMOOTH_BBOX_ALPHA!r} must be in [0, 1]")

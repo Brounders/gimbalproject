@@ -171,6 +171,7 @@ class TrackerPipeline:
     """
 
     def __init__(self, cfg: Config):
+        cfg.validate()
         self.cfg = cfg
         self.backend = create_detector_backend(cfg.MODEL_PATH, cfg.DEVICE)
         self.night = NightSmallTargetDetector(cfg)
