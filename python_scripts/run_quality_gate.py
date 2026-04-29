@@ -53,6 +53,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--allow-baseline-swpm-increase", type=float, default=0.2)
     p.add_argument("--allow-baseline-false-lock-increase", type=float, default=0.02)
 
+    p.add_argument("--lock-tracker", type=str, default="", choices=["", "on", "off"],
+                   help="Override LOCK_TRACKER_ENABLED: on=force enable, off=force disable.")
     p.add_argument("--out-dir", type=Path, default=Path("runs/evaluations/quality_gate"))
     p.add_argument("--tag", type=str, default="")
     p.add_argument(
@@ -210,6 +212,10 @@ def main() -> int:
     cfg = apply_runtime_preset(cfg, small_target_mode=small_target, imgsz=imgsz, conf=conf)
     if args.model:
         cfg.MODEL_PATH = args.model
+    if args.lock_tracker == "on":
+        cfg.LOCK_TRACKER_ENABLED = True
+    elif args.lock_tracker == "off":
+        cfg.LOCK_TRACKER_ENABLED = False
 
     baseline_rows = _load_baseline(args.baseline)
 

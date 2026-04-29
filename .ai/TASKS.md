@@ -4,7 +4,7 @@
 
 | ID | Description | Risk | Files Affected |
 |----|-------------|------|----------------|
-| BRIEF-033 | Training strategy reset — dataset composition fix, re-run training cycle | High: model regression if dataset split wrong | `configs/`, `python_scripts/training_helpers.py`, orchestrator brief |
+| BRIEF-033 | **Phase A DONE ✅. Phase B — BLOCKED (2026-03-17, Agent-2 audit).** Critical blocker: все доступные датасеты содержат только дроны — antiuav (nc=1, drone-only), drone-bird-yolo (185.8:1), mendeley_ir пути указывают на Desktop (broken). Training reset без bird-примеров не решит регрессию. build_mixed_dataset.py не поддерживает >2 источника и не умеет class weighting. **REQUIRED BEFORE PHASE B (Bround action):** переместить `drone_bird_mendeley_ir_mix_v1` из Desktop → в проект ИЛИ найти альтернативный bird YOLO датасет (nc=2). После восстановления bird-данных: (1) конвертировать antiuav YAML nc=1→2, (2) пересчитать --night-multiplier. drone_closeup_mixkit GT — NON-BLOCKER (day false_lock пропускается). | Phase B: BLOCKED / Phase E: HIGH | `datasets/drone_bird_mendeley_ir_mix_v1/` (broken paths → Desktop), `datasets/antiuav_rgbt_ir_yolo/` (nc=1 несовместим), `python_scripts/build_mixed_dataset.py` |
 
 ## P1 — Next Sprint
 
@@ -12,7 +12,7 @@
 |----|-------------|------|----------------|
 | BRIEF-031 | AutoSceneAdapter extraction — BLOCKER: (1) file doesn't exist, requires NEW class creation not file move; (2) method mutates 5 cfg fields in-place (`CONF_THRESH`, `NIGHT_MOT_THRESH`, `NIGHT_DIFF_THRESH`, `LOCK_CONFIRM_FRAMES`, `DRONE_LOCK_SCORE_MIN`) affecting NightDetector/TargetManager/LockTracker downstream; (3) 0% test coverage — no regression safety net; (4) interface design unresolved (pass cfg ref vs return override dict) | High: cfg mutation pattern must be resolved before extraction | `src/uav_tracker/pipeline.py:190-283`, new `src/uav_tracker/pipeline_control/auto_scene_adapter.py` |
 | A10 | Test coverage → **SUBSTANTIALLY COMPLETE** ✅. 282 tests total (was 48). Cycles: C1 DisplayStateTracker +21, C2 config.py +67, C3 TargetManager lifecycle +37, C4 profile_io blocked→deferred, C5 modes.py +58, C6 profile_io +51. Remaining: detectors (cv2 — permanently deferred), overlay.py (cv2 — deferred) | Medium | All new test files committed. Suite: 282/282 OK |
-| SCRIPTS-001 | Reorganise `python_scripts/` → subdirs. **RECOMMENDED NEXT: Phase 1 only (LOW)** — create `training/`, `evaluation/`, `tools/` dirs + empty `__init__.py` files, zero file moves. Phase 2 (MEDIUM) requires: fix `run_dataset_batch.py:12`, update 3 shell scripts (20 refs), update `RUNBOOK.md` (13 refs) — do separately | Low (Phase 1) / Medium (Phase 2) | Phase 1: mkdir only. Phase 2: `python_scripts/*.sh`, `run_dataset_batch.py:12`, `RUNBOOK.md` |
+| SCRIPTS-001 | Phase 1 DONE ✅ (commit 27b1616). **Phase 2 — DEFERRED (HIGH risk, re-classified 2026-03-15).** Agent-2 audit found: 21 files to move, 3 shell scripts × 22 hardcoded refs, RUNBOOK.md × 46 refs (not 13 as estimated). Any partial update breaks launch scenarios. Checklist required: (1) `run_dataset_batch.py:12` path, (2) .sh scripts 22 refs, (3) RUNBOOK.md 46 refs. Do not attempt without dedicated checklist task. | High (Phase 2) | Phase 2: `python_scripts/*.sh` (22 refs), `run_dataset_batch.py:12`, `RUNBOOK.md` (46 refs), orchestrator docs |
 
 ## P2 — Future
 
@@ -20,7 +20,7 @@
 |----|-------------|------|----------------|
 | BRIEF-030 | Config nested groups — restructure 145-field flat dataclass into grouped sections; breaking API change | High: all callers use `cfg.<field>` flat access | `src/uav_tracker/config.py`, `pipeline.py`, `main_gui.py`, all callers |
 | Hailo impl | HailoBackend real implementation for RPi5 — replace stub with actual Hailo SDK calls | High: hardware dependency, platform-specific | `src/uav_tracker/runtime/hailo_backend.py` |
-| ROOT-DOC-001 | Root MD proliferation — 12+ MD files at root; consolidate/move to `docs/` without breaking existing references | Low | root `*.md` files |
+| ROOT-DOC-001 | **ROOT-DOC-001a DONE ✅** (commit f9d7080): `PROJECT_COMPASS.md`, `ENGINEERING_CODEX.md`, `ENGINEERING_DECISIONS.md` → `docs/philosophy/`. Ссылки в AGENTS.md + CODEX_ROLE.md обновлены. **`DEVELOPMENT_NEXT_STEPS.md` удалён ✅** (commit 81127b7, ephemeral, 0 functional refs). **ROOT-DOC-001b DEFERRED** — RUNBOOK.md (51 refs), OPERATOR_BASELINE.md (135 refs), PROJECT_ARCHITECTURE.md (294 refs) остаются в root. | Medium (ROOT-DOC-001b) | root: 9 files remain; `docs/philosophy/`: 3 files moved |
 | MAIN-GUI-001 | Split `app/main_gui.py` (1600 lines) — extract TrackerWorker business logic from UI layer | High | `app/main_gui.py`, new `app/workers/tracker_worker.py` |
 | DISP-001..003 | ~~Display cluster moves~~ — COMPLETED | — | — |
 
