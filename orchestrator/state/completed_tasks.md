@@ -68,3 +68,7 @@ TASK-20260313-083 | Claude Mac | Accepted | 2026-03-13 | orchestrator/reports/RE
 TASK-20260313-084 | Claude Mac | Accepted | 2026-03-13 | orchestrator/reports/REPORT-20260313-084.md
 TASK-20260313-085 | Claude Mac | Accepted | 2026-03-13 | orchestrator/reports/REPORT-20260313-085.md
 TASK-20260313-086 | Claude Mac | Accepted | 2026-03-13 | orchestrator/reports/REPORT-20260313-086.md
+
+REPORT-20260314-087 | Claude Mac | ACCEPTED | 2026-03-14 | orchestrator/reports/REPORT-20260314-087.md — A01/A03/A05/A06/A09/A11/A12 + day gate fix
+REPORT-20260314-088 | Claude Mac | ACCEPTED (needs commit) | 2026-03-14 | orchestrator/reports/REPORT-20260314-088-dataset-audit.md — dataset audit OQ-001
+REPORT-20260314-089 | Claude Mac | NEEDS_REVIEW | 2026-03-14 | orchestrator/reports/REPORT-20260314-089-a08-decomposition.md — A08 plan in worktree, not merged

@@ -1,55 +1,65 @@
 # Active Plan
 
 ## Plan ID
-- AP-20260314-027
+- AP-20260429-GOVERNANCE
 
 ## Source Direction
-- Human approved full tech-debt closure (excluding Hailo) on 2026-03-14.
-- Scope: все аудитные задачи A01-A09, A12, day gate fix, новая training стратегия.
-- A10 (тесты >30%) — условный: выполнить только после уверенности в успехе.
-- Hailo (A04) — исключён явно.
+- Human approved governance restoration + architecture fixes on 2026-04-29.
+- Scope: синхронизация источников правды, contracts, pytest fix, pipeline contracts (A1a-A1d).
+- RTX/Hailo/новые алгоритмы — вне этого плана (следующий цикл).
 
 ## Status
 - In Progress
 
-## Phase 1 — Стабилизация (текущая)
-- [x] A02: print() → logging в run_tracker (agent-team ветка)
-- [x] A05: _iou() → utils/geometry.py (agent-team ветка)
-- [x] A11: try/except в UltralyticsBackend (agent-team ветка)
-- [x] baseline.pt установлен (drone_bird_probe_fast, 2026-03-14)
-- [ ] A01: Race condition — threading.Event в TrackerWorker и EvaluationWorker
-- [ ] A03: Circular import — перенести overlay import в начало pipeline.py
-- [ ] A12: Magic numbers → Config (NIGHT_MOG2_HISTORY, NIGHT_MOG2_VAR_THRESH, NIGHT_GRID_CELL)
+---
 
-## Phase 2 — Day Gate Diagnosis
-- [ ] Диагностика: почему false_lock=1.000 на day клипах для всех моделей
-- [ ] Исправление структурной проблемы day gate
+## Архив: AP-20260314-027 (CLOSED)
 
-## Phase 3 — Документация
-- [ ] A06: Docstrings на TrackerPipeline и публичных методах
+Закрыт на основании REPORT-20260314-087 (committed, ACCEPTED).
 
-## Phase 4 — Архитектура (отдельные briefs)
-- [ ] A09: Config 122 полей → nested groups (отдельный brief, ломает публичный API)
-- [ ] A08: TrackerPipeline decomposition SRP (отдельный brief, после A10 или параллельно с осторожностью)
+| Задача | Статус | Источник |
+|--------|--------|----------|
+| A01: threading.Event race condition | ✅ DONE | REPORT-087 |
+| A02: print() → logging | ✅ DONE | REPORT-087 |
+| A03: circular import fix | ✅ DONE | REPORT-087 |
+| A05: _iou() → utils/geometry.py | ✅ DONE | REPORT-087 |
+| A06: TrackerPipeline docstrings | ✅ DONE | REPORT-087 |
+| A07: Kalman vs EMA → ОСТАВИТЬ EMA | ✅ DECIDED | BRIEF-032 |
+| A09: Config sections (non-breaking) | ✅ DONE | REPORT-087 |
+| A11: try/except UltralyticsBackend | ✅ DONE | REPORT-087 |
+| A12: magic numbers → Config | ✅ DONE | REPORT-087 |
+| Day gate fix (gt_frames=0 skip) | ✅ DONE | REPORT-087 |
+| A08: TrackerPipeline decomposition | ⏳ WORKTREE | REPORT-089 (needs review) |
+| A10: тесты >30% | ⏳ WORKTREE | Session 7 (не смержена) |
+| Training strategy / dataset audit | ⏳ NEXT CYCLE | OQ-001 |
 
-## Phase 5 — Алгоритмика
-- [x] A07: Kalman vs EMA — решение принято: ОСТАВИТЬ EMA (BRIEF-20260314-032)
-      Обоснование: все провалы gate были на уровне детектора, не prediction.
-      Калман не измерим через текущий gate и рискует регрессией на ночи.
+---
 
-## Phase 6 — Training стратегия
-- [x] Корневая причина задокументирована: drone-bird-yolo не имеет night visible-light данных
-- [x] Brief написан: BRIEF-20260314-033 — шаги до следующего обучения
-- [ ] Шаг 1: Аудит датасета — отдельный Plan (следующая сессия)
-- [ ] Шаг 4-5: Новый training brief после аудита
+## AP-20260429-GOVERNANCE — Текущий план
 
-## Phase 7 — Тесты (условная)
-- [ ] A10: Покрытие тестами >30% — только после уверенности в успехе
+### G-фаза — Governance (выполняется сейчас)
+- [x] G1: Read-only divergence report (2026-04-29)
+- [x] G2a: Canonical state sync — wiki/synthesis/current_state.md обновлён
+- [ ] G2b: Promotion + dataset contracts
+- [ ] G2c: Worktree classification document
+
+### A-фаза — Architecture fixes
+- [ ] **A1a**: DetectionSource enum + pytest PYTHONPATH fix
+- [ ] **A1b**: FrameContext dataclass
+- [ ] **A1c**: RuntimeConfigView (BUG-001 архитектурное закрытие)
+- [ ] **A1d**: Config.validate() — raise ValueError, не assert
+
+### Exit Criteria
+- [ ] wiki/synthesis/current_state.md содержит Canonical Phase Status
+- [ ] configs/promotion_contract.yaml существует
+- [ ] configs/dataset_contract.yaml существует
+- [ ] orchestrator/state/worktree_review.md существует
+- [ ] pytest запускается без PYTHONPATH вручную
+- [ ] DetectionSource enum используется вместо строк
+- [ ] Config.validate() выбрасывает ValueError при плохих значениях
+- [ ] RuntimeConfigView заменяет мутацию cfg в auto-scene
+- [ ] Все изменения в одной ветке, закоммичены
+- [ ] active_plan.md указывает на следующий implementation цикл
 
 ## Backlog Policy
 - Любые задачи вне списков выше считаются backlog и не исполняются.
-
-## Exit Criteria
-- [ ] Все фазы 1-6 завершены и приняты
-- [ ] Каждая фаза задокументирована отчётом в orchestrator/reports
-- [ ] Smoke-test проходит после каждой фазы
