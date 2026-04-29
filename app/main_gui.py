@@ -256,25 +256,37 @@ class MainWindow(QMainWindow):
         central.setObjectName('CentralRoot')
         self.setCentralWidget(central)
         root = QVBoxLayout(central)
-        root.setContentsMargins(10, 10, 10, 10)
-        root.setSpacing(8)
+        root.setContentsMargins(16, 16, 16, 16)
+        root.setSpacing(10)
 
         self._workspace_order = ['operator']
         self.workspace_indexes = {'operator': 0}
         self.sidebar_buttons = {}
 
-        root.addWidget(self.build_header())
+        # ── Top pill (centred) ──────────────────────────────────────────────
+        topbar_row = QHBoxLayout()
+        topbar_row.setContentsMargins(0, 0, 0, 0)
+        topbar_row.addStretch(1)
+        topbar_row.addWidget(self.build_topbar())
+        topbar_row.addStretch(1)
+        root.addLayout(topbar_row)
 
-        body_splitter = QSplitter(Qt.Horizontal)
-        body_splitter.setChildrenCollapsible(False)
-        body_splitter.addWidget(self.build_left_rail())
-        body_splitter.addWidget(self.build_video_stage())
-        body_splitter.setStretchFactor(0, 0)
-        body_splitter.setStretchFactor(1, 1)
-        body_splitter.setSizes([280, 1040])
-        root.addWidget(body_splitter, 1)
+        # ── Body: left | video | right ──────────────────────────────────────
+        body = QHBoxLayout()
+        body.setContentsMargins(0, 0, 0, 0)
+        body.setSpacing(12)
+        body.addWidget(self.build_left_rail(), 0)
+        body.addWidget(self.build_video_stage(), 1)
+        body.addWidget(self.build_right_panel(), 0)
+        root.addLayout(body, 1)
 
-        root.addWidget(self.build_bottom_console())
+        # ── Dock pill (centred) ─────────────────────────────────────────────
+        dock_row = QHBoxLayout()
+        dock_row.setContentsMargins(0, 0, 0, 0)
+        dock_row.addStretch(1)
+        dock_row.addWidget(self.build_dock())
+        dock_row.addStretch(1)
+        root.addLayout(dock_row)
 
         self.log_view = QPlainTextEdit()
         self.log_view.setReadOnly(True)
@@ -291,144 +303,190 @@ class MainWindow(QMainWindow):
         quit_action.triggered.connect(self.close)
         self.menuBar().addAction(quit_action)
 
-    def build_header(self) -> QFrame:
-        header = QFrame()
-        header.setObjectName('HeaderBar')
-        header.setMinimumHeight(60)
-        header.setMaximumHeight(66)
+    def build_topbar(self) -> QFrame:
+        bar = QFrame()
+        bar.setObjectName('TopBar')
 
-        layout = QHBoxLayout(header)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(8)
+        layout = QHBoxLayout(bar)
+        layout.setContentsMargins(14, 0, 14, 0)
+        layout.setSpacing(14)
 
-        self.header_title_label = QLabel('Система сопровождения БПЛА')
-        self.header_title_label.setObjectName('WindowTitle')
-        layout.addWidget(self.header_title_label)
+        # Brand
+        brand_name = QLabel('GIMBAL')
+        brand_name.setObjectName('BrandName')
+        brand_sub = QLabel('система сопровождения')
+        brand_sub.setObjectName('BrandSub')
+        layout.addWidget(brand_name)
+        layout.addWidget(brand_sub)
 
-        layout.addSpacing(6)
+        sep1 = QLabel()
+        sep1.setObjectName('TopBarSep')
+        layout.addWidget(sep1)
+
+        # Mode selector (EO / IR / NV) maps to quick mode buttons
+        mode_frame = QFrame()
+        mode_frame.setObjectName('ModeSelector')
+        mode_layout = QHBoxLayout(mode_frame)
+        mode_layout.setContentsMargins(3, 3, 3, 3)
+        mode_layout.setSpacing(2)
+
+        self.quick_auto_btn = QPushButton('АВТО')
+        self.quick_day_btn  = QPushButton('ДЕНЬ')
+        self.quick_night_btn = QPushButton('НОЧЬ')
+        self.quick_ir_btn   = QPushButton('IR')
+        for btn in (self.quick_auto_btn, self.quick_day_btn,
+                    self.quick_night_btn, self.quick_ir_btn):
+            btn.setObjectName('ModeBtn')
+            mode_layout.addWidget(btn)
+        self.quick_auto_btn.setProperty('active', 'true')
+        refresh_widget_style(self.quick_auto_btn)
+
+        layout.addWidget(mode_frame)
+
+        sep2 = QLabel()
+        sep2.setObjectName('TopBarSep')
+        layout.addWidget(sep2)
+
+        # Status badge
         self.top_state_badge = QLabel('IDLE')
         self.top_state_badge.setObjectName('HeaderStatus')
         self.top_state_badge.setProperty('state', 'idle')
         layout.addWidget(self.top_state_badge)
 
-        self.header_source_label = QLabel('Источник: CAM 0')
-        self.header_source_label.setObjectName('HeaderMeta')
-        layout.addWidget(self.header_source_label, 1)
+        # Source / scenario label
+        self.header_source_label = QLabel('CAM 0')
+        self.header_source_label.setObjectName('BrandSub')
+        layout.addWidget(self.header_source_label)
 
-        self.record_indicator_label = QLabel('REC OFF')
+        sep3 = QLabel()
+        sep3.setObjectName('TopBarSep')
+        layout.addWidget(sep3)
+
+        # Record indicator
+        self.record_indicator_label = QLabel('● REC')
         self.record_indicator_label.setObjectName('RecordIndicator')
         self.record_indicator_label.setProperty('recording', False)
         layout.addWidget(self.record_indicator_label)
 
-        self.next_target_btn = QPushButton('Следующая цель')
-        self.next_target_btn.setProperty('variant', 'ghost')
-        self.next_target_btn.setToolTip('Переключить на следующую доступную цель')
-        self.next_target_btn.setEnabled(False)
-        layout.addWidget(self.next_target_btn)
+        sep4 = QLabel()
+        sep4.setObjectName('TopBarSep')
+        layout.addWidget(sep4)
 
+        # Expert button
         self.expert_btn = QPushButton('Эксперт')
-        self.expert_btn.setProperty('variant', 'ghost')
+        self.expert_btn.setObjectName('ModeBtn')
         layout.addWidget(self.expert_btn)
 
         self.expert_badge = QLabel('EXP')
-        self.expert_badge.setObjectName('HeaderMeta')
+        self.expert_badge.setObjectName('ChipAccent')
         self.expert_badge.setVisible(False)
         layout.addWidget(self.expert_badge)
 
+        # Fullscreen
         self.fullscreen_btn = QPushButton('⛶')
+        self.fullscreen_btn.setObjectName('ModeBtn')
         self.fullscreen_btn.setFixedWidth(34)
-        self.fullscreen_btn.setProperty('variant', 'ghost')
         self.fullscreen_btn.setToolTip('Полный экран')
         layout.addWidget(self.fullscreen_btn)
 
-        self.start_btn = QPushButton('Старт')
-        self.start_btn.setProperty('variant', 'primary')
-        layout.addWidget(self.start_btn)
+        # Next target (hidden until tracking)
+        self.next_target_btn = QPushButton('↕ Цель')
+        self.next_target_btn.setObjectName('ModeBtn')
+        self.next_target_btn.setToolTip('Следующая цель')
+        self.next_target_btn.setEnabled(False)
+        layout.addWidget(self.next_target_btn)
 
-        self.stop_btn = QPushButton('Стоп')
-        self.stop_btn.setProperty('variant', 'destructive')
-        self.stop_btn.setEnabled(False)
-        layout.addWidget(self.stop_btn)
+        sep5 = QLabel()
+        sep5.setObjectName('TopBarSep')
+        layout.addWidget(sep5)
 
-        return header
+        # Clock
+        from PySide6.QtCore import QTimer, QTime
+        self._clock_label = QLabel(QTime.currentTime().toString('HH:mm'))
+        self._clock_label.setObjectName('TopBarClock')
+        layout.addWidget(self._clock_label)
+        self._clock_timer = QTimer(self)
+        self._clock_timer.timeout.connect(
+            lambda: self._clock_label.setText(QTime.currentTime().toString('HH:mm'))
+        )
+        self._clock_timer.start(30_000)
+
+        return bar
 
     def build_left_rail(self) -> QWidget:
         rail = QFrame()
         rail.setObjectName('LeftControlRail')
-        rail.setMinimumWidth(280)
-        rail.setMaximumWidth(310)
+        rail.setFixedWidth(260)
+
         layout = QVBoxLayout(rail)
-        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
 
-        title = QLabel('Операционное управление')
-        title.setObjectName('RailSectionTitle')
-        layout.addWidget(title)
+        # ── Source panel ────────────────────────────────────────────────────
+        src_panel = QFrame()
+        src_panel.setObjectName('GlassPanel')
+        src_layout = QVBoxLayout(src_panel)
+        src_layout.setContentsMargins(14, 14, 14, 14)
+        src_layout.setSpacing(8)
 
-        self.quick_auto_btn = QPushButton('Авто')
-        self.quick_auto_btn.setProperty('variant', 'ghost')
-        self.quick_day_btn = QPushButton('День')
-        self.quick_day_btn.setProperty('variant', 'ghost')
-        self.quick_night_btn = QPushButton('Ночь')
-        self.quick_night_btn.setProperty('variant', 'ghost')
-        self.quick_ir_btn = QPushButton('IR')
-        self.quick_ir_btn.setProperty('variant', 'ghost')
-        self.quick_auto_btn.setToolTip('Авто: адаптивный день/ночь (default preset, ночной детектор вкл.)')
-        self.quick_day_btn.setToolTip('День: только дневной режим (ночной детектор выкл.)')
-        self.quick_night_btn.setToolTip('Ночь: ночной preset в операторском режиме')
-        self.quick_ir_btn.setToolTip('IR: thermal / Anti-UAV preset')
-
-        quick_row = QHBoxLayout()
-        quick_row.setContentsMargins(0, 0, 0, 0)
-        quick_row.setSpacing(4)
-        quick_row.addWidget(self.quick_auto_btn)
-        quick_row.addWidget(self.quick_day_btn)
-        quick_row.addWidget(self.quick_night_btn)
-        quick_row.addWidget(self.quick_ir_btn)
-        layout.addLayout(quick_row)
+        src_title = QLabel('ИСТОЧНИК')
+        src_title.setObjectName('RailSectionTitle')
+        src_layout.addWidget(src_title)
 
         self.source_type_combo = QComboBox()
         self.source_type_combo.addItem('Камера', 'camera')
         self.source_type_combo.addItem('Видео', 'video')
         self.source_type_combo.addItem('Поток', 'stream')
-        layout.addWidget(self.source_type_combo)
+        src_layout.addWidget(self.source_type_combo)
 
         self.camera_index_spin = QSpinBox()
         self.camera_index_spin.setRange(0, 16)
         self.camera_index_spin.setValue(0)
-        layout.addWidget(self.camera_index_spin)
+        src_layout.addWidget(self.camera_index_spin)
 
         self.source_path_label = QLabel('Видео файл')
         self.source_path_label.setObjectName('RailSectionTitle')
-        layout.addWidget(self.source_path_label)
+        src_layout.addWidget(self.source_path_label)
 
         self.source_path_edit = QLineEdit('')
         self.source_path_edit.setPlaceholderText('/путь/к/видео.mp4')
-        layout.addWidget(self.source_path_edit)
+        src_layout.addWidget(self.source_path_edit)
 
         self.source_browse_btn = QPushButton('Выбрать...')
-        layout.addWidget(self.source_browse_btn)
+        src_layout.addWidget(self.source_browse_btn)
+
+        layout.addWidget(src_panel)
+
+        # ── Record panel ────────────────────────────────────────────────────
+        rec_panel = QFrame()
+        rec_panel.setObjectName('GlassPanel')
+        rec_layout = QVBoxLayout(rec_panel)
+        rec_layout.setContentsMargins(14, 14, 14, 14)
+        rec_layout.setSpacing(8)
+
+        rec_title = QLabel('ЗАПИСЬ')
+        rec_title.setObjectName('RailSectionTitle')
+        rec_layout.addWidget(rec_title)
 
         self.record_check = QCheckBox('Сохранять видео')
         self.record_check.setChecked(True)
-        layout.addWidget(self.record_check)
+        rec_layout.addWidget(self.record_check)
 
-        self.output_path_label = QLabel('Выход')
+        self.output_path_label = QLabel('Путь')
         self.output_path_label.setObjectName('RailSectionTitle')
-        layout.addWidget(self.output_path_label)
+        rec_layout.addWidget(self.output_path_label)
 
         self.output_edit = QLineEdit(str(ROOT / 'runs' / 'gui_output.mp4'))
-        layout.addWidget(self.output_edit)
+        rec_layout.addWidget(self.output_edit)
 
         self.output_browse_btn = QPushButton('Куда сохранить...')
-        layout.addWidget(self.output_browse_btn)
+        rec_layout.addWidget(self.output_browse_btn)
 
         self.eval_btn = QPushButton('Оценка')
-        layout.addWidget(self.eval_btn)
+        self.eval_btn.setProperty('variant', 'ghost')
+        rec_layout.addWidget(self.eval_btn)
 
-        self.inspector_module = self.build_inspector_drawer()
-        self.inspector_module.setVisible(False)
-        layout.addWidget(self.inspector_module, 1)
+        layout.addWidget(rec_panel)
 
         layout.addStretch(1)
         return rail
@@ -441,20 +499,187 @@ class MainWindow(QMainWindow):
         self.video_stage.add_overlay_top_right(self.target_info_card)
         return self.video_stage
 
-    def build_bottom_console(self) -> QFrame:
-        bar = QFrame()
-        bar.setObjectName('BottomConsole')
-        bar.setMinimumHeight(32)
-        bar.setMaximumHeight(36)
-        layout = QHBoxLayout(bar)
-        layout.setContentsMargins(8, 0, 8, 0)
-        layout.setSpacing(6)
+    def build_right_panel(self) -> QWidget:
+        col = QFrame()
+        col.setObjectName('LeftControlRail')
+        col.setFixedWidth(340)
 
-        self.bottom_console_label = QLabel('$ готово к запуску')
+        layout = QVBoxLayout(col)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+
+        # ── Active target card ──────────────────────────────────────────────
+        card = QFrame()
+        card.setObjectName('ActiveTargetCard')
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(18, 18, 18, 18)
+        card_layout.setSpacing(12)
+
+        # Header row: live badge + id
+        hdr = QHBoxLayout()
+        hdr.setContentsMargins(0, 0, 0, 0)
+        self._rp_live_badge = QLabel('● LOCK')
+        self._rp_live_badge.setObjectName('LiveBadge')
+        self._rp_id_label = QLabel('—')
+        self._rp_id_label.setObjectName('ActiveTargetId')
+        hdr.addWidget(self._rp_live_badge)
+        hdr.addWidget(self._rp_id_label)
+        hdr.addStretch(1)
+        self._rp_state_chip = QLabel('IDLE')
+        self._rp_state_chip.setObjectName('ChipWarn')
+        hdr.addWidget(self._rp_state_chip)
+        card_layout.addLayout(hdr)
+
+        # Name + sub
+        self._rp_name_label = QLabel('Нет цели')
+        self._rp_name_label.setObjectName('ActiveTargetName')
+        self._rp_sub_label = QLabel('ожидание...')
+        self._rp_sub_label.setObjectName('ActiveTargetSub')
+        card_layout.addWidget(self._rp_name_label)
+        card_layout.addWidget(self._rp_sub_label)
+
+        # 3-metric grid: conf / fps / source
+        metrics = QHBoxLayout()
+        metrics.setContentsMargins(0, 0, 0, 0)
+        metrics.setSpacing(0)
+        self._rp_conf_key  = QLabel('УВЕРЕН')
+        self._rp_conf_val  = QLabel('—')
+        self._rp_fps_key   = QLabel('FPS')
+        self._rp_fps_val   = QLabel('—')
+        self._rp_src_key   = QLabel('РЕЖИМ')
+        self._rp_src_val   = QLabel('—')
+        for key, val in ((self._rp_conf_key, self._rp_conf_val),
+                         (self._rp_fps_key,  self._rp_fps_val),
+                         (self._rp_src_key,  self._rp_src_val)):
+            key.setObjectName('MetricKey')
+            val.setObjectName('MetricVal')
+            cell = QVBoxLayout()
+            cell.setContentsMargins(0, 0, 0, 0)
+            cell.setSpacing(4)
+            cell.addWidget(key)
+            cell.addWidget(val)
+            metrics.addLayout(cell)
+            metrics.addStretch(1)
+        card_layout.addLayout(metrics)
+
+        # Confidence bar
+        bar_row = QHBoxLayout()
+        bar_row.setContentsMargins(0, 0, 0, 0)
+        bar_row.setSpacing(10)
+        conf_lbl = QLabel('CONF')
+        conf_lbl.setObjectName('MetricKey')
+        bar_track = QFrame()
+        bar_track.setObjectName('ConfBarTrack')
+        bar_track.setMinimumWidth(60)
+        bar_inner = QHBoxLayout(bar_track)
+        bar_inner.setContentsMargins(0, 0, 0, 0)
+        bar_inner.setSpacing(0)
+        self._rp_conf_bar = QFrame()
+        self._rp_conf_bar.setObjectName('ConfBarFill')
+        self._rp_conf_bar.setFixedWidth(0)
+        bar_inner.addWidget(self._rp_conf_bar)
+        bar_inner.addStretch(1)
+        self._rp_conf_pct = QLabel('—')
+        self._rp_conf_pct.setObjectName('MetricVal')
+        self._rp_conf_pct.setFixedWidth(42)
+        bar_row.addWidget(conf_lbl)
+        bar_row.addWidget(bar_track, 1)
+        bar_row.addWidget(self._rp_conf_pct)
+        card_layout.addLayout(bar_row)
+
+        layout.addWidget(card)
+
+        # ── Runtime stats card ──────────────────────────────────────────────
+        rt = QFrame()
+        rt.setObjectName('RuntimeCard')
+        rt_layout = QGridLayout(rt)
+        rt_layout.setContentsMargins(16, 14, 16, 14)
+        rt_layout.setHorizontalSpacing(20)
+        rt_layout.setVerticalSpacing(6)
+
+        rt_title = QLabel('ТЕЛЕМЕТРИЯ ТРЕКЕРА')
+        rt_title.setObjectName('RuntimeTitle')
+        rt_layout.addWidget(rt_title, 0, 0, 1, 3)
+
+        self._rp_rt_fps_k  = QLabel('FPS')
+        self._rp_rt_fps_v  = QLabel('—')
+        self._rp_rt_bdg_k  = QLabel('БЮДЖЕТ')
+        self._rp_rt_bdg_v  = QLabel('—')
+        self._rp_rt_tgt_k  = QLabel('ЦЕЛЕЙ')
+        self._rp_rt_tgt_v  = QLabel('—')
+
+        for i, (k, v) in enumerate(((self._rp_rt_fps_k, self._rp_rt_fps_v),
+                                     (self._rp_rt_bdg_k, self._rp_rt_bdg_v),
+                                     (self._rp_rt_tgt_k, self._rp_rt_tgt_v))):
+            k.setObjectName('RuntimeTitle')
+            v.setObjectName('RuntimeVal')
+            rt_layout.addWidget(k, 1, i)
+            rt_layout.addWidget(v, 2, i)
+
+        layout.addWidget(rt)
+
+        # ── Inspector (diagnostics) — collapsible ───────────────────────────
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        self.inspector_module = self.build_inspector_drawer()
+        self.inspector_module.setVisible(True)
+        scroll.setWidget(self.inspector_module)
+        layout.addWidget(scroll, 1)
+
+        return col
+
+    def build_dock(self) -> QFrame:
+        dock = QFrame()
+        dock.setObjectName('Dock')
+
+        layout = QHBoxLayout(dock)
+        layout.setContentsMargins(12, 0, 12, 0)
+        layout.setSpacing(4)
+
+        # Status / log line
+        self.bottom_console_label = QLabel('готово к запуску')
         self.bottom_console_label.setObjectName('BottomConsoleText')
         self.bottom_console_label.setWordWrap(False)
         layout.addWidget(self.bottom_console_label, 1)
-        return bar
+
+        sep1 = QFrame()
+        sep1.setObjectName('DockSep')
+        layout.addWidget(sep1)
+
+        # Start
+        self.start_btn = QPushButton('▶  Старт')
+        self.start_btn.setObjectName('DockPrimary')
+        layout.addWidget(self.start_btn)
+
+        # Stop
+        self.stop_btn = QPushButton('■  Стоп')
+        self.stop_btn.setObjectName('DockDestructive')
+        self.stop_btn.setEnabled(False)
+        layout.addWidget(self.stop_btn)
+
+        sep2 = QFrame()
+        sep2.setObjectName('DockSep')
+        layout.addWidget(sep2)
+
+        # Next target
+        btn_next = self.next_target_btn if hasattr(self, 'next_target_btn') else QPushButton('↕')
+        # next_target_btn already created in build_topbar; add a duplicate dock shortcut
+        dock_next = QPushButton('↕')
+        dock_next.setObjectName('DockIconBtn')
+        dock_next.setToolTip('Следующая цель')
+        dock_next.setEnabled(False)
+        dock_next.clicked.connect(self._request_next_target)
+        self._dock_next_btn = dock_next
+        layout.addWidget(dock_next)
+
+        return dock
+
+    # keep alias so any code calling build_bottom_console still works
+    def build_bottom_console(self) -> QFrame:
+        return self.build_dock()
 
     def build_inspector_drawer(self) -> QWidget:
         body = QGroupBox('Диагностика')
@@ -1488,8 +1713,48 @@ class MainWindow(QMainWindow):
         self._tc_state.setText(card_state)
         self._tc_state.setProperty('state', card_state_key)
         refresh_widget_style(self._tc_state)
+
+        # ── Right panel updates ─────────────────────────────────────────────
+        self._rp_id_label.setText(f'ID {active_id}' if active_id is not None else '—')
+        self._rp_name_label.setText(
+            f'ID {active_id}' if active_id is not None else ('Потеря сигнала' if tracker_mode == 'LOST' else 'Нет цели')
+        )
+        self._rp_sub_label.setText(f'{active_source} · {operator_mode}')
+
+        if tracker_mode == 'TRACK':
+            self._rp_live_badge.setObjectName('LiveBadge')
+            self._rp_state_chip.setText('ЗАХВАТ')
+            self._rp_state_chip.setObjectName('ChipOk')
+        elif tracker_mode == 'LOST':
+            self._rp_live_badge.setObjectName('ChipWarn')
+            self._rp_state_chip.setText('ПОТЕРЯ')
+            self._rp_state_chip.setObjectName('ChipWarn')
+        else:
+            self._rp_live_badge.setObjectName('ChipAccent')
+            self._rp_state_chip.setText('СКАН')
+            self._rp_state_chip.setObjectName('ChipAccent')
+        refresh_widget_style(self._rp_live_badge)
+        refresh_widget_style(self._rp_state_chip)
+
+        self._rp_conf_val.setText(f'{confidence_pct}%')
+        self._rp_fps_val.setText(f'{fps:.0f}')
+        self._rp_src_val.setText(tracker_mode)
+        self._rp_conf_pct.setText(f'{confidence_pct}%')
+
+        # Confidence bar fill (max width is track width of ConfBarTrack)
+        bar_w = max(0, int(self._rp_conf_bar.parent().width() * display_confidence))
+        self._rp_conf_bar.setFixedWidth(bar_w)
+
+        # Runtime card
+        self._rp_rt_fps_v.setText(f'{fps:.0f}')
+        self._rp_rt_bdg_v.setText(f'L{budget_level}')
+        self._rp_rt_tgt_v.setText(str(target_count))
+
         # Enable/disable Next Target button
-        self.next_target_btn.setEnabled(self._job_state == 'tracking' and target_count > 1)
+        can_switch = self._job_state == 'tracking' and target_count > 1
+        self.next_target_btn.setEnabled(can_switch)
+        if hasattr(self, '_dock_next_btn'):
+            self._dock_next_btn.setEnabled(can_switch)
 
         self._refresh_header_state()
 
