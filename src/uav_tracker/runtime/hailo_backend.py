@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from uav_tracker.config import Config
+from uav_tracker.detection_source import DetectionSource
 
 
 class HailoBackend:
@@ -18,8 +19,8 @@ class HailoBackend:
     def track_frame(self, frame: np.ndarray, cfg: Config):
         self._not_ready()
 
-    def predict_frame(self, frame: np.ndarray, cfg: Config, *, conf=None, imgsz=None, source='local'):
+    def predict_frame(self, frame: np.ndarray, cfg: Config, *, conf=None, imgsz=None, source=DetectionSource.LOCAL):
         self._not_ready()
 
-    def predict_crops(self, frame: np.ndarray, rois, cfg: Config, *, conf=None, imgsz=None, source='roi'):
+    def predict_crops(self, frame: np.ndarray, rois, cfg: Config, *, conf=None, imgsz=None, source=DetectionSource.ROI):
         self._not_ready()

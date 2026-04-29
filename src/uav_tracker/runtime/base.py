@@ -6,6 +6,7 @@ from typing import Protocol
 import numpy as np
 
 from uav_tracker.config import Config
+from uav_tracker.detection_source import DetectionSource
 
 
 @dataclass
@@ -30,7 +31,7 @@ class DetectorBackend(Protocol):
         *,
         conf: float | None = None,
         imgsz: int | None = None,
-        source: str = 'local',
+        source: str = DetectionSource.LOCAL,
     ) -> list[Detection]:
         ...
 
@@ -42,6 +43,6 @@ class DetectorBackend(Protocol):
         *,
         conf: float | None = None,
         imgsz: int | None = None,
-        source: str = 'roi',
+        source: str = DetectionSource.ROI,
     ) -> list[Detection]:
         ...

@@ -12,6 +12,7 @@ import cv2
 import numpy as np
 
 from uav_tracker.config import Config
+from uav_tracker.detection_source import DetectionSource
 from uav_tracker.tracking.target_manager import TargetManager, TrackedTarget
 
 
@@ -27,11 +28,11 @@ def _draw_target(
     is_active = tid == manager.active_id
     x1, y1, x2, y2 = target.bbox
     color_map = {
-        'yolo': (48, 204, 92),
-        'roi': (30, 180, 255),
-        'local': (0, 210, 255),
-        'lock': (255, 215, 0),
-        'night': (255, 170, 50),
+        DetectionSource.YOLO: (48, 204, 92),
+        DetectionSource.ROI: (30, 180, 255),
+        DetectionSource.LOCAL: (0, 210, 255),
+        DetectionSource.LOCK: (255, 215, 0),
+        DetectionSource.NIGHT: (255, 170, 50),
     }
     color_active = (0, 70, 255)
 
@@ -42,7 +43,7 @@ def _draw_target(
 
     if compact:
         label = f"{'[LOCK] ' if is_active else ''}ID:{tid}"
-    elif target.source in {'yolo', 'roi', 'local', 'lock'} and target.cls_id >= 0:
+    elif target.source in DetectionSource.primary_sources() and target.cls_id >= 0:
         label = (
             f"{'[LOCK] ' if is_active else ''}ID:{tid} {target.source[0].upper()} "
             f"c{target.cls_id} d:{target.drone_score:.2f} conf:{target.conf:.2f} spd:{target.speed:.1f}"

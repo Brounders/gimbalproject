@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from uav_tracker.config import Config
+from uav_tracker.detection_source import DetectionSource
 from uav_tracker.runtime.base import Detection
 from utils.geometry import iou
 
@@ -22,7 +23,7 @@ class TrackedTarget:
     drone_score: float = 0.5
     lost_frames: int = 0
     hit_streak: int = 0
-    source: str = 'yolo'
+    source: str = DetectionSource.YOLO
     trail: deque = field(default_factory=lambda: deque(maxlen=30))
 
 
@@ -47,7 +48,7 @@ class TargetManager:
         return ((ax - bx) ** 2 + (ay - by) ** 2) ** 0.5
 
     def _is_primary_source(self, source: str) -> bool:
-        return source in {'yolo', 'roi', 'local', 'lock'}
+        return source in DetectionSource.primary_sources()
 
     def get_active_target(self) -> Optional[TrackedTarget]:
         if self.active_id is None:
@@ -358,11 +359,11 @@ class TargetManager:
                 if not is_reacquire_candidate:
                     continue
 
-            tid = self._find_nearby_track(det.cx, det.cy, max_dist=self.cfg.NIGHT_TRACK_DIST * 2, sources={'roi'})
+            tid = self._find_nearby_track(det.cx, det.cy, max_dist=self.cfg.NIGHT_TRACK_DIST * 2, sources={DetectionSource.ROI})
             if tid is None:
                 tid = self._next_aux_id
                 self._next_aux_id += 1
-            self._update_or_create_target(tid, det.bbox, det.cx, det.cy, det.conf, det.cls_id, 'roi')
+            self._update_or_create_target(tid, det.bbox, det.cx, det.cy, det.conf, det.cls_id, DetectionSource.ROI)
             seen_roi_ids.add(tid)
 
         self._try_reacquire_active_from_primary(seen_roi_ids)
@@ -377,11 +378,11 @@ class TargetManager:
         for det in night_dets:
             if self._overlaps_any(det['bbox'], primary_bboxes, iou_thresh=0.3):
                 continue
-            tid = self._find_nearby_track(det['cx'], det['cy'], max_dist=self.cfg.NIGHT_TRACK_DIST, sources={'night'})
+            tid = self._find_nearby_track(det['cx'], det['cy'], max_dist=self.cfg.NIGHT_TRACK_DIST, sources={DetectionSource.NIGHT})
             if tid is None:
                 tid = self._next_aux_id
                 self._next_aux_id += 1
-            self._update_or_create_target(tid, det['bbox'], det['cx'], det['cy'], det.get('conf', 0.0), det.get('cls_id', -1), 'night')
+            self._update_or_create_target(tid, det['bbox'], det['cx'], det['cy'], det.get('conf', 0.0), det.get('cls_id', -1), DetectionSource.NIGHT)
             seen_night_ids.add(tid)
         return seen_night_ids
 

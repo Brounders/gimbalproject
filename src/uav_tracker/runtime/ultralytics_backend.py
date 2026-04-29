@@ -7,6 +7,7 @@ import numpy as np
 from ultralytics import YOLO
 
 from uav_tracker.config import Config
+from uav_tracker.detection_source import DetectionSource
 from uav_tracker.runtime.base import Detection
 
 logger = logging.getLogger(__name__)
@@ -85,7 +86,7 @@ class UltralyticsBackend:
         *,
         conf: float | None = None,
         imgsz: int | None = None,
-        source: str = 'local',
+        source: str = DetectionSource.LOCAL,
     ) -> list[Detection]:
         try:
             results = self._predict_impl(frame, cfg, conf=conf or cfg.CONF_THRESH, imgsz=imgsz or cfg.IMG_SIZE, track=False)
@@ -104,7 +105,7 @@ class UltralyticsBackend:
         *,
         conf: float | None = None,
         imgsz: int | None = None,
-        source: str = 'roi',
+        source: str = DetectionSource.ROI,
     ) -> list[Detection]:
         if not rois:
             return []

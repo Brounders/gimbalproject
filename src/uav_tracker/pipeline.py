@@ -17,6 +17,7 @@ from uav_tracker.tracking.tracking_state_machine import TrackingStateMachine
 from uav_tracker.detectors.night_detector import NightSmallTargetDetector
 from uav_tracker.detectors.roi_assist import MotionROIProposer
 from uav_tracker.runtime import create_detector_backend
+from uav_tracker.detection_source import DetectionSource
 from uav_tracker.runtime.base import Detection
 from uav_tracker.tracking.lock_tracker import TemplateLockTracker
 from uav_tracker.tracking.target_manager import TargetManager, TrackedTarget
@@ -386,9 +387,9 @@ class TrackerPipeline:
             self.cfg,
             conf=local_conf,
             imgsz=local_imgsz,
-            source='local',
+            source=DetectionSource.LOCAL,
         )
-        shifted = [self._offset_detection(det, (x1, y1), 'local') for det in detections]
+        shifted = [self._offset_detection(det, (x1, y1), DetectionSource.LOCAL) for det in detections]
         return self._select_best_local_detection(shifted)
 
     def _sync_lock_tracker(self, frame: np.ndarray) -> None:
@@ -396,7 +397,7 @@ class TrackerPipeline:
         if active is None:
             self.lock_tracker.reset()
             return
-        if active.source in {'yolo', 'roi', 'local'}:
+        if active.source in {DetectionSource.YOLO, DetectionSource.ROI, DetectionSource.LOCAL}:
             self.lock_tracker.sync_from_bbox(frame, active.raw_bbox)
 
     def _compute_gt_iou(self, gt_bbox: Optional[tuple[int, int, int, int]]) -> float:
@@ -467,10 +468,10 @@ class TrackerPipeline:
                         cls_id=cls_id,
                         cx=float(lock_det_data['cx']),
                         cy=float(lock_det_data['cy']),
-                        source='lock',
+                        source=DetectionSource.LOCK,
                         track_id=self.manager.active_id,
                     )
-                    lock_ids = self.manager.update_from_focus_detection(lock_det, 'lock')
+                    lock_ids = self.manager.update_from_focus_detection(lock_det, DetectionSource.LOCK)
                     scan_strategy = 'LOCK-TRACK'
 
             need_local_validate = (
@@ -510,7 +511,7 @@ class TrackerPipeline:
                 self.cfg,
                 conf=self.cfg.ROI_CONF_THRESH,
                 imgsz=self.cfg.ROI_IMG_SIZE,
-                source='roi',
+                source=DetectionSource.ROI,
             )
             timings_ms['roi'] = (time.perf_counter() - t0) * 1000.0
             roi_ids = self.manager.update_from_roi_yolo(roi_dets, global_ids | lock_ids | local_ids)
