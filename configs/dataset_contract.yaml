@@ -1,0 +1,52 @@
+# GimbalProject — Dataset Contract
+# version: 1.0 | date: 2026-04-29
+#
+# Machine-readable. Claude проверяет этот файл перед запуском training.
+# Training без соответствия контракту запрещён.
+
+version: "1.0"
+date: "2026-04-29"
+
+# ─────────────────────────────────────────────
+# Требования к составу датасета
+# ─────────────────────────────────────────────
+composition:
+  night_visible_light_min_pct: 20
+  ir_min_pct: 15
+  day_max_pct: 65
+
+  # drone_bird_ratio_max: не более чем N дронов на 1 птицу
+  # Значение 10 означает drone:bird ≤ 10:1
+  # REJECTED baseline drone-bird-yolo имел 540:1 — критический дисбаланс
+  drone_bird_ratio_max: 10
+
+  bird_negatives: "must be meaningfully represented (не менее 5% от общего объёма)"
+
+# ─────────────────────────────────────────────
+# Верификация перед training
+# ─────────────────────────────────────────────
+verification:
+  method: "content-derived scene statistics"
+  not_acceptable: "name-based inference only (папки без анализа содержимого)"
+  required_outputs:
+    - class_balance_report    # соотношение классов из .txt labels
+    - night_coverage_report   # % night visible-light кадров
+    - ir_coverage_report      # % IR кадров
+
+# ─────────────────────────────────────────────
+# Training checkpoints
+# ─────────────────────────────────────────────
+training_checkpoints:
+  gate_every_n_epochs: 20
+  stop_condition: "night problem-pack gate FAIL at checkpoint"
+  min_checkpoint_pass_before_full: "epoch 20 must not show worse metrics than baseline"
+
+# ─────────────────────────────────────────────
+# Открытые вопросы, блокирующие training
+# ─────────────────────────────────────────────
+open_blockers:
+  - id: "OQ-001"
+    description: "Dataset composition для следующего RTX цикла не верифицирован"
+    blocks: training
+    close_action: "SSH RTX → python_scripts/dataset_audit.py → class_balance_report"
+    status: open

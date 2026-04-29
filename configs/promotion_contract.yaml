@@ -1,0 +1,100 @@
+# GimbalProject — Promotion Contract
+# version: 1.0 | date: 2026-04-29
+#
+# Machine-readable gate. Claude проверяет этот файл перед install_baseline.py.
+# Изменение thresholds требует явного Human approval + новой версии файла.
+
+version: "1.0"
+date: "2026-04-29"
+
+# ─────────────────────────────────────────────
+# Режимы установки
+# ─────────────────────────────────────────────
+install_modes:
+  production:
+    description: "Полная production-установка. Все контексты PASS."
+    requires: "all required_contexts PASS"
+    known_gaps: not_allowed
+
+  reference_baseline:
+    description: "Reference для сравнения кандидатов. Не production."
+    requires: "night и day PASS минимум"
+    known_gaps:
+      policy: must_be_listed_with_close_condition
+      note: "acknowledged gap не разрешает production install"
+
+  context_specific:
+    description: "Deployment строго для перечисленных контекстов."
+    requires: "listed_contexts PASS"
+    scope: "contexts должны быть явно перечислены в install команде"
+
+# ─────────────────────────────────────────────
+# Обязательные контексты для production
+# ─────────────────────────────────────────────
+required_contexts:
+  - day
+  - night
+  - ir
+
+# ─────────────────────────────────────────────
+# Пороги по контекстам
+# ─────────────────────────────────────────────
+thresholds:
+  night:
+    false_lock_rate: {max: 0.55}
+    id_chg_per_min: {max: 18.0}
+  ir:
+    false_lock_rate: {max: 0.70}
+    status: provisional
+    close_condition: "OQ-002 resolved + IR threshold formally accepted by Human"
+  day:
+    false_lock_rate: {max: 0.10}
+
+# ─────────────────────────────────────────────
+# Regression tolerances (vs baseline JSON)
+# ─────────────────────────────────────────────
+baseline_regression_tolerance:
+  false_lock:      {increase_allowed: 0.02}
+  id_chg_per_min:  {increase_allowed: 0.3}
+  fps:             {drop_allowed: 1.0}
+  continuity:      {drop_allowed: 0.03}
+  presence:        {drop_allowed: 0.03}
+  lock_switches:   {increase_allowed: 0.2}
+
+# ─────────────────────────────────────────────
+# CLI вызов gate скрипта (явные флаги, не defaults)
+# ─────────────────────────────────────────────
+# ВАЖНО: скрипт defaults отличаются от принятых порогов.
+# Всегда передавать флаги явно.
+gate_invocation:
+  night:
+    command: >
+      python python_scripts/run_quality_gate.py
+      --context night
+      --max-false-lock-rate 0.55
+      --max-night-id-changes-per-min 18.0
+      --baseline runs/evaluations/quality_gate/quality_gate_night.json
+  ir:
+    command: >
+      python python_scripts/run_quality_gate.py
+      --context ir
+      --max-false-lock-rate 0.70
+      --baseline runs/evaluations/quality_gate/quality_gate_antiuav_thermal.json
+    note: "provisional threshold — OQ-002"
+  day:
+    command: >
+      python python_scripts/run_quality_gate.py
+      --context day
+      --baseline runs/evaluations/quality_gate/quality_gate_default.json
+
+# ─────────────────────────────────────────────
+# Известные gaps (не блокируют reference, блокируют production)
+# ─────────────────────────────────────────────
+known_gaps:
+  - id: "IR_GAP_2026"
+    description: "IR dataset слабый. Baseline FAIL на Demo_IR_DRONE_146 и IR_DRONE_001."
+    affected_contexts: [ir]
+    current_install_mode: reference_baseline
+    allows_production_install: false
+    close_condition: "OQ-002 resolved + IR threshold formally accepted + candidate PASS IR gate"
+    opened: "2026-03-14"
