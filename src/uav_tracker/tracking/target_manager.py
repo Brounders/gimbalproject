@@ -4,6 +4,7 @@ from typing import Optional
 from uav_tracker.config import Config
 from uav_tracker.detection_source import DetectionSource
 from uav_tracker.runtime.base import Detection
+from uav_tracker.tracking.focus_mode_controller import FocusModeController
 from uav_tracker.tracking.tracked_target import TrackedTarget
 from utils.geometry import iou
 
@@ -15,9 +16,7 @@ class TargetManager:
         self.active_id: Optional[int] = None
         self._next_aux_id = 9000
         self._frames_since_primary = 9999
-        self._focus_mode = False
-        self._focus_enter_streak = 0
-        self._focus_exit_streak = 0
+        self._focus_ctrl = FocusModeController(cfg)
         self._active_switch_cooldown = 0
 
     def _smooth_bbox(self, old_bbox, new_bbox, alpha):
@@ -110,45 +109,13 @@ class TargetManager:
         return self._is_drone_like_target(active, self.cfg.DRONE_LOCK_SCORE_MIN)
 
     def is_focus_mode(self) -> bool:
-        return bool(self.cfg.LOCK_FOCUS_ONLY and self._focus_mode)
+        return self._focus_ctrl.is_active()
 
     def update_focus_mode(self) -> bool:
-        if not self.cfg.LOCK_FOCUS_ONLY:
-            self._focus_mode = False
-            self._focus_enter_streak = 0
-            self._focus_exit_streak = 0
-            return False
-
-        confirmed = self.has_confirmed_drone_lock()
-        enter_frames = max(1, int(self.cfg.LOCK_MODE_ACQUIRE_FRAMES))
-        release_frames = max(1, int(self.cfg.LOCK_MODE_RELEASE_FRAMES))
-
-        if confirmed:
-            self._focus_enter_streak += 1
-            self._focus_exit_streak = 0
-            if not self._focus_mode and self._focus_enter_streak >= enter_frames:
-                self._focus_mode = True
-            return self._focus_mode
-
-        self._focus_enter_streak = 0
-        if self._focus_mode:
-            self._focus_exit_streak += 1
-            if self._focus_exit_streak >= release_frames:
-                self._focus_mode = False
-        else:
-            self._focus_exit_streak = 0
-        return self._focus_mode
+        return self._focus_ctrl.update(self.has_confirmed_drone_lock())
 
     def should_run_night_detector(self) -> bool:
-        if not self.cfg.NIGHT_ENABLED:
-            return False
-        if self.cfg.DISABLE_NIGHT_ON_LOCK and self.is_focus_mode():
-            return False
-        if not self.cfg.NIGHT_RUN_WHEN_PRIMARY_SEEN:
-            cooldown = max(0, int(self.cfg.NIGHT_PRIMARY_COOLDOWN))
-            if self._frames_since_primary < cooldown:
-                return False
-        return True
+        return self._focus_ctrl.should_run_night_detector(self._frames_since_primary)
 
     def display_targets(self) -> list[TrackedTarget]:
         if self.cfg.SHOW_ONLY_ACTIVE_ON_LOCK and self.is_focus_mode():
