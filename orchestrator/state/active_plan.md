@@ -1,15 +1,20 @@
 # Active Plan
 
 ## Plan ID
-- AP-20260429-GOVERNANCE
-
-## Source Direction
-- Human approved governance restoration + architecture fixes on 2026-04-29.
-- Scope: синхронизация источников правды, contracts, pytest fix, pipeline contracts (A1a-A1d).
-- RTX/Hailo/новые алгоритмы — вне этого плана (следующий цикл).
+- AP-20260430-CLEANUP
 
 ## Status
-- In Progress
+- **In Progress**
+
+## Source Direction
+Phase 0 critical bugs завершена 2026-04-30.
+Текущая цель: cleanup + stabilisation проекта перед Phase 1.
+
+---
+
+## Архив: AP-20260429-GOVERNANCE (CLOSED 2026-04-30)
+
+Все exit criteria выполнены: governance restore, contracts, A1a-A1d pipeline contracts, pytest green.
 
 ---
 
@@ -61,15 +66,54 @@
 - [x] Все изменения закоммичены в main (7 коммитов)
 - [x] active_plan.md указывает на следующий implementation цикл
 
-## Следующий цикл — implementation (открыть отдельной сессией)
+---
 
-Governance восстановлен. Следующие задачи в порядке приоритета:
+## AP-20260430-CLEANUP — Текущий план
 
-1. **Worktree review** (Human decision needed):
-   - `orchestrator/state/worktree_review.md` — решить судьбу UI diff и Session 7 worktree
-2. **REPORT-088 commit** — закоммитить untracked dataset audit report
-3. **Tracker association A/B** — сравнить ByteTrack vs template lock по id_chg/min
-4. **YOLOv11 benchmark** — model intake с SHA + gate против baseline
+### Phase 0 Bugs (CLOSED 2026-04-30)
+
+| Баг | Статус |
+|-----|--------|
+| BUG-001 Auto-scene race | ✅ DONE |
+| BUG-002 Reacquire radius cap | ✅ DONE |
+| BUG-003 Template lock drift | ✅ DONE |
+| BUG-004 MainWindow thread safety | ⏳ **DEFERRED → Phase 1** (не блокирует pipeline) |
+| BUG-005 Night grid collision | ✅ DONE |
+| BUG-006 Confidence EMA cold-start | ✅ DONE |
+| BUG-007 Inference timeout 8.0s | ✅ DONE |
+| BUG-008 Typed exceptions | ✅ DONE |
+
+### Cleanup Tasks
+
+- [x] **C1**: antiuav_ir_v1 intake — REPORT-20260430, SHA записан, статус IR_CANDIDATE_HOLD
+- [x] **C2**: resolve_model_path — explicit override не подменяется дефолтом
+- [x] **C3**: pytest 338/338 green (без PYTHONPATH)
+- [x] **C4**: BUG-004 формально DEFERRED → Phase 1
+- [x] **C5**: OQ-002 → DEFERRED
+- [ ] **C6**: wiki/synthesis/current_state.md обновить
+- [ ] **C7**: финальный коммит
+
+### Open Questions
+
+| ID | Статус |
+|----|--------|
+| OQ-001 | OPEN — следующий training цикл |
+| OQ-002 | **DEFERRED** — IR bird rejection, не блокирует |
+| OQ-003 | OPEN — false_lock=1.000 day clip |
+| OQ-004 | OPEN — night_confirm 4 vs 5 в docs |
+| OQ-005 | OPEN — baseline.pt верификация |
+
+---
+
+## Следующий цикл — Phase 1 (Architecture)
+
+Открыть отдельной сессией.
+
+1. BUG-004: MainWindow thread safety
+2. ARC-001: декомпозиция MainWindow
+3. ARC-002: декомпозиция TargetManager
+4. TD-003: magic numbers → Config
+5. TEST-001: coverage → 35%
 
 ## Backlog Policy
-- Любые задачи вне списков выше считаются backlog и не исполняются.
+Задачи вне списков выше — backlog. Не исполняются без явного Human запроса.
