@@ -12,7 +12,11 @@ class NightSmallTargetDetector:
         self.bg_subtractor = cv2.createBackgroundSubtractorMOG2(
             history=cfg.NIGHT_MOG2_HISTORY, varThreshold=cfg.NIGHT_MOG2_VAR_THRESH, detectShadows=False
         )
-        self._candidates: dict[tuple, int] = {}
+        # BUG-005: store (cx, cy) per unique candidate so nearby objects in the
+        # same grid cell don't merge their confidence counters.
+        # key = (grid_x, grid_y, sub_id) where sub_id disambiguates collisions.
+        # value = {"count": int, "cx": int, "cy": int}
+        self._candidates: dict[tuple, dict] = {}
         self._prev_gray: Optional[np.ndarray] = None
         self._warmup = 0
 
@@ -68,11 +72,33 @@ class NightSmallTargetDetector:
                 continue
 
             cx, cy = x + w // 2, y + h // 2
-            key = (cx // self.cfg.NIGHT_GRID_CELL, cy // self.cfg.NIGHT_GRID_CELL)
-            current_keys.add(key)
-            self._candidates[key] = self._candidates.get(key, 0) + 1
-            if self._candidates[key] >= self.cfg.NIGHT_CONFIRM:
-                conf = min(0.6, 0.2 + self._candidates[key] * 0.05)
+            cell = self.cfg.NIGHT_GRID_CELL
+            gx, gy = cx // cell, cy // cell
+            # BUG-005: find matching candidate within spatial radius, not just grid cell
+            merge_key = None
+            for sub_id in range(8):  # max 8 distinct objects per grid cell
+                k = (gx, gy, sub_id)
+                if k not in self._candidates:
+                    merge_key = k   # first free slot → new candidate
+                    break
+                existing = self._candidates[k]
+                dx = existing["cx"] - cx
+                dy = existing["cy"] - cy
+                if dx * dx + dy * dy <= cell * cell:  # within one grid cell radius
+                    merge_key = k   # same spatial object
+                    break
+            if merge_key is None:
+                continue  # too many distinct objects in this cell — skip
+
+            current_keys.add(merge_key)
+            if merge_key not in self._candidates:
+                self._candidates[merge_key] = {"count": 0, "cx": cx, "cy": cy}
+            entry = self._candidates[merge_key]
+            entry["count"] += 1
+            entry["cx"] = cx  # update to latest position
+            entry["cy"] = cy
+            if entry["count"] >= self.cfg.NIGHT_CONFIRM:
+                conf = min(0.6, 0.2 + entry["count"] * 0.05)
                 detections.append(
                     {
                         "bbox": (x, y, x + w, y + h),
@@ -85,8 +111,8 @@ class NightSmallTargetDetector:
 
         gone = set(self._candidates.keys()) - current_keys
         for key in gone:
-            self._candidates[key] = max(0, self._candidates[key] - 1)
-            if self._candidates[key] == 0:
+            self._candidates[key]["count"] = max(0, self._candidates[key]["count"] - 1)
+            if self._candidates[key]["count"] == 0:
                 del self._candidates[key]
 
         return detections
