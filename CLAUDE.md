@@ -52,13 +52,16 @@ configs/               # regression_pack.csv, preset YAMLs
 
 ## Agent Workflow
 
+0. Проверить wiki-маршрут: `../wiki/maps/GimbalProject Map.md` → `../wiki/synthesis/source_of_truth.md` → `../wiki/synthesis/current_state.md`
 1. Проверить `orchestrator/state/active_plan.md` — найти текущую задачу
-2. Grep/Glob для поиска затронутых файлов (не Read)
-3. Read только нужные файлы, частично (offset/limit)
-4. Edit (patch) — минимальные изменения
-5. compileall + unittest discover — проверка
-6. Commit с префиксом `[agent-team][модуль]`
-7. Отчёт в `orchestrator/reports/`
+2. Сверить active plan со свежими reports/git history, если задача зависит от текущей фазы
+3. Если источники правды расходятся — остановиться и сообщить конфликт, не реализовывать новую задачу
+4. Grep/Glob для поиска затронутых файлов (не Read)
+5. Read только нужные файлы, частично (offset/limit)
+6. Edit (patch) — минимальные изменения
+7. compileall + unittest discover — проверка
+8. Commit с префиксом `[agent-team][модуль]`
+9. Отчёт в `orchestrator/reports/`
 
 ## Output Policy
 
@@ -116,8 +119,16 @@ Claude обязан использовать project playbooks из `.claude/pla
 Wiki живёт в `../wiki/` (то есть `Projects/wiki/`) — вне git, общая для всех проектов.
 Это постоянная база знаний: доменные знания GimbalProject + общие концепты AI/методологии.
 
+**Обязательный старт для GimbalProject:**
+- Сначала читать `../wiki/maps/GimbalProject Map.md`
+- Затем `../wiki/synthesis/source_of_truth.md`
+- Затем `../wiki/synthesis/current_state.md`
+- Только после этого читать `orchestrator/state/active_plan.md`
+- Если wiki, active_plan, reports и git history противоречат друг другу — остановиться и сообщить source-of-truth conflict
+
 **Когда использовать:**
-- Вопросы о ночном детекторе, lock policy, качественных порогах → `../wiki/index.md` → drill-down
+- Любая новая сессия по GimbalProject → `../wiki/maps/GimbalProject Map.md` → area map
+- Вопросы о ночном детекторе, lock policy, качественных порогах → `../wiki/maps/Runtime Tracking Map.md` → drill-down
 - Вопросы о модели, пресетах, тест-клипах → `../wiki/entities/`
 - История дефектов → `../wiki/synthesis/night_defect_history.md`
 - Открытые вопросы → `../wiki/synthesis/open_questions.md`
