@@ -44,7 +44,7 @@ class Config:
     PREFER_CLASS_ID: int = 0
     SMALL_TARGET_IMG_SIZE: int = 960
     SMALL_TARGET_CONF: float = 0.15
-    INFERENCE_TIMEOUT_SEC: float = 2.0  # BUG-007: max seconds before inference is considered hung
+    INFERENCE_TIMEOUT_SEC: float = 8.0  # BUG-007: max seconds before inference is considered hung (MPS warmup ~1-5s)
 
     # ── Adaptive Scan ────────────────────────────────────────────────────────
     ADAPTIVE_SCAN_ENABLED: bool = True
