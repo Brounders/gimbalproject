@@ -65,6 +65,7 @@ class Config:
     LOCK_TRACKER_SEARCH_SCALE: float = 3.0
     LOCK_TRACKER_MIN_SCORE: float = 0.42
     LOCK_TRACKER_UPDATE_ALPHA: float = 0.18
+    LOCK_TRACKER_DRIFT_MAX_LOW: int = 8    # consecutive low-score frames before drift reset (BUG-003)
 
     # ── ROI Assist ───────────────────────────────────────────────────────────
     ROI_ASSIST_ENABLED: bool = True

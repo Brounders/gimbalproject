@@ -12,11 +12,15 @@ class TemplateLockTracker:
         self.template: np.ndarray | None = None
         self.bbox: tuple[int, int, int, int] | None = None
         self.last_score: float = 0.0
+        self._consecutive_low_score: int = 0  # BUG-003: drift detection counter
+        self.needs_recovery: bool = False      # set True when drift detected → pipeline reacquires
 
     def reset(self) -> None:
         self.template = None
         self.bbox = None
         self.last_score = 0.0
+        self._consecutive_low_score = 0
+        self.needs_recovery = False
 
     def _gray(self, frame: np.ndarray) -> np.ndarray:
         return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -75,8 +79,18 @@ class TemplateLockTracker:
         _min_val, max_val, _min_loc, max_loc = cv2.minMaxLoc(response)
         score = float(max_val)
         self.last_score = score
+
+        # BUG-003: track consecutive low-score frames → detect template drift/corruption
+        drift_threshold = int(getattr(self.cfg, 'LOCK_TRACKER_DRIFT_MAX_LOW', 8))
         if score < self.cfg.LOCK_TRACKER_MIN_SCORE:
+            self._consecutive_low_score += 1
+            if self._consecutive_low_score >= drift_threshold:
+                # Template has drifted — full reset + signal upstream for GLOBAL recovery
+                self.reset()
+                self.needs_recovery = True
             return None, score, (sx1, sy1, sx2, sy2)
+        else:
+            self._consecutive_low_score = 0  # good match resets the counter
 
         px1 = sx1 + int(max_loc[0])
         py1 = sy1 + int(max_loc[1])
