@@ -97,6 +97,7 @@ class Config:
     VELOCITY_ALPHA: float = 0.60
     LOCK_CONFIRM_FRAMES: int = 5
     LOCK_REACQUIRE_DIST: int = 120
+    LOCK_REACQUIRE_DIST_MAX: int = 300  # hard cap regardless of speed/lost_frames (BUG-002)
     LOCK_REACQUIRE_PREDICT_GAIN: float = 1.0
     LOCK_REACQUIRE_PREDICT_HORIZON_MAX: int = 4
     LOCK_LOST_GRACE: int = 2

@@ -204,7 +204,10 @@ class TargetManager:
         if active.track_id in seen_ids:
             return
 
-        max_reacquire_dist = self.cfg.LOCK_REACQUIRE_DIST + min(90, int(active.speed * 1.8) + active.lost_frames * 12)
+        max_reacquire_dist = min(
+            self.cfg.LOCK_REACQUIRE_DIST_MAX,
+            self.cfg.LOCK_REACQUIRE_DIST + min(90, int(active.speed * 1.8) + active.lost_frames * 12),
+        )  # BUG-002: hard cap prevents radius exceeding frame on high speed/lost combos
         px, py = self._predict_center(active)
         pred_gate_dist = max_reacquire_dist + min(70, int(active.speed * 2.0))
         best_tid = None

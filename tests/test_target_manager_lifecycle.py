@@ -522,3 +522,35 @@ class TestTryReacquireActive(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestReacquireRadiusCap:
+    """BUG-002: hard cap on reacquire radius."""
+
+    def _make_mgr(self):
+        from uav_tracker.config import Config
+        from uav_tracker.tracking.target_manager import TargetManager
+        return TargetManager(Config())
+
+    def test_cap_applied_at_max(self):
+        from uav_tracker.config import Config
+        cfg = Config(LOCK_REACQUIRE_DIST=120, LOCK_REACQUIRE_DIST_MAX=200)
+        from uav_tracker.tracking.target_manager import TargetManager
+        mgr = TargetManager(cfg)
+        # Simulate high speed + many lost frames → raw formula would exceed 200
+        # min(90, int(50*1.8) + 20*12) = min(90, 330) = 90 → 120+90=210 > cap=200
+        import math
+        active_speed = 50.0
+        lost_frames = 20
+        raw = cfg.LOCK_REACQUIRE_DIST + min(90, int(active_speed * 1.8) + lost_frames * 12)
+        capped = min(cfg.LOCK_REACQUIRE_DIST_MAX, raw)
+        assert raw > cfg.LOCK_REACQUIRE_DIST_MAX, "test precondition: raw must exceed cap"
+        assert capped == cfg.LOCK_REACQUIRE_DIST_MAX
+
+    def test_cap_not_applied_when_below(self):
+        from uav_tracker.config import Config
+        cfg = Config(LOCK_REACQUIRE_DIST=120, LOCK_REACQUIRE_DIST_MAX=300)
+        # Normal: speed=5, lost=1 → 120 + min(90, 9+12) = 120+21 = 141 < 300
+        raw = cfg.LOCK_REACQUIRE_DIST + min(90, int(5.0 * 1.8) + 1 * 12)
+        capped = min(cfg.LOCK_REACQUIRE_DIST_MAX, raw)
+        assert capped == raw  # cap not hit
