@@ -1,7 +1,7 @@
 # ARC-002 — Декомпозиция TargetManager: FocusModeController
 
-**Дата:** 2026-04-30  
-**Статус:** ✅ DONE  
+**Дата:** 2026-04-30
+**Статус:** ✅ DONE
 **Ветка:** claude/busy-hamilton-9c2e2a
 
 ---
@@ -32,8 +32,10 @@
 
 ## Что проверено
 
-- `python3 -m compileall -q src` — OK
-- `python3 -m unittest discover -s tests -q` — **338/338 OK**
+- `python -m compileall -q python_scripts src app orchestrator tests` — OK
+- `python -m pytest -q` — **362/362 passed**
+- `python -m pytest --cov=src` — **52% coverage** (TOTAL: 2155 statements)
+- `orchestrator/scripts/check_orchestration_state.py` — OK
 - 4 теста трогали `mgr._focus_mode = True` напрямую — обновлены до `mgr._focus_ctrl._active = True`
 
 ## Риски
