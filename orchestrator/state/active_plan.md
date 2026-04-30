@@ -114,8 +114,8 @@ Phase 0 critical bugs завершена 2026-04-30.
 | BUG-004: MainWindow thread safety | ✅ DONE | threading.RLock, one-shot shutdown guard |
 | ARC-001: декомпозиция MainWindow | ✅ DONE | 1205 → 683 строк; все build-методы в layout_builders |
 | ARC-002: декомпозиция TargetManager | ✅ DONE | FocusModeController; target_manager 434→401 строк |
-| TEST-001: coverage → 35% | ⏳ NEXT | текущий baseline 52% (--cov=src); цель ≥35% branch или +specific modules |
-| TD-003: magic numbers → Config | ⏳ BACKLOG | **blocked** — не начинать до TEST-001 или explicit human override |
+| TEST-001: coverage → 35% | ✅ DONE | core 52→55% (--cov=src); full 27→29% (--cov=src/uav_tracker --cov=app) |
+| TD-003: magic numbers → Config | ⏳ BACKLOG | **blocked** — не начинать без explicit human override |
 
 ---
 
