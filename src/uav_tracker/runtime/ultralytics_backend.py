@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 from typing import Iterable
 
@@ -11,6 +12,9 @@ from uav_tracker.detection_source import DetectionSource
 from uav_tracker.runtime.base import Detection
 
 logger = logging.getLogger(__name__)
+
+# BUG-007: thread pool for inference timeout — avoids hanging GUI on GPU/MPS stall
+_INFERENCE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="yolo_infer")
 
 
 class UltralyticsBackend:
@@ -70,8 +74,17 @@ class UltralyticsBackend:
         )
 
     def track_frame(self, frame: np.ndarray, cfg: Config) -> list[Detection]:
+        # BUG-007: wrap inference in future with timeout to prevent GPU/MPS hang
+        timeout_sec = float(getattr(cfg, 'INFERENCE_TIMEOUT_SEC', 2.0))
         try:
-            results = self._predict_impl(frame, cfg, conf=cfg.CONF_THRESH, imgsz=cfg.IMG_SIZE, track=True)
+            future = _INFERENCE_EXECUTOR.submit(
+                self._predict_impl, frame, cfg,
+                conf=cfg.CONF_THRESH, imgsz=cfg.IMG_SIZE, track=True,
+            )
+            results = future.result(timeout=timeout_sec)
+        except concurrent.futures.TimeoutError:
+            logger.warning('track_frame: inference timeout (%.1fs) — falling back to lock tracker', timeout_sec)
+            return []
         except Exception:
             logger.exception('track_frame: ошибка при вызове YOLO track')
             return []
