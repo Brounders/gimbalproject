@@ -80,13 +80,13 @@ class TestConfidenceEMA(unittest.TestCase):
         self.assertGreaterEqual(result, 0.0)
         self.assertLessEqual(result, 1.0)
 
-    def test_ema_rises_over_frames(self):
+    def test_ema_cold_start_nonzero(self):
+        """BUG-006: first non-zero reading must not be dampened by 0-initialized EMA."""
         dst = DisplayStateTracker(_cfg(CONFIDENCE_EMA_ALPHA=0.5, CONFIDENCE_DISPLAY_UPDATE_SEC=0.0))
         t = _target(hit_streak=10, conf=0.9)
         first = dst.update_confidence(t, 0.8, 1.0, 1)
-        for i in range(2, 20):
-            later = dst.update_confidence(t, 0.8, float(i), i)
-        self.assertGreater(later, first)
+        # With cold-start fix, first value = full instant confidence, not ~half
+        self.assertGreater(first, 0.5, "cold-start must not dampen first reading toward 0")
 
     def test_drops_to_zero_when_target_disappears(self):
         dst = DisplayStateTracker(_cfg(CONFIDENCE_EMA_ALPHA=0.9, CONFIDENCE_DISPLAY_UPDATE_SEC=0.0))
