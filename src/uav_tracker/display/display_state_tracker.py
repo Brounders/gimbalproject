@@ -25,6 +25,7 @@ class DisplayStateTracker:
         self._cfg = cfg
         # Confidence EMA
         self._confidence_ema: float = 0.0
+        self._confidence_ema_initialized: bool = False  # BUG-006: cold-start flag
         self._display_confidence: float = 0.0
         self._confidence_last_update_sec: float = 0.0
         # Reticle
@@ -53,7 +54,12 @@ class DisplayStateTracker:
         """
         instant = self._instant_confidence(active, lock_score)
         alpha = max(0.01, min(0.95, float(self._cfg.CONFIDENCE_EMA_ALPHA)))
-        self._confidence_ema = (1.0 - alpha) * self._confidence_ema + alpha * instant
+        # BUG-006: cold-start — skip EMA on first non-zero reading to avoid 0% display
+        if not self._confidence_ema_initialized and instant > 0.0:
+            self._confidence_ema = instant
+            self._confidence_ema_initialized = True
+        else:
+            self._confidence_ema = (1.0 - alpha) * self._confidence_ema + alpha * instant
 
         period = max(0.5, float(self._cfg.CONFIDENCE_DISPLAY_UPDATE_SEC))
         if video_elapsed_sec - self._confidence_last_update_sec >= period:
