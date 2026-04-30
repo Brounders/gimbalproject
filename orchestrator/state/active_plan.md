@@ -4,7 +4,7 @@
 - AP-20260430-CLEANUP
 
 ## Status
-- **In Progress**
+- Completed
 
 ## Source Direction
 Phase 0 critical bugs завершена 2026-04-30.
@@ -90,8 +90,8 @@ Phase 0 critical bugs завершена 2026-04-30.
 - [x] **C3**: pytest 338/338 green (без PYTHONPATH)
 - [x] **C4**: BUG-004 формально DEFERRED → Phase 1
 - [x] **C5**: OQ-002 → DEFERRED
-- [ ] **C6**: wiki/synthesis/current_state.md обновить
-- [ ] **C7**: финальный коммит
+- [x] **C6**: wiki/synthesis/current_state.md обновлён (фазы, модели, baseline)
+- [x] **C7**: финальный коммит (5912e3b)
 
 ### Open Questions
 
@@ -114,6 +114,16 @@ Phase 0 critical bugs завершена 2026-04-30.
 3. ARC-002: декомпозиция TargetManager
 4. TD-003: magic numbers → Config
 5. TEST-001: coverage → 35%
+
+---
+
+## Active Claude Tasks (execution allowed now)
+(none)
+
+## Active RTX Tasks (execution allowed now)
+(none)
+
+---
 
 ## Backlog Policy
 Задачи вне списков выше — backlog. Не исполняются без явного Human запроса.
