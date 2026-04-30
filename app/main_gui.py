@@ -382,8 +382,10 @@ class MainWindow(QMainWindow):
         refresh_widget_style(self.expert_btn)
 
     def _request_next_target(self) -> None:
-        if self.worker is not None and self._job_state == 'tracking':
-            self.worker.request_switch_target()
+        with self._worker_lock:
+            worker = self.worker
+        if worker is not None and self._job_state == 'tracking':
+            worker.request_switch_target()
 
     def _on_scenario_changed(self):
         if self._updating_controls:
