@@ -95,11 +95,73 @@ class TestBudgetControllerEffectiveIntervals(unittest.TestCase):
         self.assertGreaterEqual(result, 1)
         self.assertLess(result, 5)
 
+    def test_scan_interval_disabled_returns_base(self):
+        cfg = _cfg(BUDGET_ENABLED=False, GLOBAL_SCAN_INTERVAL=4)
+        bc = BudgetController(cfg)
+        bc.level = 5  # level ignored when disabled
+        self.assertEqual(bc.effective_global_scan_interval(0), 4)
+
+    def test_local_validate_interval_disabled_returns_base(self):
+        cfg = _cfg(BUDGET_ENABLED=False, LOCAL_VALIDATE_INTERVAL=3)
+        bc = BudgetController(cfg)
+        self.assertEqual(bc.effective_local_validate_interval(0), 3)
+
+    def test_local_validate_interval_enabled_with_level(self):
+        cfg = _cfg(BUDGET_ENABLED=True, LOCAL_VALIDATE_INTERVAL=2,
+                   BUDGET_LOCAL_VALIDATE_BOOST_PER_LEVEL=2)
+        bc = BudgetController(cfg)
+        bc.level = 2
+        self.assertEqual(bc.effective_local_validate_interval(0), 6)
+
+    def test_roi_candidates_disabled_returns_base(self):
+        cfg = _cfg(BUDGET_ENABLED=False, ROI_MAX_CANDIDATES=8)
+        bc = BudgetController(cfg)
+        result = bc.effective_roi_max_candidates()
+        self.assertEqual(result, 8)
+        self.assertEqual(bc.last_roi_candidates, 8)
+
+    def test_night_skip_disabled_returns_1(self):
+        bc = BudgetController(_cfg(BUDGET_ENABLED=False))
+        self.assertEqual(bc._effective_night_skip(), 1)
+
+    def test_night_skip_level1(self):
+        bc = BudgetController(_cfg(BUDGET_ENABLED=True, BUDGET_NIGHT_SKIP_LEVEL1=3))
+        bc.level = 1
+        self.assertEqual(bc._effective_night_skip(), 3)
+
+    def test_night_skip_level2_plus(self):
+        bc = BudgetController(_cfg(BUDGET_ENABLED=True, BUDGET_NIGHT_SKIP_LEVEL2=5))
+        bc.level = 2
+        self.assertEqual(bc._effective_night_skip(), 5)
+
     def test_should_run_night_always_at_level0(self):
         bc = BudgetController(_cfg(BUDGET_ENABLED=True))
         bc.level = 0
         for i in range(10):
             self.assertTrue(bc.should_run_night(i))
+
+    def test_should_run_night_skips_frames_at_level1(self):
+        bc = BudgetController(_cfg(BUDGET_ENABLED=True, BUDGET_NIGHT_SKIP_LEVEL1=2))
+        bc.level = 1
+        results = [bc.should_run_night(i) for i in range(4)]
+        # skip=2 → runs at frames 0, 2 (even)
+        self.assertEqual(results, [True, False, True, False])
+
+    def test_should_run_roi_disabled_always_true(self):
+        bc = BudgetController(_cfg(BUDGET_ENABLED=False))
+        bc.level = 5
+        self.assertTrue(bc.should_run_roi(0))
+
+    def test_should_run_roi_level1_always_true(self):
+        bc = BudgetController(_cfg(BUDGET_ENABLED=True))
+        bc.level = 1
+        self.assertTrue(bc.should_run_roi(0))
+
+    def test_should_run_roi_level2_skips_frames(self):
+        bc = BudgetController(_cfg(BUDGET_ENABLED=True, BUDGET_ROI_SKIP_LEVEL2=3))
+        bc.level = 2
+        results = [bc.should_run_roi(i) for i in range(6)]
+        self.assertEqual(results, [True, False, False, True, False, False])
 
 
 # ---------------------------------------------------------------------------
