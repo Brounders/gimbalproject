@@ -10,6 +10,7 @@ import numpy as np
 
 from uav_tracker.pipeline_control.budget_controller import BudgetController
 from uav_tracker.config import Config
+from uav_tracker.exceptions import ModelNotFoundError, SourceOpenError
 from uav_tracker.tracking.continuity_tracker import ContinuityTracker
 from uav_tracker.display.display_state_tracker import DisplayStateTracker
 from uav_tracker.tracking.lock_event_tracker import LockEventTracker
@@ -174,6 +175,10 @@ class TrackerPipeline:
     def __init__(self, cfg: Config):
         cfg.validate()
         self.cfg = cfg
+        # BUG-008: raise ModelNotFoundError so TrackerWorker can show specific message
+        from pathlib import Path as _Path
+        if not _Path(cfg.MODEL_PATH).exists():
+            raise ModelNotFoundError(cfg.MODEL_PATH)
         self.backend = create_detector_backend(cfg.MODEL_PATH, cfg.DEVICE)
         self.night = NightSmallTargetDetector(cfg)
         self.roi = MotionROIProposer(cfg)
@@ -653,7 +658,7 @@ class VideoSession:
                 src_fps = float(self.cap.get(cv2.CAP_PROP_FPS))
                 self.source_fps = src_fps if src_fps > self.cfg.SOURCE_FPS_MIN_VALID else 0.0
         if self.cap is None or not self.cap.isOpened():
-            raise RuntimeError(f'Не удалось открыть источник: {self.source}')
+            raise SourceOpenError(self.source)
         if self.output_path:
             output = Path(self.output_path)
             output.parent.mkdir(parents=True, exist_ok=True)

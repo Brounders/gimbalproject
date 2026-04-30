@@ -10,6 +10,7 @@ from PySide6.QtCore import QThread, Signal
 
 from uav_tracker.config import Config
 from uav_tracker.evaluation import evaluate_source
+from uav_tracker.exceptions import InferenceDeviceError, ModelNotFoundError, SourceOpenError
 from uav_tracker.pipeline import TrackerPipeline, VideoSession
 
 
@@ -124,8 +125,20 @@ class TrackerWorker(QThread):
                         'timings_ms': result.timings_ms,
                     }
                 )
+        except ModelNotFoundError as exc:
+            self.failed.emit(str(exc))  # BUG-008: specific model error message
+            return
+        except SourceOpenError as exc:
+            self.failed.emit(str(exc))  # BUG-008: specific source error message
+            return
+        except InferenceDeviceError as exc:
+            self.failed.emit(str(exc))  # BUG-008: specific device error message
+            return
+        except MemoryError:
+            self.failed.emit("Недостаточно памяти для запуска трекера. Закройте другие приложения.")
+            return
         except Exception as exc:
-            self.failed.emit(str(exc))
+            self.failed.emit(f"Неожиданная ошибка: {type(exc).__name__}: {exc}")
             return
         finally:
             if event_log_handle is not None:
