@@ -105,15 +105,17 @@ Phase 0 critical bugs завершена 2026-04-30.
 
 ---
 
-## Следующий цикл — Phase 1 (Architecture)
+## AP-20260430-PHASE1 — Phase 1 Architecture (текущий план)
 
-Открыть отдельной сессией.
+Сессия 2026-04-30. Коммит: 10480ab.
 
-1. BUG-004: MainWindow thread safety
-2. ARC-001: декомпозиция MainWindow
-3. ARC-002: декомпозиция TargetManager
-4. TD-003: magic numbers → Config
-5. TEST-001: coverage → 35%
+| Задача | Статус | Примечание |
+|--------|--------|------------|
+| BUG-004: MainWindow thread safety | ✅ DONE | threading.RLock, one-shot shutdown guard |
+| ARC-001: декомпозиция MainWindow | ✅ DONE | 1205 → 683 строк; все build-методы в layout_builders |
+| ARC-002: декомпозиция TargetManager | ⏳ NEXT | |
+| TD-003: magic numbers → Config | ⏳ BACKLOG | |
+| TEST-001: coverage → 35% | ⏳ BACKLOG | текущий pytest 362/362 |
 
 ---
 
