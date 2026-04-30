@@ -125,16 +125,34 @@ def parse_video_source(video_source: Union[str, int]) -> Union[str, int]:
     return video_source
 
 
+_DEFAULT_MODEL_PATH = 'runs/detect/runs/drone_bird_probe_fast/weights/best.pt'
+
+_MODEL_FALLBACKS = [
+    _DEFAULT_MODEL_PATH,
+    'runs/detect/runs/drone_bird_v2/weights/best.pt',
+    'runs/detect/runs/drone_bird_v1/weights/best.pt',
+    'models/yolo11n.pt',
+    'yolo11n.pt',
+]
+
+
 def resolve_model_path(model_path: str) -> str:
-    candidates = [
-        model_path,
-        'runs/detect/runs/drone_bird_probe_fast/weights/best.pt',
-        'runs/detect/runs/drone_bird_v2/weights/best.pt',
-        'runs/detect/runs/drone_bird_v1/weights/best.pt',
-        'models/yolo11n.pt',
-        'yolo11n.pt',
-    ]
-    for candidate in candidates:
+    """Resolve a model path to an existing file.
+
+    If *model_path* exists, return it immediately.
+    If *model_path* is the default config value (or empty), search fallback
+    candidates and return the first that exists.
+    If *model_path* is an explicit non-default override that does not exist,
+    return it unchanged — TrackerPipeline will raise ModelNotFoundError.
+    """
+    if Path(model_path).exists():
+        return model_path
+    # Only search fallbacks for the default/empty path — explicit overrides
+    # must be validated by the caller (avoids silently substituting a different model).
+    is_default = not model_path or model_path == _DEFAULT_MODEL_PATH
+    if not is_default:
+        return model_path
+    for candidate in _MODEL_FALLBACKS:
         if Path(candidate).exists():
             return candidate
     return model_path
