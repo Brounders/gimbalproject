@@ -1,4 +1,5 @@
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -13,21 +14,14 @@ from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QAction, QImage, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
-    QCheckBox,
-    QComboBox,
     QFileDialog,
     QFrame,
     QHBoxLayout,
     QInputDialog,
-    QLabel,
-    QLineEdit,
     QMainWindow,
     QMessageBox,
     QPushButton,
     QPlainTextEdit,
-    QSizePolicy,
-    QSpinBox,
-    QSplitter,
     QVBoxLayout,
     QWidget,
 )
@@ -56,7 +50,14 @@ from app.job_state_machine import refresh_header_state as _refresh_header_state_
 from app.source_controller import on_source_type_changed as _on_source_type_changed_impl, source_from_controls as _source_from_controls_impl, split_source as _split_source_impl
 from app.stats_renderer import update_stats as _update_stats_impl
 from app.ui.expert_dialog import build_expert_dialog as _build_expert_dialog
-from app.ui.layout_builders import build_header as _build_header, build_inspector_drawer as _build_inspector_drawer, build_left_rail as _build_left_rail
+from app.ui.layout_builders import (
+    build_dock as _build_dock,
+    build_header as _build_header,
+    build_inspector_drawer as _build_inspector_drawer,
+    build_left_rail as _build_left_rail,
+    build_right_panel as _build_right_panel,
+    build_topbar as _build_topbar,
+)
 from app.workers import EvaluationWorker, TrackerWorker
 
 
@@ -65,6 +66,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.worker: TrackerWorker | None = None
         self.eval_worker: EvaluationWorker | None = None
+        self._worker_lock = threading.RLock()
         self._profile_extras: dict[str, Any] = {}
         self._updating_controls = False
         self._is_closing = False
@@ -147,192 +149,10 @@ class MainWindow(QMainWindow):
         self.menuBar().addAction(quit_action)
 
     def build_topbar(self) -> QFrame:
-        bar = QFrame()
-        bar.setObjectName('TopBar')
-
-        layout = QHBoxLayout(bar)
-        layout.setContentsMargins(14, 0, 14, 0)
-        layout.setSpacing(14)
-
-        # Brand
-        brand_name = QLabel('GIMBAL')
-        brand_name.setObjectName('BrandName')
-        brand_sub = QLabel('система сопровождения')
-        brand_sub.setObjectName('BrandSub')
-        layout.addWidget(brand_name)
-        layout.addWidget(brand_sub)
-
-        sep1 = QLabel()
-        sep1.setObjectName('TopBarSep')
-        layout.addWidget(sep1)
-
-        # Mode selector (EO / IR / NV) maps to quick mode buttons
-        mode_frame = QFrame()
-        mode_frame.setObjectName('ModeSelector')
-        mode_layout = QHBoxLayout(mode_frame)
-        mode_layout.setContentsMargins(3, 3, 3, 3)
-        mode_layout.setSpacing(2)
-
-        self.quick_auto_btn = QPushButton('АВТО')
-        self.quick_day_btn  = QPushButton('ДЕНЬ')
-        self.quick_night_btn = QPushButton('НОЧЬ')
-        self.quick_ir_btn   = QPushButton('IR')
-        for btn in (self.quick_auto_btn, self.quick_day_btn,
-                    self.quick_night_btn, self.quick_ir_btn):
-            btn.setObjectName('ModeBtn')
-            mode_layout.addWidget(btn)
-        self.quick_auto_btn.setProperty('active', 'true')
-        refresh_widget_style(self.quick_auto_btn)
-
-        layout.addWidget(mode_frame)
-
-        sep2 = QLabel()
-        sep2.setObjectName('TopBarSep')
-        layout.addWidget(sep2)
-
-        # Status badge
-        self.top_state_badge = QLabel('IDLE')
-        self.top_state_badge.setObjectName('HeaderStatus')
-        self.top_state_badge.setProperty('state', 'idle')
-        layout.addWidget(self.top_state_badge)
-
-        # Source / scenario label
-        self.header_source_label = QLabel('CAM 0')
-        self.header_source_label.setObjectName('BrandSub')
-        layout.addWidget(self.header_source_label)
-
-        sep3 = QLabel()
-        sep3.setObjectName('TopBarSep')
-        layout.addWidget(sep3)
-
-        # Record indicator
-        self.record_indicator_label = QLabel('● REC')
-        self.record_indicator_label.setObjectName('RecordIndicator')
-        self.record_indicator_label.setProperty('recording', False)
-        layout.addWidget(self.record_indicator_label)
-
-        sep4 = QLabel()
-        sep4.setObjectName('TopBarSep')
-        layout.addWidget(sep4)
-
-        # Expert button
-        self.expert_btn = QPushButton('Эксперт')
-        self.expert_btn.setObjectName('ModeBtn')
-        layout.addWidget(self.expert_btn)
-
-        self.expert_badge = QLabel('EXP')
-        self.expert_badge.setObjectName('ChipAccent')
-        self.expert_badge.setVisible(False)
-        layout.addWidget(self.expert_badge)
-
-        # Fullscreen
-        self.fullscreen_btn = QPushButton('⛶')
-        self.fullscreen_btn.setObjectName('ModeBtn')
-        self.fullscreen_btn.setFixedWidth(34)
-        self.fullscreen_btn.setToolTip('Полный экран')
-        layout.addWidget(self.fullscreen_btn)
-
-        # Next target (hidden until tracking)
-        self.next_target_btn = QPushButton('↕ Цель')
-        self.next_target_btn.setObjectName('ModeBtn')
-        self.next_target_btn.setToolTip('Следующая цель')
-        self.next_target_btn.setEnabled(False)
-        layout.addWidget(self.next_target_btn)
-
-        sep5 = QLabel()
-        sep5.setObjectName('TopBarSep')
-        layout.addWidget(sep5)
-
-        # Clock
-        from PySide6.QtCore import QTimer, QTime
-        self._clock_label = QLabel(QTime.currentTime().toString('HH:mm'))
-        self._clock_label.setObjectName('TopBarClock')
-        layout.addWidget(self._clock_label)
-        self._clock_timer = QTimer(self)
-        self._clock_timer.timeout.connect(
-            lambda: self._clock_label.setText(QTime.currentTime().toString('HH:mm'))
-        )
-        self._clock_timer.start(30_000)
-
-        return bar
+        return _build_topbar(self)
 
     def build_left_rail(self) -> QWidget:
-        rail = QFrame()
-        rail.setObjectName('LeftControlRail')
-        rail.setFixedWidth(260)
-
-        layout = QVBoxLayout(rail)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
-
-        # ── Source panel ────────────────────────────────────────────────────
-        src_panel = QFrame()
-        src_panel.setObjectName('GlassPanel')
-        src_layout = QVBoxLayout(src_panel)
-        src_layout.setContentsMargins(14, 14, 14, 14)
-        src_layout.setSpacing(8)
-
-        src_title = QLabel('ИСТОЧНИК')
-        src_title.setObjectName('RailSectionTitle')
-        src_layout.addWidget(src_title)
-
-        self.source_type_combo = QComboBox()
-        self.source_type_combo.addItem('Камера', 'camera')
-        self.source_type_combo.addItem('Видео', 'video')
-        self.source_type_combo.addItem('Поток', 'stream')
-        src_layout.addWidget(self.source_type_combo)
-
-        self.camera_index_spin = QSpinBox()
-        self.camera_index_spin.setRange(0, 16)
-        self.camera_index_spin.setValue(0)
-        src_layout.addWidget(self.camera_index_spin)
-
-        self.source_path_label = QLabel('Видео файл')
-        self.source_path_label.setObjectName('RailSectionTitle')
-        src_layout.addWidget(self.source_path_label)
-
-        self.source_path_edit = QLineEdit('')
-        self.source_path_edit.setPlaceholderText('/путь/к/видео.mp4')
-        src_layout.addWidget(self.source_path_edit)
-
-        self.source_browse_btn = QPushButton('Выбрать...')
-        src_layout.addWidget(self.source_browse_btn)
-
-        layout.addWidget(src_panel)
-
-        # ── Record panel ────────────────────────────────────────────────────
-        rec_panel = QFrame()
-        rec_panel.setObjectName('GlassPanel')
-        rec_layout = QVBoxLayout(rec_panel)
-        rec_layout.setContentsMargins(14, 14, 14, 14)
-        rec_layout.setSpacing(8)
-
-        rec_title = QLabel('ЗАПИСЬ')
-        rec_title.setObjectName('RailSectionTitle')
-        rec_layout.addWidget(rec_title)
-
-        self.record_check = QCheckBox('Сохранять видео')
-        self.record_check.setChecked(True)
-        rec_layout.addWidget(self.record_check)
-
-        self.output_path_label = QLabel('Путь')
-        self.output_path_label.setObjectName('RailSectionTitle')
-        rec_layout.addWidget(self.output_path_label)
-
-        self.output_edit = QLineEdit(str(ROOT / 'runs' / 'gui_output.mp4'))
-        rec_layout.addWidget(self.output_edit)
-
-        self.output_browse_btn = QPushButton('Куда сохранить...')
-        rec_layout.addWidget(self.output_browse_btn)
-
-        self.eval_btn = QPushButton('Оценка')
-        self.eval_btn.setProperty('variant', 'ghost')
-        rec_layout.addWidget(self.eval_btn)
-
-        layout.addWidget(rec_panel)
-
-        layout.addStretch(1)
-        return rail
+        return _build_left_rail(self)
 
     def build_video_stage(self) -> QWidget:
         self.video_stage = VideoStage()
@@ -343,184 +163,11 @@ class MainWindow(QMainWindow):
         return self.video_stage
 
     def build_right_panel(self) -> QWidget:
-        col = QFrame()
-        col.setObjectName('LeftControlRail')
-        col.setFixedWidth(340)
-
-        layout = QVBoxLayout(col)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
-
-        # ── Active target card ──────────────────────────────────────────────
-        card = QFrame()
-        card.setObjectName('ActiveTargetCard')
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(18, 18, 18, 18)
-        card_layout.setSpacing(12)
-
-        # Header row: live badge + id
-        hdr = QHBoxLayout()
-        hdr.setContentsMargins(0, 0, 0, 0)
-        self._rp_live_badge = QLabel('● LOCK')
-        self._rp_live_badge.setObjectName('LiveBadge')
-        self._rp_id_label = QLabel('—')
-        self._rp_id_label.setObjectName('ActiveTargetId')
-        hdr.addWidget(self._rp_live_badge)
-        hdr.addWidget(self._rp_id_label)
-        hdr.addStretch(1)
-        self._rp_state_chip = QLabel('IDLE')
-        self._rp_state_chip.setObjectName('ChipWarn')
-        hdr.addWidget(self._rp_state_chip)
-        card_layout.addLayout(hdr)
-
-        # Name + sub
-        self._rp_name_label = QLabel('Нет цели')
-        self._rp_name_label.setObjectName('ActiveTargetName')
-        self._rp_sub_label = QLabel('ожидание...')
-        self._rp_sub_label.setObjectName('ActiveTargetSub')
-        card_layout.addWidget(self._rp_name_label)
-        card_layout.addWidget(self._rp_sub_label)
-
-        # 3-metric grid: conf / fps / source
-        metrics = QHBoxLayout()
-        metrics.setContentsMargins(0, 0, 0, 0)
-        metrics.setSpacing(0)
-        self._rp_conf_key  = QLabel('УВЕРЕН')
-        self._rp_conf_val  = QLabel('—')
-        self._rp_fps_key   = QLabel('FPS')
-        self._rp_fps_val   = QLabel('—')
-        self._rp_src_key   = QLabel('РЕЖИМ')
-        self._rp_src_val   = QLabel('—')
-        for key, val in ((self._rp_conf_key, self._rp_conf_val),
-                         (self._rp_fps_key,  self._rp_fps_val),
-                         (self._rp_src_key,  self._rp_src_val)):
-            key.setObjectName('MetricKey')
-            val.setObjectName('MetricVal')
-            cell = QVBoxLayout()
-            cell.setContentsMargins(0, 0, 0, 0)
-            cell.setSpacing(4)
-            cell.addWidget(key)
-            cell.addWidget(val)
-            metrics.addLayout(cell)
-            metrics.addStretch(1)
-        card_layout.addLayout(metrics)
-
-        # Confidence bar
-        bar_row = QHBoxLayout()
-        bar_row.setContentsMargins(0, 0, 0, 0)
-        bar_row.setSpacing(10)
-        conf_lbl = QLabel('CONF')
-        conf_lbl.setObjectName('MetricKey')
-        bar_track = QFrame()
-        bar_track.setObjectName('ConfBarTrack')
-        bar_track.setMinimumWidth(60)
-        bar_inner = QHBoxLayout(bar_track)
-        bar_inner.setContentsMargins(0, 0, 0, 0)
-        bar_inner.setSpacing(0)
-        self._rp_conf_bar = QFrame()
-        self._rp_conf_bar.setObjectName('ConfBarFill')
-        self._rp_conf_bar.setFixedWidth(0)
-        bar_inner.addWidget(self._rp_conf_bar)
-        bar_inner.addStretch(1)
-        self._rp_conf_pct = QLabel('—')
-        self._rp_conf_pct.setObjectName('MetricVal')
-        self._rp_conf_pct.setFixedWidth(42)
-        bar_row.addWidget(conf_lbl)
-        bar_row.addWidget(bar_track, 1)
-        bar_row.addWidget(self._rp_conf_pct)
-        card_layout.addLayout(bar_row)
-
-        layout.addWidget(card)
-
-        # ── Runtime stats card ──────────────────────────────────────────────
-        rt = QFrame()
-        rt.setObjectName('RuntimeCard')
-        rt_layout = QGridLayout(rt)
-        rt_layout.setContentsMargins(16, 14, 16, 14)
-        rt_layout.setHorizontalSpacing(20)
-        rt_layout.setVerticalSpacing(6)
-
-        rt_title = QLabel('ТЕЛЕМЕТРИЯ ТРЕКЕРА')
-        rt_title.setObjectName('RuntimeTitle')
-        rt_layout.addWidget(rt_title, 0, 0, 1, 3)
-
-        self._rp_rt_fps_k  = QLabel('FPS')
-        self._rp_rt_fps_v  = QLabel('—')
-        self._rp_rt_bdg_k  = QLabel('БЮДЖЕТ')
-        self._rp_rt_bdg_v  = QLabel('—')
-        self._rp_rt_tgt_k  = QLabel('ЦЕЛЕЙ')
-        self._rp_rt_tgt_v  = QLabel('—')
-
-        for i, (k, v) in enumerate(((self._rp_rt_fps_k, self._rp_rt_fps_v),
-                                     (self._rp_rt_bdg_k, self._rp_rt_bdg_v),
-                                     (self._rp_rt_tgt_k, self._rp_rt_tgt_v))):
-            k.setObjectName('RuntimeTitle')
-            v.setObjectName('RuntimeVal')
-            rt_layout.addWidget(k, 1, i)
-            rt_layout.addWidget(v, 2, i)
-
-        layout.addWidget(rt)
-
-        # ── Inspector (diagnostics) — collapsible ───────────────────────────
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        self.inspector_module = self.build_inspector_drawer()
-        self.inspector_module.setVisible(True)
-        scroll.setWidget(self.inspector_module)
-        layout.addWidget(scroll, 1)
-
-        return col
+        return _build_right_panel(self)
 
     def build_dock(self) -> QFrame:
-        dock = QFrame()
-        dock.setObjectName('Dock')
+        return _build_dock(self)
 
-        layout = QHBoxLayout(dock)
-        layout.setContentsMargins(12, 0, 12, 0)
-        layout.setSpacing(4)
-
-        # Status / log line
-        self.bottom_console_label = QLabel('готово к запуску')
-        self.bottom_console_label.setObjectName('BottomConsoleText')
-        self.bottom_console_label.setWordWrap(False)
-        layout.addWidget(self.bottom_console_label, 1)
-
-        sep1 = QFrame()
-        sep1.setObjectName('DockSep')
-        layout.addWidget(sep1)
-
-        # Start
-        self.start_btn = QPushButton('▶  Старт')
-        self.start_btn.setObjectName('DockPrimary')
-        layout.addWidget(self.start_btn)
-
-        # Stop
-        self.stop_btn = QPushButton('■  Стоп')
-        self.stop_btn.setObjectName('DockDestructive')
-        self.stop_btn.setEnabled(False)
-        layout.addWidget(self.stop_btn)
-
-        sep2 = QFrame()
-        sep2.setObjectName('DockSep')
-        layout.addWidget(sep2)
-
-        # Next target
-        btn_next = self.next_target_btn if hasattr(self, 'next_target_btn') else QPushButton('↕')
-        # next_target_btn already created in build_topbar; add a duplicate dock shortcut
-        dock_next = QPushButton('↕')
-        dock_next.setObjectName('DockIconBtn')
-        dock_next.setToolTip('Следующая цель')
-        dock_next.setEnabled(False)
-        dock_next.clicked.connect(self._request_next_target)
-        self._dock_next_btn = dock_next
-        layout.addWidget(dock_next)
-
-        return dock
-
-    # keep alias so any code calling build_bottom_console still works
     def build_bottom_console(self) -> QFrame:
         return self.build_dock()
 
@@ -818,10 +465,11 @@ class MainWindow(QMainWindow):
         _set_job_state_impl(self, state)
 
     def _start(self):
-        if self.worker is not None and self.worker.isRunning():
-            return
-        if self.eval_worker is not None and self.eval_worker.isRunning():
-            return
+        with self._worker_lock:
+            if self.worker is not None and self.worker.isRunning():
+                return
+            if self.eval_worker is not None and self.eval_worker.isRunning():
+                return
 
         try:
             cfg, source, small_target_mode, output_path = self._build_config()
@@ -837,13 +485,14 @@ class MainWindow(QMainWindow):
         cfg.LOCK_EVENT_LOG_ENABLED = True
         cfg.LOCK_EVENT_LOG_PATH = str(lock_log_path)
 
-        self.worker = TrackerWorker(cfg, source, output_path, small_target_mode, lock_log_path=str(lock_log_path))
-        self.worker.frame_ready.connect(self._update_frame)
-        self.worker.stats_ready.connect(self._update_stats)
-        self.worker.log_ready.connect(self._log)
-        self.worker.finished.connect(self._on_tracking_finished)
-        self.worker.failed.connect(self._on_failed)
-        self.worker.start()
+        with self._worker_lock:
+            self.worker = TrackerWorker(cfg, source, output_path, small_target_mode, lock_log_path=str(lock_log_path))
+            self.worker.frame_ready.connect(self._update_frame)
+            self.worker.stats_ready.connect(self._update_stats)
+            self.worker.log_ready.connect(self._log)
+            self.worker.finished.connect(self._on_tracking_finished)
+            self.worker.failed.connect(self._on_failed)
+            self.worker.start()
 
         self._set_job_state('tracking')
         self._set_video_idle_state('Подключение к источнику...')
@@ -862,21 +511,25 @@ class MainWindow(QMainWindow):
         self._log(f'Lock events -> {lock_log_path}')
 
     def _stop(self):
-        if self.worker is not None and self.worker.isRunning():
+        with self._worker_lock:
+            worker = self.worker
+            eval_worker = self.eval_worker
+        if worker is not None and worker.isRunning():
             self._set_job_state('stopping')
-            self.worker.stop()
+            worker.stop()
             self._log('Остановка сессии запрошена...')
             return
-        if self.eval_worker is not None and self.eval_worker.isRunning():
+        if eval_worker is not None and eval_worker.isRunning():
             self._set_job_state('stopping')
-            self.eval_worker.stop()
+            eval_worker.stop()
             self._log('Остановка оценки запрошена...')
 
     def _evaluate(self):
-        if self.worker is not None and self.worker.isRunning():
-            return
-        if self.eval_worker is not None and self.eval_worker.isRunning():
-            return
+        with self._worker_lock:
+            if self.worker is not None and self.worker.isRunning():
+                return
+            if self.eval_worker is not None and self.eval_worker.isRunning():
+                return
 
         try:
             cfg, source, small_target_mode, _output_path = self._build_config()
@@ -887,12 +540,13 @@ class MainWindow(QMainWindow):
         source_name = Path(str(source)).stem if isinstance(source, str) else f'camera_{source}'
         report_path = str(ROOT / 'runs' / 'evaluations' / f'{source_name}_{cfg.RUNTIME_MODE}.json')
 
-        self.eval_worker = EvaluationWorker(cfg, source, small_target_mode, report_path, max_frames=0)
-        self.eval_worker.log_ready.connect(self._log)
-        self.eval_worker.report_ready.connect(self._on_eval_report)
-        self.eval_worker.finished.connect(self._on_eval_finished)
-        self.eval_worker.failed.connect(self._on_failed)
-        self.eval_worker.start()
+        with self._worker_lock:
+            self.eval_worker = EvaluationWorker(cfg, source, small_target_mode, report_path, max_frames=0)
+            self.eval_worker.log_ready.connect(self._log)
+            self.eval_worker.report_ready.connect(self._on_eval_report)
+            self.eval_worker.finished.connect(self._on_eval_finished)
+            self.eval_worker.failed.connect(self._on_failed)
+            self.eval_worker.start()
 
         self._set_job_state('evaluating')
 
@@ -909,11 +563,13 @@ class MainWindow(QMainWindow):
             self._log(f'Сессия завершена: {reason}')
             self._set_video_idle_state(f'Сессия завершена: {reason}')
             self.console_status_label.setText('$ завершено // см. журнал')
-        self.worker = None
+        with self._worker_lock:
+            self.worker = None
         self._set_job_state('idle')
 
     def _on_eval_finished(self, reason: str):
-        self.eval_worker = None
+        with self._worker_lock:
+            self.eval_worker = None
         self._set_job_state('idle')
         if reason == 'stopped':
             self._log('Оценка остановлена пользователем.')
@@ -925,8 +581,9 @@ class MainWindow(QMainWindow):
             self.console_status_label.setText('$ оценка завершена')
 
     def _on_failed(self, message: str):
-        self.worker = None
-        self.eval_worker = None
+        with self._worker_lock:
+            self.worker = None
+            self.eval_worker = None
         self._set_job_state('idle')
         self._state_machine.set(UIState.ERROR)
         self._refresh_header_state()
@@ -960,193 +617,7 @@ class MainWindow(QMainWindow):
         self._render_preview_pixmap()
 
     def _update_stats(self, stats: dict):
-        timings = stats.get('timings_ms', {})
-        active_id = stats.get('active_id')
-        active_source = str(stats.get('active_source', '-'))
-        tracker_mode = str(stats.get('mode', 'SCAN')).upper()
-        frame_index = int(stats.get('frame_index', 0))
-        fps = float(stats.get('fps') or 0.0)
-        gt_visible = bool(stats.get('gt_visible', False))
-        gt_iou = float(stats.get('gt_iou') or 0.0)
-        lock_score = float(stats.get('lock_score') or 0.0)
-        display_confidence = max(0.0, min(1.0, float(stats.get('display_confidence') or 0.0)))
-        continuity_score = max(0.0, min(1.0, float(stats.get('continuity_score') or 0.0)))
-        active_presence_rate = max(0.0, min(1.0, float(stats.get('active_presence_rate') or 0.0)))
-        lock_switches_per_min = float(stats.get('lock_switches_per_min') or 0.0)
-        lock_switch_count = int(stats.get('lock_switch_count', 0))
-        budget_level = int(stats.get('budget_level', 0))
-        budget_load = float(stats.get('budget_load') or 0.0)
-        budget_frame_ms = float(stats.get('budget_frame_ms') or 0.0)
-        roi_budget_candidates = int(stats.get('roi_budget_candidates', 0))
-        night_skip = int(stats.get('night_skip', 0))
-        scan_strategy = str(stats.get('scan_strategy', '-'))
-
-        if tracker_mode == 'TRACK':
-            self._target_present_latched = True
-            self._target_missing_streak = 0
-            self._had_target_in_session = True
-        elif tracker_mode == 'LOST':
-            self._target_present_latched = True
-            self._target_missing_streak += 1
-        elif self._target_present_latched:
-            self._target_missing_streak += 1
-            if self._target_missing_streak >= 8:
-                self._target_present_latched = False
-        target_present = tracker_mode in {'TRACK', 'LOST'}
-
-        if self._job_state == 'tracking':
-            if tracker_mode == 'TRACK':
-                self._state_machine.set(UIState.LOCK)
-            elif tracker_mode == 'LOST':
-                self._state_machine.set(UIState.LOST)
-            elif self._target_present_latched and self._target_missing_streak < 3:
-                # Brief SCAN while recently latched: hold LOCK badge to avoid flicker.
-                self._state_machine.set(UIState.LOCK)
-            else:
-                self._state_machine.set(UIState.RUNNING)
-        elif self._job_state == 'evaluating':
-            self._state_machine.set(UIState.EVALUATION)
-        elif self._job_state == 'stopping':
-            self._state_machine.set(UIState.CHECKING)
-        else:
-            self._state_machine.set(UIState.IDLE)
-        self._last_active_id = active_id
-
-        state_value_map = {
-            UIState.IDLE: 'Ожидание',
-            UIState.CHECKING: 'Остановка',
-            UIState.RUNNING: 'Сканирование',
-            UIState.LOCK: 'Захват',
-            UIState.LOST: 'Повторный захват',
-            UIState.EVALUATION: 'Оценка',
-            UIState.ERROR: 'Ошибка',
-        }
-        state_value = state_value_map.get(self._state_machine.state, 'Ожидание')
-
-        target_count = int(stats.get('target_count', 0))
-        visible_count = int(stats.get('visible_target_count', 0))
-        bg_visible = max(0, visible_count - (1 if active_id is not None else 0))
-
-        if active_id is not None:
-            target_value = f'ID {active_id}'
-        elif tracker_mode == 'LOST':
-            target_value = 'Потеря'
-        else:
-            target_value = 'Нет цели'
-
-        operator_mode_map = {
-            'TRACK': 'Сопровождение',
-            'LOST': 'Повторный захват',
-            'SCAN': 'Сканирование',
-        }
-        operator_mode = operator_mode_map.get(tracker_mode, 'Сканирование')
-
-        confidence_pct = int(round(display_confidence * 100.0))
-        continuity_pct = continuity_score * 100.0
-        active_presence_pct = active_presence_rate * 100.0
-        if gt_visible:
-            quality_main = f'IoU {gt_iou:.3f} | conf {confidence_pct}%'
-        else:
-            quality_main = f'conf {confidence_pct}% | cont {continuity_pct:.1f}%'
-
-        perf_value = budget_frame_ms if budget_frame_ms > 0 else float(timings.get('global', 0.0) or 0.0)
-        self.console_status_label.setText(
-            f"$ {state_value.lower()} // {target_value.lower()} // {operator_mode.lower()}"
-        )
-
-        self.panel_runtime_summary = (
-            f"FPS: {fps:.1f}\n"
-            f"Состояние: {state_value}\n"
-            f"Режим: {operator_mode} | кадр {frame_index + 1}\n"
-            f"Budget L{budget_level} load={budget_load:.2f} frame={perf_value:.1f}ms\n"
-            f"Continuity {continuity_pct:.1f}% | Presence {active_presence_pct:.1f}%\n"
-            f"G {float(timings.get('global', 0.0) or 0.0):.1f} | "
-            f"L {float(timings.get('local', 0.0) or 0.0):.1f} | "
-            f"ROI {float(timings.get('roi', 0.0) or 0.0):.1f} | "
-            f"N {float(timings.get('night', 0.0) or 0.0):.1f}"
-        )
-        self.panel_monitoring_summary.setText(self.panel_runtime_summary)
-        self.panel_target_summary.setText(
-            f"Цель: {'ID ' + str(active_id) if active_id is not None else ('временная потеря' if target_present else 'не обнаружена')}\n"
-            f"Источник: {active_source}\n"
-            f"Lock score: {lock_score:.2f} | strategy: {scan_strategy}"
-        )
-        self.panel_quality_summary.setText(
-            f"{quality_main}\n"
-            f"sw/min {lock_switches_per_min:.2f} ({lock_switch_count}) | "
-            f"roi cand {roi_budget_candidates} | night skip {night_skip}\n"
-            f"видимые цели: {visible_count}, всего: {target_count}, фон: {bg_visible}"
-        )
-
-        for event in stats.get('lock_events', []):
-            self._log(f"[f{frame_index + 1}] {event}")
-            self.panel_events_view.appendPlainText(f"[f{frame_index + 1}] {event}")
-
-        # Update target info card overlay (TASK-023)
-        if tracker_mode == 'TRACK' and active_id is not None:
-            if self._target_lock_start is None:
-                self._target_lock_start = time.perf_counter()
-            elapsed = time.perf_counter() - self._target_lock_start
-            elapsed_str = f'{int(elapsed // 60):02d}:{int(elapsed % 60):02d}'
-            card_state, card_state_key = 'LOCK', 'lock'
-        elif tracker_mode == 'LOST':
-            elapsed_str = '—'
-            card_state, card_state_key = 'ПОТЕРЯ', 'lost'
-        else:
-            self._target_lock_start = None
-            elapsed_str = '—'
-            card_state, card_state_key = 'IDLE', 'idle'
-        self._tc_id.setText(f'ID {active_id}' if active_id is not None else '—')
-        self._tc_conf.setText(f'{confidence_pct}%')
-        self._tc_fps.setText(f'{fps:.1f}')
-        self._tc_time.setText(elapsed_str)
-        self._tc_state.setText(card_state)
-        self._tc_state.setProperty('state', card_state_key)
-        refresh_widget_style(self._tc_state)
-
-        # ── Right panel updates ─────────────────────────────────────────────
-        self._rp_id_label.setText(f'ID {active_id}' if active_id is not None else '—')
-        self._rp_name_label.setText(
-            f'ID {active_id}' if active_id is not None else ('Потеря сигнала' if tracker_mode == 'LOST' else 'Нет цели')
-        )
-        self._rp_sub_label.setText(f'{active_source} · {operator_mode}')
-
-        if tracker_mode == 'TRACK':
-            self._rp_live_badge.setObjectName('LiveBadge')
-            self._rp_state_chip.setText('ЗАХВАТ')
-            self._rp_state_chip.setObjectName('ChipOk')
-        elif tracker_mode == 'LOST':
-            self._rp_live_badge.setObjectName('ChipWarn')
-            self._rp_state_chip.setText('ПОТЕРЯ')
-            self._rp_state_chip.setObjectName('ChipWarn')
-        else:
-            self._rp_live_badge.setObjectName('ChipAccent')
-            self._rp_state_chip.setText('СКАН')
-            self._rp_state_chip.setObjectName('ChipAccent')
-        refresh_widget_style(self._rp_live_badge)
-        refresh_widget_style(self._rp_state_chip)
-
-        self._rp_conf_val.setText(f'{confidence_pct}%')
-        self._rp_fps_val.setText(f'{fps:.0f}')
-        self._rp_src_val.setText(tracker_mode)
-        self._rp_conf_pct.setText(f'{confidence_pct}%')
-
-        # Confidence bar fill (max width is track width of ConfBarTrack)
-        bar_w = max(0, int(self._rp_conf_bar.parent().width() * display_confidence))
-        self._rp_conf_bar.setFixedWidth(bar_w)
-
-        # Runtime card
-        self._rp_rt_fps_v.setText(f'{fps:.0f}')
-        self._rp_rt_bdg_v.setText(f'L{budget_level}')
-        self._rp_rt_tgt_v.setText(str(target_count))
-
-        # Enable/disable Next Target button
-        can_switch = self._job_state == 'tracking' and target_count > 1
-        self.next_target_btn.setEnabled(can_switch)
-        if hasattr(self, '_dock_next_btn'):
-            self._dock_next_btn.setEnabled(can_switch)
-
-        self._refresh_header_state()
+        _update_stats_impl(self, stats)
 
     def _log(self, message: str):
         self.log_view.appendPlainText(message)
@@ -1174,29 +645,35 @@ class MainWindow(QMainWindow):
         event.accept()
 
     def _shutdown_workers(self):
-        if self.worker is not None:
-            self.worker.stop()
-            deadline = time.monotonic() + 15.0
-            while not self.worker.isFinished() and time.monotonic() < deadline:
-                self.worker.wait(120)
-            if not self.worker.isFinished():
-                self.worker.terminate()
-                self.worker.wait(1000)
+        with self._worker_lock:
+            if getattr(self, '_workers_shutdown_done', False):
+                return
+            self._workers_shutdown_done = True
+            worker = self.worker
+            eval_worker = self.eval_worker
 
-        if self.eval_worker is not None:
-            self.eval_worker.stop()
+        if worker is not None:
+            worker.stop()
+            deadline = time.monotonic() + 15.0
+            while not worker.isFinished() and time.monotonic() < deadline:
+                worker.wait(120)
+            if not worker.isFinished():
+                worker.terminate()
+                worker.wait(1000)
+
+        if eval_worker is not None:
+            eval_worker.stop()
             deadline = time.monotonic() + 20.0
-            while not self.eval_worker.isFinished() and time.monotonic() < deadline:
-                self.eval_worker.wait(120)
-            if not self.eval_worker.isFinished():
-                self.eval_worker.terminate()
-                self.eval_worker.wait(1000)
+            while not eval_worker.isFinished() and time.monotonic() < deadline:
+                eval_worker.wait(120)
+            if not eval_worker.isFinished():
+                eval_worker.terminate()
+                eval_worker.wait(1000)
 
 
 def main() -> None:
     app = QApplication(sys.argv)
     window = MainWindow()
-    app.aboutToQuit.connect(window._shutdown_workers)
     window.show()
     sys.exit(app.exec())
 

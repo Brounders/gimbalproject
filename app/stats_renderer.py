@@ -148,6 +148,44 @@ def update_stats(window, stats: dict) -> None:
     window._tc_state.setText(card_state)
     window._tc_state.setProperty('state', card_state_key)
     refresh_widget_style(window._tc_state)
-    window.next_target_btn.setEnabled(window._job_state == 'tracking' and target_count > 1)
+
+    # Right panel updates
+    window._rp_id_label.setText(f'ID {active_id}' if active_id is not None else '—')
+    window._rp_name_label.setText(
+        f'ID {active_id}' if active_id is not None else ('Потеря сигнала' if tracker_mode == 'LOST' else 'Нет цели')
+    )
+    window._rp_sub_label.setText(f'{active_source} · {operator_mode}')
+
+    if tracker_mode == 'TRACK':
+        window._rp_live_badge.setObjectName('LiveBadge')
+        window._rp_state_chip.setText('ЗАХВАТ')
+        window._rp_state_chip.setObjectName('ChipOk')
+    elif tracker_mode == 'LOST':
+        window._rp_live_badge.setObjectName('ChipWarn')
+        window._rp_state_chip.setText('ПОТЕРЯ')
+        window._rp_state_chip.setObjectName('ChipWarn')
+    else:
+        window._rp_live_badge.setObjectName('ChipAccent')
+        window._rp_state_chip.setText('СКАН')
+        window._rp_state_chip.setObjectName('ChipAccent')
+    refresh_widget_style(window._rp_live_badge)
+    refresh_widget_style(window._rp_state_chip)
+
+    window._rp_conf_val.setText(f'{confidence_pct}%')
+    window._rp_fps_val.setText(f'{fps:.0f}')
+    window._rp_src_val.setText(tracker_mode)
+    window._rp_conf_pct.setText(f'{confidence_pct}%')
+
+    bar_w = max(0, int(window._rp_conf_bar.parent().width() * display_confidence))
+    window._rp_conf_bar.setFixedWidth(bar_w)
+
+    window._rp_rt_fps_v.setText(f'{fps:.0f}')
+    window._rp_rt_bdg_v.setText(f'L{budget_level}')
+    window._rp_rt_tgt_v.setText(str(target_count))
+
+    can_switch = window._job_state == 'tracking' and target_count > 1
+    window.next_target_btn.setEnabled(can_switch)
+    if hasattr(window, '_dock_next_btn'):
+        window._dock_next_btn.setEnabled(can_switch)
 
     window._refresh_header_state()
