@@ -165,7 +165,7 @@ class TestUpdateFromYoloFocusMode(unittest.TestCase):
         mgr = TargetManager(_cfg(LOCK_FOCUS_ONLY=True, LOCK_REACQUIRE_DIST=120))
         _inject(mgr, 1, cx=100.0, cy=100.0, drone_score=0.65)
         mgr.active_id = 1
-        mgr._focus_mode = True
+        mgr._focus_ctrl._active = True
         return mgr
 
     def test_active_box_accepted_in_focus_mode(self):
@@ -232,7 +232,7 @@ class TestUpdateFromNightBasic(unittest.TestCase):
     def test_focus_mode_suppresses_night_updates(self):
         """Night detection is fully suppressed when in focus/lock mode."""
         mgr = TargetManager(_cfg(LOCK_FOCUS_ONLY=True))
-        mgr._focus_mode = True
+        mgr._focus_ctrl._active = True
         seen = mgr.update_from_night([_night()], primary_ids=set())
         self.assertEqual(seen, set())
         self.assertEqual(len(mgr.targets), 0)
@@ -446,7 +446,7 @@ class TestUpdateFromRoiYolo(unittest.TestCase):
         active = _inject(mgr, 1, cx=100.0, cy=100.0, source='yolo',
                          drone_score=0.8, hit_streak=10)
         mgr.active_id = 1
-        mgr._focus_mode = True
+        mgr._focus_ctrl._active = True
 
         far_det = Detection(
             bbox=(400, 400, 450, 450), conf=0.7, cls_id=0,
@@ -465,7 +465,7 @@ class TestUpdateFromNightEdgeCases(unittest.TestCase):
     def test_focus_mode_skips_all_night_dets(self):
         """update_from_night must return empty set when in focus mode."""
         mgr = TargetManager(_cfg())
-        mgr._focus_mode = True
+        mgr._focus_ctrl._active = True
         night = _night(cx=200.0, cy=200.0)
         result = mgr.update_from_night([night], primary_ids=set())
         self.assertEqual(result, set())

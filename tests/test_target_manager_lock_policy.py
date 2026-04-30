@@ -88,7 +88,7 @@ class TestActiveSwitchPolicy(unittest.TestCase):
         _inject(mgr, 1, hit_streak=5, drone_score=0.65, lost_frames=0)
         _inject(mgr, 2, cx=200.0)
         mgr.active_id = 1
-        mgr._focus_mode = True
+        mgr._focus_ctrl._active = True
         switched = mgr._set_active_id(2)
         self.assertFalse(switched)
         self.assertEqual(mgr.active_id, 1)
