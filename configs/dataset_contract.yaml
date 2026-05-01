@@ -4,23 +4,35 @@
 # Machine-readable. Claude проверяет этот файл перед запуском training.
 # Training без соответствия контракту запрещён.
 
-version: "1.0"
-date: "2026-04-29"
+version: "1.1"
+date: "2026-05-01"
+
+# ─────────────────────────────────────────────
+# Классы (YOLO label convention)
+# ─────────────────────────────────────────────
+classes:
+  drone_class_id: 0
+  bird_class_id: 1
 
 # ─────────────────────────────────────────────
 # Требования к составу датасета
 # ─────────────────────────────────────────────
 composition:
+  # Минимальное число изображений для валидного training run
+  min_total_images: 5000
+
+  # Доли по сцене (от total images, heuristic по папкам)
   night_visible_light_min_pct: 20
   ir_min_pct: 15
   day_max_pct: 65
 
-  # drone_bird_ratio_max: не более чем N дронов на 1 птицу
-  # Значение 10 означает drone:bird ≤ 10:1
+  # drone:bird ≤ N:1 по числу label-боксов
   # REJECTED baseline drone-bird-yolo имел 540:1 — критический дисбаланс
   drone_bird_ratio_max: 10
 
-  bird_negatives: "must be meaningfully represented (не менее 5% от общего объёма)"
+  # Bird negatives: минимум 5% боксов = class_id 1
+  # Без этого модель не формирует decision boundary drone vs bird
+  bird_negatives_min_pct: 5
 
 # ─────────────────────────────────────────────
 # Верификация перед training
@@ -48,5 +60,10 @@ open_blockers:
   - id: "OQ-001"
     description: "Dataset composition для следующего RTX цикла не верифицирован"
     blocks: training
-    close_action: "SSH RTX → python_scripts/dataset_audit.py → class_balance_report"
-    status: open
+    close_action: "python python_scripts/dataset_audit.py <dataset_dir> --contract configs/dataset_contract.yaml"
+    status: resolved
+    resolved_date: "2026-05-01"
+    resolved_note: >
+      Acceptance criteria формализованы в dataset_contract.yaml v1.1.
+      dataset_audit.py реализован для машинной проверки перед запуском training.
+      Следующий RTX цикл может стартовать после PASS dataset_audit.py.
