@@ -504,7 +504,7 @@ class TrackerPipeline:
                 focus_roi is not None
                 and (
                     not lock_ids
-                    or lock_score < max(self.cfg.LOCK_TRACKER_MIN_SCORE + 0.12, 0.55)
+                    or lock_score < max(self.cfg.LOCK_TRACKER_MIN_SCORE + self.cfg.LOCK_SCORE_VALIDATE_MARGIN, self.cfg.LOCK_SCORE_VALIDATE_MIN)
                     or self.frame_counter % self.budget.effective_local_validate_interval(self.frame_counter) == 0
                 )
             )

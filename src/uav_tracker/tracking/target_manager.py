@@ -173,10 +173,10 @@ class TargetManager:
 
         max_reacquire_dist = min(
             self.cfg.LOCK_REACQUIRE_DIST_MAX,
-            self.cfg.LOCK_REACQUIRE_DIST + min(90, int(active.speed * 1.8) + active.lost_frames * 12),
+            self.cfg.LOCK_REACQUIRE_DIST + min(self.cfg.REACQUIRE_SPEED_DIST_CAP, int(active.speed * self.cfg.REACQUIRE_SPEED_MULT) + active.lost_frames * self.cfg.REACQUIRE_LOST_MULT),
         )  # BUG-002: hard cap prevents radius exceeding frame on high speed/lost combos
         px, py = self._predict_center(active)
-        pred_gate_dist = max_reacquire_dist + min(70, int(active.speed * 2.0))
+        pred_gate_dist = max_reacquire_dist + min(self.cfg.REACQUIRE_PRED_GATE_CAP, int(active.speed * self.cfg.REACQUIRE_PRED_GATE_SPEED_MULT))
         best_tid = None
         best_score = None
         for tid in seen_ids:
@@ -259,7 +259,7 @@ class TargetManager:
             if focus_target is not None:
                 is_active_box = tid == focus_target.track_id
                 fpx, fpy = self._predict_center(focus_target)
-                focus_max_dist = self.cfg.LOCK_REACQUIRE_DIST + min(70, int(focus_target.speed * 1.6))
+                focus_max_dist = self.cfg.LOCK_REACQUIRE_DIST + min(self.cfg.FOCUS_MAX_DIST_SPEED_CAP, int(focus_target.speed * self.cfg.FOCUS_MAX_DIST_SPEED_MULT))
                 is_reacquire_candidate = (
                     self._is_drone_like_detection(det.cls_id, det.conf)
                     and self._dist(cx, cy, fpx, fpy) <= focus_max_dist
@@ -297,12 +297,12 @@ class TargetManager:
         focus_target = self.get_active_target() if self.is_focus_mode() else None
 
         for det in roi_dets:
-            if self._overlaps_any(det.bbox, primary_bboxes, iou_thresh=0.35):
+            if self._overlaps_any(det.bbox, primary_bboxes, iou_thresh=self.cfg.ROI_OVERLAP_IOU_THRESH):
                 continue
 
             if focus_target is not None:
                 fpx, fpy = self._predict_center(focus_target)
-                focus_max_dist = self.cfg.LOCK_REACQUIRE_DIST + min(70, int(focus_target.speed * 1.6))
+                focus_max_dist = self.cfg.LOCK_REACQUIRE_DIST + min(self.cfg.FOCUS_MAX_DIST_SPEED_CAP, int(focus_target.speed * self.cfg.FOCUS_MAX_DIST_SPEED_MULT))
                 is_reacquire_candidate = (
                     self._is_drone_like_detection(det.cls_id, det.conf)
                     and self._dist(det.cx, det.cy, fpx, fpy) <= focus_max_dist
@@ -377,17 +377,17 @@ class TargetManager:
 
         def score(target: TrackedTarget) -> float:
             score_value = float(target.speed)
-            score_value += target.conf * 1.2
-            score_value += min(4.0, target.hit_streak * 0.35)
-            score_value -= target.lost_frames * 0.8
+            score_value += target.conf * self.cfg.SELECT_ACTIVE_CONF_WEIGHT
+            score_value += min(self.cfg.SELECT_ACTIVE_STREAK_CAP, target.hit_streak * self.cfg.SELECT_ACTIVE_STREAK_WEIGHT)
+            score_value -= target.lost_frames * self.cfg.SELECT_ACTIVE_LOST_PENALTY
             if self._is_primary_source(target.source):
-                score_value += 2.8 * target.drone_score
+                score_value += self.cfg.SELECT_ACTIVE_DRONE_WEIGHT * target.drone_score
             else:
-                score_value -= 0.8
+                score_value -= self.cfg.SELECT_ACTIVE_LOST_PENALTY
             return score_value
 
         best = max(self.targets.values(), key=score)
-        if best.speed > 1.0 or self._is_drone_like_target(best, self.cfg.DRONE_REACQUIRE_SCORE_MIN):
+        if best.speed > self.cfg.SELECT_ACTIVE_MIN_SPEED or self._is_drone_like_target(best, self.cfg.DRONE_REACQUIRE_SCORE_MIN):
             self._set_active_id(best.track_id)
 
     def switch_target(self):

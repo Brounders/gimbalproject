@@ -121,6 +121,32 @@ class Config:
     LOCK_EVENT_LOG_PATH: str = ''
     YOLO_LOST_MAX: int = 12
 
+    # ── select_active() scoring weights (target_manager.py) ─────────────────
+    SELECT_ACTIVE_CONF_WEIGHT: float = 1.2     # conf contribution in select_active()
+    SELECT_ACTIVE_STREAK_CAP: float = 4.0      # max hit_streak bonus in select_active()
+    SELECT_ACTIVE_STREAK_WEIGHT: float = 0.35  # per-frame hit_streak bonus weight
+    SELECT_ACTIVE_LOST_PENALTY: float = 0.8    # per-frame lost_frames penalty + night src penalty
+    SELECT_ACTIVE_DRONE_WEIGHT: float = 2.8    # drone_score multiplier for primary-source targets
+    SELECT_ACTIVE_MIN_SPEED: float = 1.0       # min speed threshold to accept best candidate
+
+    # ── Reacquire gate geometry (target_manager.py) ──────────────────────────
+    REACQUIRE_SPEED_DIST_CAP: int = 90         # max speed-based dist extension (px)
+    REACQUIRE_SPEED_MULT: float = 1.8          # speed → dist extension multiplier
+    REACQUIRE_LOST_MULT: int = 12              # lost_frames → dist extension multiplier
+    REACQUIRE_PRED_GATE_CAP: int = 70          # max speed-based prediction gate extension (px)
+    REACQUIRE_PRED_GATE_SPEED_MULT: float = 2.0  # speed → pred gate extension multiplier
+
+    # ── Focus-mode reacquire gate (target_manager.py) ───────────────────────
+    FOCUS_MAX_DIST_SPEED_CAP: int = 70         # max speed-based extension for focus reacquire gate (px)
+    FOCUS_MAX_DIST_SPEED_MULT: float = 1.6     # speed → focus reacquire gate extension multiplier
+
+    # ── ROI overlap filter (target_manager.py) ───────────────────────────────
+    ROI_OVERLAP_IOU_THRESH: float = 0.35       # iou_thresh for _overlaps_any() primary filter
+
+    # ── Lock-score local-validation thresholds (pipeline.py) ─────────────────
+    LOCK_SCORE_VALIDATE_MARGIN: float = 0.12   # margin added to LOCK_TRACKER_MIN_SCORE for validate trigger
+    LOCK_SCORE_VALIDATE_MIN: float = 0.55      # absolute min lock_score that skips local validation
+
     # ── Night Detector (MOG2 + frame-diff small-target) ──────────────────────
     NIGHT_ENABLED: bool = True
     NIGHT_MOG2_HISTORY: int = 50       # MOG2 background history length (frames)
