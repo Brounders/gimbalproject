@@ -100,3 +100,45 @@ class TestContractParsing(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ── verify_baseline tests ─────────────────────────────────────────────────────
+
+import importlib.util as _ilu
+import tempfile as _tempfile
+
+_VB_PATH = Path(__file__).resolve().parents[1] / "python_scripts" / "verify_baseline.py"
+_vb_spec = _ilu.spec_from_file_location("verify_baseline", _VB_PATH)
+_vb_mod = _ilu.module_from_spec(_vb_spec)   # type: ignore[arg-type]
+_vb_spec.loader.exec_module(_vb_mod)        # type: ignore[union-attr]
+_verify = _vb_mod.verify
+
+
+class TestVerifyBaseline(unittest.TestCase):
+
+    def _make_model_and_manifest(self, tmp: Path, content: bytes, sha_override: str | None = None) -> tuple[Path, Path]:
+        model = tmp / "model.pt"
+        model.write_bytes(content)
+        import hashlib
+        real_sha = hashlib.sha256(content).hexdigest()
+        manifest = tmp / "manifest.json"
+        manifest.write_text(
+            __import__("json").dumps({"source_sha256": sha_override or real_sha,
+                                      "installed_at": "2026-01-01T00:00:00Z",
+                                      "source_path": "fake/path.pt",
+                                      "notes": "test"}),
+            encoding="utf-8"
+        )
+        return model, manifest
+
+    def test_pass_matching_sha(self):
+        with _tempfile.TemporaryDirectory() as tmp:
+            model, manifest = self._make_model_and_manifest(Path(tmp), b"fake model weights")
+            self.assertTrue(_verify(model, manifest))
+
+    def test_fail_mismatched_sha(self):
+        with _tempfile.TemporaryDirectory() as tmp:
+            model, manifest = self._make_model_and_manifest(
+                Path(tmp), b"fake model weights", sha_override="0" * 64
+            )
+            self.assertFalse(_verify(model, manifest))
