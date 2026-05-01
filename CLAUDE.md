@@ -82,6 +82,16 @@ configs/               # regression_pack.csv, preset YAMLs
 
 Claude реализует задачи, созданные orchestrator-слоем.
 
+## Codex Control Protocol
+
+Текущий режим проекта: Codex является управляющим слоем.
+
+Claude не продолжает проект автономно и не выбирает следующую задачу.
+Claude выполняет только явно заданный task/scope из `orchestrator/state/active_plan.md`.
+
+Перед началом работы прочитать `orchestrator/state/codex_control_protocol.md`.
+Если `active_plan.md` имеет статус `Completed` или нет active Claude task — остановиться и запросить направление у Human/Codex.
+
 ## Обязательные правила
 
 - Работать только по задачам из `orchestrator/state/active_plan.md`.

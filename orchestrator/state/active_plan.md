@@ -4,11 +4,12 @@
 - AP-PHASE2-MODEL-DATASET-INTAKE
 
 ## Status
-- Active
+- Completed
 
 ## Source Direction
 Phase 1 architecture завершена: BUG-004, ARC-001, ARC-002, TEST-001, TD-003.
-Текущая цель: формальный intake новых моделей/датасетов через gate без ручной возни.
+AP-PHASE2 завершён: проект умеет принимать модель/датасет через формальный gate без ручной возни.
+Следующий цикл открывается только после Human approval через Codex-control protocol.
 
 **Strict non-scope for AP-PHASE2:** bird training, Hailo, UI, ByteTrack, thermal YOLO.
 
@@ -99,11 +100,11 @@ Phase 1 architecture завершена: BUG-004, ARC-001, ARC-002, TEST-001, TD
 
 | ID | Статус |
 |----|--------|
-| OQ-001 | OPEN — следующий training цикл |
+| OQ-001 | ✅ CLOSED — `configs/dataset_contract.yaml` v1.1 + `python_scripts/dataset_audit.py` |
 | OQ-002 | **DEFERRED** — IR bird rejection, не блокирует |
-| OQ-003 | OPEN — false_lock=1.000 day clip |
-| OQ-004 | OPEN — night_confirm 4 vs 5 в docs |
-| OQ-005 | OPEN — baseline.pt верификация |
+| OQ-003 | ✅ CLOSED — no-GT structural false_lock artifact, gate already protected |
+| OQ-004 | ✅ CLOSED — `docs/OPERATOR_BASELINE.md` night_confirm=5 |
+| OQ-005 | ✅ CLOSED — `python_scripts/verify_baseline.py` baseline integrity check |
 
 ---
 
@@ -130,7 +131,8 @@ Phase 1 architecture завершена: BUG-004, ARC-001, ARC-002, TEST-001, TD
 | **TASK-20260501-090 / MG-001: Единый intake-скрипт** | ✅ DONE | `python_scripts/run_intake.py` | коммит 19f3984; 11 тестов |
 | **DG-001: Закрыть OQ-001 dataset spec** | ✅ DONE | `configs/dataset_contract.yaml` v1.1 + `dataset_audit.py` | коммит fde841b; OQ-001 resolved; 15 тестов |
 | **OQ-004-fix: night_confirm docs** | ✅ DONE | `docs/OPERATOR_BASELINE.md` | коммит 0dc2319; OQ-004 закрыт |
-| **OQ-003-diag: day false_lock=1.000** | ✅ DONE | диагностика | коммит pending; структурный артефакт, gate уже защищён; OQ-003 закрыт |
+| **OQ-003-diag: day false_lock=1.000** | ✅ DONE | диагностика | коммит dbd0b84; структурный артефакт, gate уже защищён; OQ-003 закрыт |
+| **OQ-005: baseline verification** | ✅ DONE | `python_scripts/verify_baseline.py` | коммит cbb01c8; baseline integrity check |
 
 ### Execution Order
 
@@ -150,7 +152,7 @@ Phase 1 architecture завершена: BUG-004, ARC-001, ARC-002, TEST-001, TD
 ---
 
 ## Active Claude Tasks (execution allowed now)
-(none — AP-PHASE2 завершён)
+(none)
 
 ## Active RTX Tasks (execution allowed now)
 (none)
