@@ -1,14 +1,16 @@
 # Active Plan
 
 ## Plan ID
-- AP-20260430-CLEANUP
+- AP-PHASE2-MODEL-DATASET-INTAKE
 
 ## Status
-- Completed
+- Active
 
 ## Source Direction
-Phase 0 critical bugs завершена 2026-04-30.
-Текущая цель: cleanup + stabilisation проекта перед Phase 1.
+Phase 1 architecture завершена: BUG-004, ARC-001, ARC-002, TEST-001, TD-003.
+Текущая цель: формальный intake новых моделей/датасетов через gate без ручной возни.
+
+**Strict non-scope for AP-PHASE2:** bird training, Hailo, UI, ByteTrack, thermal YOLO.
 
 ---
 
@@ -119,8 +121,36 @@ Phase 0 critical bugs завершена 2026-04-30.
 
 ---
 
+## AP-PHASE2 — Model & Dataset Intake (текущий план)
+
+Цель: проект умеет принимать новую модель/датасет через формальный gate без ручной возни.
+
+| Задача | Статус | Scope | Acceptance |
+|--------|--------|-------|------------|
+| **TASK-20260501-090 / MG-001: Единый intake-скрипт** | ⏳ NEXT | `python_scripts/run_intake.py model.pt [--preset night\|day\|ir]` | читает `configs/promotion_contract.yaml`; запускает применимые gates; пишет `orchestrator/reports/REPORT-INTAKE-{model}.md`; вердикт `ACCEPTED` / `HOLD` / `REJECTED` |
+| **DG-001: Закрыть OQ-001 dataset spec** | ⏳ BACKLOG | уточнить `configs/dataset_contract.yaml` как acceptance criteria, не выбирать конкретный датасет | contract содержит минимальные доли night/IR/day, `drone_bird_ratio_max`, bird negatives; `OQ-001` формально закрыт для старта следующего RTX-цикла |
+| **OQ-004-fix: night_confirm docs** | ⏳ BACKLOG | исправить расхождение docs vs config | `docs/OPERATOR_BASELINE.md` согласован с `configs/night.yaml` / accepted `NIGHT_CONFIRM=5`; OQ-004 закрыт |
+| **OQ-003-diag: day false_lock=1.000** | ⏳ BACKLOG | только диагностика, без runtime-fix | воспроизведена причина day false_lock=1.000; написан report; если нужен фикс, открыть отдельную задачу |
+
+### Execution Order
+
+1. MG-001
+2. DG-001
+3. OQ-004-fix
+4. OQ-003-diag
+
+### Guardrails
+
+- Не начинать training.
+- Не менять model baseline.
+- Не менять runtime thresholds без explicit Human approval.
+- Не исправлять OQ-003 в диагностической задаче.
+- Не выходить за текущую задачу из таблицы AP-PHASE2.
+
+---
+
 ## Active Claude Tasks (execution allowed now)
-(none)
+- TASK-20260501-090 — MG-001: Единый intake-скрипт
 
 ## Active RTX Tasks (execution allowed now)
 (none)
