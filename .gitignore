@@ -40,6 +40,15 @@ logs/security/
 # wiki — перенесена в Projects/wiki/ (вне git, общая для всех проектов)
 wiki/
 
+# Local agent, editor, design-reference, and external-memory workspaces.
+# They are useful on this machine but must not pollute project status.
+.claire/
+.claude/worktrees/
+.obsidian/
+Gimbal design/
+design_refs/
+memory/claude-memory-compiler/
+
 # claude-memory-compiler — auto-generated, not for git
 memory/claude-memory-compiler/daily/
 memory/claude-memory-compiler/knowledge/

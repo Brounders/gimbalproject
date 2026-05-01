@@ -66,6 +66,9 @@ Claude must not receive broad prompts such as:
 - "sync and proceed";
 - "do the whole plan".
 
+Old Claude branches and worktrees are archive/reference material unless `active_plan.md` explicitly activates one task that uses them.
+Their current classification is recorded in `orchestrator/state/worktree_review.md`.
+
 ## Obsidian Rule
 
 Obsidian remains part of the control loop.
@@ -102,3 +105,8 @@ For Codex-controlled work:
 3. Run validation.
 4. Commit governance changes separately from runtime/code changes.
 5. Report remaining drift explicitly.
+
+## Remote Publication Rule
+
+Do not push `main` to `origin/main` from an orchestration session unless Human explicitly approves remote publication.
+If local commits are ahead of `origin/main`, report the count and keep the project locally backed up before continuing.

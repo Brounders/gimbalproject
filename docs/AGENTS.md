@@ -22,10 +22,16 @@
 
 ## Canonical Context Files
 - For new sessions, treat these as the primary fast-context files:
-  - `docs/philosophy/PROJECT_COMPASS.md`
-  - `CURRENT_PHASE.md`
-  - `docs/philosophy/ENGINEERING_DECISIONS.md`
+  - `orchestrator/state/codex_control_protocol.md`
+  - `orchestrator/state/active_plan.md`
+  - `orchestrator/state/open_tasks.md`
+  - `orchestrator/state/open_training.md`
+  - `../wiki/maps/GimbalProject Map.md`
+  - `../wiki/synthesis/source_of_truth.md`
+  - `../wiki/synthesis/current_state.md`
+  - `../wiki/synthesis/open_questions.md`
 - Use them to avoid rebuilding project memory from long chat history.
+- `docs/philosophy/PROJECT_COMPASS.md` and `docs/philosophy/ENGINEERING_DECISIONS.md` are secondary orientation files.
 
 ## Validation Commands
 - `lint`: `python3 -m compileall -q python_scripts src app`

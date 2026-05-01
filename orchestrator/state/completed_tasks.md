@@ -73,3 +73,5 @@ REPORT-20260314-087 | Claude Mac | ACCEPTED | 2026-03-14 | orchestrator/reports/
 REPORT-20260314-088 | Claude Mac | ACCEPTED (needs commit) | 2026-03-14 | orchestrator/reports/REPORT-20260314-088-dataset-audit.md — dataset audit OQ-001
 REPORT-20260314-089 | Claude Mac | NEEDS_REVIEW | 2026-03-14 | orchestrator/reports/REPORT-20260314-089-a08-decomposition.md — A08 plan in worktree, not merged
 TASK-20260501-090 | Claude Mac | Accepted | 2026-05-01 | orchestrator/reports/REPORT-INTAKE-baseline.md — MG-001 run_intake.py model intake wrapper
+REPORT-CODEX-CONTROL-20260501 | Codex Mac | ACCEPTED | 2026-05-01 | orchestrator/reports/REPORT-CODEX-CONTROL-20260501.md — Codex-control handoff
+REPORT-RISK-CLOSURE-20260501 | Codex Mac | ACCEPTED | 2026-05-01 | orchestrator/reports/REPORT-RISK-CLOSURE-20260501.md — local risk closure before next cycle

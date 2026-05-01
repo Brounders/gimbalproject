@@ -1,68 +1,66 @@
-# Worktree Review — 2026-04-29
+# Worktree Review — 2026-05-01
 
-Создан в G1 read-only audit. Только классификация.
-Никаких git-операций не выполнялось. Все решения требуют явного Human approval.
+Current status after Codex-control handoff.
 
----
+No runtime changes are authorized by this file.
+This is a classification registry for old Claude branches, local tool folders, and design reference folders.
 
-## Модифицированные файлы (tracked, uncommitted)
+## Current Main State
 
-| Файл | Изменение | Источник | Классификация | Решение | Статус |
-|------|-----------|----------|---------------|---------|--------|
-| `app/main_gui.py` | +467 строк | Session 10, UI редизайн | UI diff | Review required | ⏳ pending |
-| `app/ui/theme.py` | +748 строк | Session 10, glass design | UI diff | Review required | ⏳ pending |
-| `python_scripts/run_quality_gate.py` | +6 строк | Session 8, `--context` flag | Feature addition | Likely ACCEPT | ⏳ pending |
-| `.ai/TASKS.md` | +6 строк | Неизвестно | Minor update | Likely ACCEPT | ⏳ pending |
+| Item | Status |
+|------|--------|
+| Current branch | `main` |
+| Current head | `5b7b05e` before this risk-closure session |
+| `active_plan.md` | `Completed` |
+| Active Claude tasks | none |
+| Active RTX tasks | none |
+| Open backlog tasks | none |
 
----
+## Claude Worktrees
 
-## Untracked файлы
+Claude worktrees are archive/reference material unless `active_plan.md` names a specific task for one of them.
 
-| Файл/Директория | Источник | Классификация | Решение | Статус |
-|------|---------|---------------|---------|--------|
-| `orchestrator/reports/REPORT-20260314-088-dataset-audit.md` | Session 8 | Report not committed | **COMMIT** | ⏳ pending |
-| `orchestrator/reports/REPORT-agent-team-audit-20260314.md` | agent-team | Agent-team audit report | Review required | ⏳ pending |
-| `models/anti_uav_night_v5.onnx` | Session 9, Path A (провален) | Abandoned experiment artifact | Likely DELETE | ⏳ pending |
-| `models/anti_uav_night_v5.onnx.data` | Session 9, Path A (провален) | Abandoned experiment artifact | Likely DELETE | ⏳ pending |
-| `configs/night_yolov5.yaml` | Session 9, Path A | Config заброшенного пути | Likely DELETE | ⏳ pending |
-| `"Gimbal design/"` | Session 10 | UI reference materials | Keep/ignore | ⏳ pending |
-| `memory/claude-memory-compiler/` | Tool infrastructure | Memory system | Keep/ignore | ⏳ pending |
-| `.claire/` | Unknown | Unknown tool | Review required | ⏳ pending |
-| `.obsidian/` | Obsidian vault | Wiki tool | Keep/ignore | ⏳ pending |
-| `.claude/worktrees/` | Claude worktree dirs | Tool infrastructure | Keep/ignore | ⏳ pending |
+| Branch | Ahead of `main` | Behind `main` | Classification | Decision |
+|--------|-----------------|---------------|----------------|----------|
+| `claude/busy-bhaskara-4ebe9f` | 0 | 10 | merged/obsolete | archive only |
+| `claude/busy-hamilton-9c2e2a` | 0 | 12 | merged/obsolete | archive only |
+| `claude/cool-lehmann-1ef3aa` | 0 | 2 | merged/obsolete | archive only |
+| `claude/elastic-hawking-25f3dd` | 0 | 45 | merged/obsolete | archive only |
+| `claude/funny-hugle-328c74` | 0 | 55 | merged/obsolete | archive only |
+| `claude/interesting-visvesvaraya-c35788` | 0 | 15 | merged/obsolete | archive only |
+| `claude/nifty-golick-21e65b` | 0 | 56 | merged/obsolete | archive only |
+| `claude/optimistic-wiles-6ee846` | 0 | 55 | merged/obsolete | archive only |
+| `claude/sharp-spence-afd285` | 0 | 56 | merged/obsolete | archive only |
+| `claude/trusting-bose-308c4d` | 0 | 56 | merged/obsolete | archive only |
+| `claude/elastic-babbage-b20fe7` | 2 | 107 | stale wiki build | do not merge without review |
+| `claude/elegant-vaughan-284df8` | 1 | 56 | stale phase-2 plan | do not merge without review |
+| `claude/eloquent-ride-82b6f9` | 2 | 56 | stale phase-0 work | do not merge without review |
+| `claude/inspiring-agnesi-c7897f` | 1 | 56 | stale UI/design work | preserve as UI reference only |
+| `worktree-agent-a3ff75ebca884588b` | 1 | 120 | stale TD-003 duplicate | do not merge without review |
 
----
+## Local Untracked Workspaces
 
-## UI Diff — Отдельный Review Item
+These folders are intentionally ignored in `.gitignore`.
+They are not deleted.
 
-**Ветка:** `claude/inspiring-agnesi-c7897f` (Session 10 work)
-**Файлы:** `app/main_gui.py` (+467), `app/ui/theme.py` (+748)
-**Описание:** 3-колоночный layout, TopBar pill, Dock pill, glass design токены
-**Статус сессии:** структурно правильно, визуально не совпадает с референсом
-**Решение не принято:** Path A (точно повторить референс) vs Path B (только стиль)
+| Path | Classification | Decision |
+|------|----------------|----------|
+| `.claire/` | local agent workspace | ignore locally |
+| `.claude/worktrees/` | Claude archive worktrees | ignore locally |
+| `.obsidian/` | local Obsidian app state for this folder | ignore locally |
+| `memory/claude-memory-compiler/` | external Claude memory repo/tool | ignore locally |
+| `Gimbal design/` | UI reference prototype | keep as reference, not execution source |
+| `design_refs/` | UI reference exports | keep as reference, not execution source |
 
-> Эти файлы НЕ входят в governance-коммиты G2a/G2b/G2c.
-> Human решает судьбу UI diff отдельно.
+## Authority Rule
 
----
+- `main` + accepted reports + `active_plan.md` are canonical.
+- Old Claude branches are not canonical.
+- Obsidian is context, not proof of completion.
+- Claude memory is archive only.
+- Broad prompts to Claude are forbidden; use single-scope prompts only.
 
-## Worktrees с незамерженной работой
+## Remaining Human Decision
 
-| Ветка | Сессия | Содержимое | Статус |
-|-------|--------|------------|--------|
-| `elastic-hawking-25f3dd` | Session 7 | Рефакторинг: MainWindow decomposition, 338 тестов, coverage 51% | ⚠️ NOT MERGED |
-| `claude/inspiring-agnesi-c7897f` | Session 10 | UI редизайн | ⚠️ NOT MERGED |
-
-> Работа в этих ветках была задекларирована как выполненная в project_state.md,
-> но в main ветке отсутствует. Это основная причина расхождений (G1 audit).
-
----
-
-## Actions Required (Human approval needed)
-
-- [ ] **REPORT-088**: закоммитить untracked report (`git add orchestrator/reports/REPORT-20260314-088-dataset-audit.md`)
-- [ ] **UI diff**: принять решение Path A / Path B / abandon
-- [ ] **Session 7 worktree**: смержить в main или закрыть как abandoned
-- [ ] **Onnx артефакты**: удалить `models/anti_uav_night_v5.onnx*` и `configs/night_yolov5.yaml` если Path A окончательно заброшен
-- [ ] **run_quality_gate.py +6**: проверить и принять изменение
-- [ ] **REPORT-agent-team-audit**: прочитать и дать статус
+`main` is ahead of `origin/main`.
+Pushing to GitHub is the only way to remove the remote-backup risk, but it requires explicit Human approval.
