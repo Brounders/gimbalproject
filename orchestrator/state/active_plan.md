@@ -115,7 +115,7 @@ Phase 0 critical bugs завершена 2026-04-30.
 | ARC-001: декомпозиция MainWindow | ✅ DONE | 1205 → 683 строк; все build-методы в layout_builders |
 | ARC-002: декомпозиция TargetManager | ✅ DONE | FocusModeController; target_manager 434→401 строк |
 | TEST-001: coverage → 35% | ✅ DONE | core 52→55% (--cov=src); full 27→29% (--cov=src/uav_tracker --cov=app) |
-| TD-003: magic numbers → Config | ⏳ BACKLOG | **blocked** — не начинать без explicit human override |
+| TD-003: magic numbers → Config | ✅ DONE | 16 constants, commit 351f1c8, coverage 55% |
 
 ---
 
