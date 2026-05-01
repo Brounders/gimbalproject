@@ -31,7 +31,7 @@ from uav_tracker.modes import apply_runtime_mode
 from uav_tracker.pipeline import apply_runtime_preset, parse_video_source
 from uav_tracker.profile_io import apply_overrides, available_presets
 from app.ui import UIState, UIStateMachine, VideoStage
-from app.ui.theme import APP_STYLESHEET, refresh_widget_style
+from app.ui.theme import APP_STYLESHEET, refresh_widget_style, SCENARIO_LABELS
 from app.ui.cards import build_target_info_card
 from app.app_settings import load_app_settings as _load_app_settings_impl, save_app_settings as _save_app_settings_impl
 from app.profile_controller import (
