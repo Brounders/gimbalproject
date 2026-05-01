@@ -31,3 +31,4 @@ Always answer in this order:
 - Read `orchestrator/state/codex_control_protocol.md` before opening a new project cycle.
 - If `orchestrator/state/active_plan.md` is `Completed`, do not start implementation until Human approves the next cycle.
 - Obsidian wiki is long-term context, not execution authority.
+- For any task about detectors, tracking, models, datasets, training, export, benchmarks, or deployment, infer the need from meaning even when the user writes in Russian. Read the local Ultralytics map first, then verify against official Ultralytics docs when the decision depends on current API behavior.

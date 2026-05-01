@@ -87,6 +87,20 @@ Do not use it for:
 - replacing gate reports;
 - overriding current `active_plan.md`.
 
+## Ultralytics Documentation Rule
+
+For any task whose meaning involves detectors, YOLO, tracking, models, datasets, training, validation, export, benchmarks, Raspberry Pi, Hailo, runtime inference, or deployment, Codex must use the Ultralytics knowledge route even if the user writes the request in Russian and does not use exact English trigger words.
+
+Required local read route:
+
+1. `../wiki/sources/ultralytics_site_map.md`
+2. `../wiki/sources/ultralytics_yolo.md` when API/code details are needed
+3. `../wiki/maps/Training Models Datasets Map.md` when the task affects model lifecycle or dataset decisions
+
+If the decision depends on current API behavior, model names, export formats, tracker options, or version-specific defaults, verify against official Ultralytics docs before deciding.
+
+Ultralytics documentation is an external technical reference. Project promotion, baseline install, and acceptance decisions still require project gates and accepted reports.
+
 ## Session Start Rule
 
 Before new work:
