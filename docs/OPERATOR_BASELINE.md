@@ -183,7 +183,7 @@ test_videos/IR_BIRD_001.mp4 \
 > Root cause id_chg/min для large-target night clips — нестабильность детекций на уровне night detector,
 > не lock policy layer. Knobs выше адресуют эту нестабильность.
 > AP-024 фактические значения в `night` пресете: night_max_area=220, night_track_dist=65, night_lost_max=8.
-> AP-025 добавляет: night_confirm=4.
+> AP-025 принял: night_confirm=5 (прогрессия 4→5; =5 даёт PASS night gate, =4 не достаточно).
 
 ---
 
@@ -220,7 +220,7 @@ test_videos/IR_BIRD_001.mp4 \
 | `night_max_area` | 200 (default) | **220** (AP-024) | 200 (default) | Night detector max blob area |
 | `night_track_dist` | 42 (default) | **65** (AP-024) | 42 (default) | Night tracker spatial gate (px) |
 | `night_lost_max` | 8 (default) | 8 (default) | 8 (default) | Night track grace frames |
-| `night_confirm` | 3 (default) | **4** (AP-025) | 3 (default) | Consecutive frames to establish night detection |
+| `night_confirm` | 3 (default) | **5** (AP-025) | 3 (default) | Consecutive frames to establish night detection |
 
 ---
 
