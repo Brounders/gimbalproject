@@ -127,10 +127,10 @@ Phase 1 architecture завершена: BUG-004, ARC-001, ARC-002, TEST-001, TD
 
 | Задача | Статус | Scope | Acceptance |
 |--------|--------|-------|------------|
-| **TASK-20260501-090 / MG-001: Единый intake-скрипт** | ⏳ NEXT | `python_scripts/run_intake.py model.pt [--preset night\|day\|ir]` | читает `configs/promotion_contract.yaml`; запускает применимые gates; пишет `orchestrator/reports/REPORT-INTAKE-{model}.md`; вердикт `ACCEPTED` / `HOLD` / `REJECTED` |
-| **DG-001: Закрыть OQ-001 dataset spec** | ⏳ BACKLOG | уточнить `configs/dataset_contract.yaml` как acceptance criteria, не выбирать конкретный датасет | contract содержит минимальные доли night/IR/day, `drone_bird_ratio_max`, bird negatives; `OQ-001` формально закрыт для старта следующего RTX-цикла |
-| **OQ-004-fix: night_confirm docs** | ⏳ BACKLOG | исправить расхождение docs vs config | `docs/OPERATOR_BASELINE.md` согласован с `configs/night.yaml` / accepted `NIGHT_CONFIRM=5`; OQ-004 закрыт |
-| **OQ-003-diag: day false_lock=1.000** | ⏳ BACKLOG | только диагностика, без runtime-fix | воспроизведена причина day false_lock=1.000; написан report; если нужен фикс, открыть отдельную задачу |
+| **TASK-20260501-090 / MG-001: Единый intake-скрипт** | ✅ DONE | `python_scripts/run_intake.py` | коммит 19f3984; 11 тестов |
+| **DG-001: Закрыть OQ-001 dataset spec** | ✅ DONE | `configs/dataset_contract.yaml` v1.1 + `dataset_audit.py` | коммит fde841b; OQ-001 resolved; 15 тестов |
+| **OQ-004-fix: night_confirm docs** | ✅ DONE | `docs/OPERATOR_BASELINE.md` | коммит 0dc2319; OQ-004 закрыт |
+| **OQ-003-diag: day false_lock=1.000** | ✅ DONE | диагностика | коммит pending; структурный артефакт, gate уже защищён; OQ-003 закрыт |
 
 ### Execution Order
 
@@ -150,7 +150,7 @@ Phase 1 architecture завершена: BUG-004, ARC-001, ARC-002, TEST-001, TD
 ---
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260501-090 — MG-001: Единый intake-скрипт
+(none — AP-PHASE2 завершён)
 
 ## Active RTX Tasks (execution allowed now)
 (none)
