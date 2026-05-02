@@ -82,13 +82,38 @@ class TestActionPolicy:
     def test_ir_strong_evidence_yields_keep_lock(self):
         """IR-source belief with high reliability still resolves to KEEP_LOCK.
 
-        TargetBelief.modality='ir' is sensor metadata; it does not change
-        the deterministic decision but must not invalidate it either.
+        IR/thermal is the accepted night gate, so the baseline keep threshold
+        remains valid for IR evidence.
         """
         policy = ActionPolicy()
         belief = _belief(reliability=0.85, lost_age=0, source='lock', modality='ir')
         action = policy.decide(belief, lock_score=0.7)
         assert action == TrackingAction.KEEP_LOCK
+
+    def test_night_modality_requires_stronger_reliability_to_keep_lock(self):
+        """RGB-night should not KEEP_LOCK on marginal reliability.
+
+        The same reliability/lock_score still keeps day/IR targets, but
+        visible-night is diagnostic-only and should fall back to validation.
+        """
+        policy = ActionPolicy()
+        belief = _belief(reliability=0.65, lost_age=0, source='night', modality='night')
+        action = policy.decide(belief, lock_score=0.7)
+        assert action == TrackingAction.LOCAL_VALIDATE
+
+    def test_ir_modality_keeps_lock_at_baseline_reliability(self):
+        """IR is primary night evidence and must not inherit RGB-night strictness."""
+        policy = ActionPolicy()
+        belief = _belief(reliability=0.65, lost_age=0, source='lock', modality='ir')
+        action = policy.decide(belief, lock_score=0.7)
+        assert action == TrackingAction.KEEP_LOCK
+
+    def test_night_modality_drops_stale_lock_earlier(self):
+        """RGB-night stale evidence should release before generic RGB evidence."""
+        policy = ActionPolicy()
+        belief = _belief(reliability=0.14, lost_age=10, source='night', modality='night')
+        action = policy.decide(belief, lock_score=0.0)
+        assert action == TrackingAction.DROP_LOCK
 
     def test_weak_evidence_does_not_keep_lock(self):
         """Weak/lost evidence must NOT yield KEEP_LOCK regardless of modality."""

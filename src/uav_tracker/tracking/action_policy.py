@@ -76,6 +76,28 @@ class ActionPolicy:
     drop_reliability_max: float = 0.10
     drop_lost_age_min: int = 12
     rescan_lost_age_min: int = 9
+    night_keep_reliability_min: float = 0.70
+    night_drop_reliability_max: float = 0.15
+    night_drop_lost_age_min: int = 10
+
+    def _thresholds_for(self, belief: TargetBelief) -> tuple[float, float, int]:
+        """Return keep/drop thresholds for the current evidence modality.
+
+        IR keeps the baseline thresholds because thermal is the accepted night
+        evidence.  RGB-night is stricter: visible night detections are
+        diagnostic/secondary and should not hold a marginal lock as eagerly.
+        """
+        if belief.modality == 'night':
+            return (
+                float(self.night_keep_reliability_min),
+                float(self.night_drop_reliability_max),
+                int(self.night_drop_lost_age_min),
+            )
+        return (
+            float(self.keep_reliability_min),
+            float(self.drop_reliability_max),
+            int(self.drop_lost_age_min),
+        )
 
     def decide(
         self,
@@ -89,9 +111,11 @@ class ActionPolicy:
         if needs_recovery:
             return TrackingAction.REDETECT
 
+        keep_reliability_min, drop_reliability_max, drop_lost_age_min = self._thresholds_for(belief)
+
         if (
-            belief.reliability < self.drop_reliability_max
-            and belief.lost_age >= self.drop_lost_age_min
+            belief.reliability < drop_reliability_max
+            and belief.lost_age >= drop_lost_age_min
         ):
             return TrackingAction.DROP_LOCK
 
@@ -99,7 +123,7 @@ class ActionPolicy:
             return TrackingAction.GLOBAL_RESCAN
 
         if (
-            belief.reliability >= self.keep_reliability_min
+            belief.reliability >= keep_reliability_min
             and belief.lost_age <= self.keep_lost_age_max
             and lock_score >= self.validate_lock_score_max
         ):
