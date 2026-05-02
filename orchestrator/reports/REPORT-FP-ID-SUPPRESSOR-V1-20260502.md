@@ -13,6 +13,7 @@
 | `docs/superpowers/plans/2026-05-02-fp-id-suppressor-v1.md` | NEW | Подробный execution plan для FP/ID suppressor цикла. |
 | `orchestrator/state/active_plan.md` | EDIT | Открыт активный цикл `AP-FP-ID-SUPPRESSOR-V1`; FPID-001/002/003 отмечены DONE, FPID-004 вынесен как `TASK-20260502-091`. |
 | `orchestrator/state/open_tasks.md` | EDIT | Добавлена bounded Claude-задача `TASK-20260502-091` для реализации weak-evidence suppressor. |
+| `orchestrator/tasks/TASK-20260502-091-fp-id-suppressor.md` | NEW | Точный контракт реализации FPID-004 с учётом аудита: не опираться на `modality`, не подавлять `yolo`, не менять gate thresholds. |
 | `src/uav_tracker/evaluation.py` | EDIT | `EvaluationReport` расширен telemetry counters: action/path/source/modality counts, false-lock source/action counts, avg reliability/p_present. |
 | `python_scripts/run_action_policy_gate.py` | EDIT | `compact_report()` и row output пробрасывают новую telemetry в JSON/CSV. |
 | `tests/test_evaluation_telemetry.py` | NEW | Unit-тесты для новых `EvaluationReport` telemetry fields и стабильных source labels. |
@@ -164,6 +165,12 @@ Do not jump to YOLO26/model cycle yet for this specific FP/ID issue. Model/data 
 2. Because of that, FPID-004 should rely primarily on `source`, `reliability`, `p_present`, and `lost_age`, not on `belief.modality` alone.
 3. A later cleanup should add explicit scene/modality plumbing for offline gates if modality-specific policy becomes central.
 4. Full benchmark runs must stay serial while `avg_fps` is a blocking threshold.
+
+Audit note from Human-provided read-only review:
+
+- `modality-aware ActionPolicy` is valid at unit-test/API level, but its RGB-night branch is not observed in current offline gate JSONs because `target_modality='rgb'`.
+- Therefore any wording that implies gate-level proof for RGB-night strictness should be treated as downgraded to "unit-level PASS; behavioral effect not observed in offline gates".
+- This does not invalidate `POLICY_SUPPRESSOR_CANDIDATE`, because the suppressor evidence is source/reliability/p_present based.
 
 ---
 

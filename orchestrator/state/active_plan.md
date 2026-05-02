@@ -8,6 +8,7 @@
 
 ## Active Claude Tasks (execution allowed now)
 - TASK-20260502-091 — FPID-004 weak-evidence suppressor bounded implementation.
+  - Task contract: `orchestrator/tasks/TASK-20260502-091-fp-id-suppressor.md`
 
 Allowed scope:
 - `src/uav_tracker/tracking/action_policy.py`
@@ -19,6 +20,7 @@ Allowed scope:
 - `python_scripts/run_action_policy_gate.py` only if compact telemetry needs test-safe formatting
 - `orchestrator/reports/REPORT-FP-ID-SUPPRESSOR-IMPLEMENTATION-20260502.md`
 - `orchestrator/state/completed_tasks.md` after validation
+- `orchestrator/state/open_tasks.md` / `orchestrator/state/active_plan.md` only to mark `TASK-20260502-091` complete after successful validation
 
 Strict non-scope:
 - model changes;
@@ -28,6 +30,7 @@ Strict non-scope:
 - replacing `TargetManager` or `TemplateLockTracker`;
 - enabling `ACTION_POLICY_BEHAVIOR_ENABLED=True` by default;
 - changing gate thresholds to make failures pass.
+- relying primarily on `belief.modality`; offline gates currently report `target_modality='rgb'`, so use `source/reliability/p_present/lost_age`.
 
 Validation required:
 - `PYTHONPATH=src tracker_env/bin/python -m pytest tests/test_tracking_evidence.py tests/test_action_policy.py tests/test_action_policy_behavior.py tests/test_action_policy_gate.py tests/test_evaluation_telemetry.py -q`
