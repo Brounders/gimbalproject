@@ -47,6 +47,7 @@ class EvaluationReport:
     longest_lock_streak: int
     scan_strategy_counts: dict[str, int]
     avg_stage_ms: dict[str, float]
+    behavior_drop_count: int
 
     def to_dict(self) -> dict:
         data = asdict(self)
@@ -104,6 +105,7 @@ class Evaluator:
         stage_samples: dict[str, list[float]] = {'global': [], 'lock': [], 'local': [], 'roi': [], 'night': [], 'draw': []}
         scan_strategy_counts: Counter[str] = Counter()
         elapsed_video_sec = 0.0
+        behavior_drop_count = 0
 
         try:
             while True:
@@ -141,6 +143,7 @@ class Evaluator:
                 scan_strategy_counts[result.scan_strategy] += 1
                 for key in stage_samples:
                     stage_samples[key].append(result.timings_ms.get(key, 0.0))
+                behavior_drop_count = max(behavior_drop_count, int(getattr(result, 'behavior_drop_count', 0)))
 
                 gt_visible = bool(meta.get('gt_bbox'))
                 if gt_visible:
@@ -222,6 +225,7 @@ class Evaluator:
             longest_lock_streak=longest_lock_streak,
             scan_strategy_counts=dict(scan_strategy_counts),
             avg_stage_ms=avg_stage_ms,
+            behavior_drop_count=behavior_drop_count,
         )
         if report_path:
             out = Path(report_path)

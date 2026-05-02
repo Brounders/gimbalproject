@@ -1,0 +1,8 @@
+# source,scene
+# Reproducible ActionPolicy OFF/ON gate pack.
+# IR/thermal is the accepted night gate; visible-night remains diagnostic-only.
+test_videos/drone_closeup_mixkit_44644_360.mp4,day
+test_videos/antiuav_rgbt_train_20190925_210802_1_7_infrared.mp4,ir
+test_videos/antiuav_rgbt_train_20190925_205804_1_2_infrared.mp4,ir
+test_videos/drone_detection_V_BIRD_001.mp4,noise
+test_videos/drone_detection_V_AIRPLANE_001.mp4,noise
