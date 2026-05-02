@@ -1,7 +1,7 @@
 # Active Plan
 
 ## Plan ID
-- AP-FP-ID-SUPPRESSOR-V1
+- AP-OPERATOR-OVERRIDE-BACKEND-V1
 
 ## Status
 - Completed
@@ -13,41 +13,44 @@
 - none
 
 ## Source Direction
-Human approved the FP/ID suppressor cycle after ActionPolicy telemetry showed that the blocking `noise-airplane` false lock and visible-night diagnostic false locks were weak runtime evidence rather than high-confidence YOLO false positives.
+Human approved a one-pass implementation of the backend foundation for manual
+operator target selection.  Scope was intentionally limited to command/data
+contract, TargetManager/Pipeline wiring, feature flag, telemetry, tests, and
+reporting.  PySide6 UI wiring is a later cycle.
 
-## AP-FP-ID-SUPPRESSOR-V1 — False Positive / ID Suppressor
+## AP-OPERATOR-OVERRIDE-BACKEND-V1 — Manual Target Selection Backend
 
 ### Цель
 
-Проверить, можно ли безопасно уменьшить ложные удержания и ID-дёрганье на weak/noise evidence без ухудшения accepted day/IR gate.
+Позволить будущему UI передать в pipeline операторскую метку цели
+(click или bbox), чтобы tracker мог сбросить ошибочную active target и начать
+вести operator-confirmed область.
 
 ### Результат
 
 | ID | Задача | Статус | Результат |
 |----|--------|--------|-----------|
-| FPID-001 | Baseline promotion + diagnostic gates | ✅ DONE | Blocking retry PASS; diagnostic-night PASS |
-| FPID-002 | Evaluation telemetry for false locks | ✅ DONE | `EvaluationReport` получил action/source/modality/reliability counters |
-| FPID-003 | Telemetry rerun + decision checkpoint | ✅ DONE | `POLICY_SUPPRESSOR_CANDIDATE`: false locks идут из weak runtime evidence |
-| FPID-004 | Weak-evidence suppressor implementation | ✅ DONE | `night/roi` weak evidence → guarded `DROP_LOCK`; blocking gate PASS |
-| FPID-005 | Final report and state close | ✅ DONE | `REPORT-FP-ID-SUPPRESSOR-IMPLEMENTATION-20260503.md` |
+| OPOR-001 | OperatorTargetOverride command | ✅ DONE | click/bbox command with clipped frame bbox |
+| OPOR-002 | TargetManager operator-confirmed target | ✅ DONE | prefer existing overlapping target, otherwise create auxiliary target |
+| OPOR-003 | TrackerPipeline guarded queue | ✅ DONE | `request_operator_target()` + `OPERATOR_OVERRIDE_ENABLED` guard |
+| OPOR-004 | FrameOutput telemetry | ✅ DONE | status/count/bbox fields added default-safe |
+| OPOR-005 | Tests/report/state | ✅ DONE | `tests/test_operator_override.py` + implementation report |
 
 ### Итоговое решение
 
-**PASS for blocking gate.**
+**Backend PASS.**
 
-Ключевые факты:
+Ручной выбор цели теперь имеет проверяемый backend-контракт, но остаётся
+выключенным по умолчанию через `Config.OPERATOR_OVERRIDE_ENABLED=False`.
 
-- `noise-airplane` false lock улучшен: `0.190 → 0.171`.
-- Day clip не изменился по presence/false_lock/idchg.
-- IR clips не ухудшены materially.
-- Visible-night diagnostic false_lock/idchg снижаются, но presence падает и drop rate высокий, поэтому visible-night остаётся diagnostic-only.
-- `ACTION_POLICY_BEHAVIOR_ENABLED` остаётся default OFF.
+### Отчёт
 
-### Отчёты
-
-- `orchestrator/reports/REPORT-FP-ID-SUPPRESSOR-V1-20260502.md`
-- `orchestrator/reports/REPORT-FP-ID-SUPPRESSOR-IMPLEMENTATION-20260503.md`
+- `orchestrator/reports/REPORT-OPERATOR-OVERRIDE-BACKEND-20260503.md`
 
 ### Следующий шаг
 
-Выбрать новый цикл после Human approval. Не начинать следующий implementation без отдельного подтверждения.
+Выбрать новый цикл после Human approval:
+
+- подключить PySide6 UI click/drag к `TrackerPipeline.request_operator_target()`;
+- проверить coordinate mapping из widget coordinates в frame coordinates;
+- добавить визуальную индикацию operator-selected/operator-confirmed target.
