@@ -11,6 +11,14 @@ from uav_tracker.config import Config
 from uav_tracker.pipeline import VideoSession, TrackerPipeline
 
 
+def _telemetry_label(value: object) -> str:
+    """Stable JSON label for plain strings and string-valued enums."""
+    enum_value = getattr(value, "value", None)
+    if enum_value is not None:
+        return str(enum_value)
+    return str(value)
+
+
 @dataclass
 class EvaluationReport:
     source: str
@@ -48,6 +56,14 @@ class EvaluationReport:
     scan_strategy_counts: dict[str, int]
     avg_stage_ms: dict[str, float]
     behavior_drop_count: int
+    tracking_action_counts: dict[str, int]
+    decision_path_counts: dict[str, int]
+    target_source_counts: dict[str, int]
+    target_modality_counts: dict[str, int]
+    false_lock_action_counts: dict[str, int]
+    false_lock_source_counts: dict[str, int]
+    avg_target_reliability: float
+    avg_target_p_present: float
 
     def to_dict(self) -> dict:
         data = asdict(self)
@@ -106,6 +122,14 @@ class Evaluator:
         scan_strategy_counts: Counter[str] = Counter()
         elapsed_video_sec = 0.0
         behavior_drop_count = 0
+        tracking_action_counts: Counter[str] = Counter()
+        decision_path_counts: Counter[str] = Counter()
+        target_source_counts: Counter[str] = Counter()
+        target_modality_counts: Counter[str] = Counter()
+        false_lock_action_counts: Counter[str] = Counter()
+        false_lock_source_counts: Counter[str] = Counter()
+        target_reliability_values: list[float] = []
+        target_p_present_values: list[float] = []
 
         try:
             while True:
@@ -144,6 +168,16 @@ class Evaluator:
                 for key in stage_samples:
                     stage_samples[key].append(result.timings_ms.get(key, 0.0))
                 behavior_drop_count = max(behavior_drop_count, int(getattr(result, 'behavior_drop_count', 0)))
+                tracking_action = _telemetry_label(getattr(result, 'tracking_action', 'global_rescan'))
+                decision_path = _telemetry_label(getattr(result, 'decision_path', 'telemetry_only'))
+                active_source = _telemetry_label(getattr(result, 'active_source', '-'))
+                target_modality = _telemetry_label(getattr(result, 'target_modality', 'rgb'))
+                tracking_action_counts[tracking_action] += 1
+                decision_path_counts[decision_path] += 1
+                target_source_counts[active_source] += 1
+                target_modality_counts[target_modality] += 1
+                target_reliability_values.append(float(getattr(result, 'target_reliability', 0.0)))
+                target_p_present_values.append(float(getattr(result, 'target_p_present', 0.0)))
 
                 gt_visible = bool(meta.get('gt_bbox'))
                 if gt_visible:
@@ -166,6 +200,8 @@ class Evaluator:
                         time_to_first_active = total_frames
                     if (not gt_visible) or (gt_visible and result.gt_iou < 0.10):
                         false_lock_frames += 1
+                        false_lock_action_counts[tracking_action] += 1
+                        false_lock_source_counts[active_source] += 1
                 if result.mode in {'TRACK', 'LOCK-FOCUS'}:
                     lock_frames += 1
                     current_lock_streak += 1
@@ -226,6 +262,14 @@ class Evaluator:
             scan_strategy_counts=dict(scan_strategy_counts),
             avg_stage_ms=avg_stage_ms,
             behavior_drop_count=behavior_drop_count,
+            tracking_action_counts=dict(tracking_action_counts),
+            decision_path_counts=dict(decision_path_counts),
+            target_source_counts=dict(target_source_counts),
+            target_modality_counts=dict(target_modality_counts),
+            false_lock_action_counts=dict(false_lock_action_counts),
+            false_lock_source_counts=dict(false_lock_source_counts),
+            avg_target_reliability=mean(target_reliability_values) if target_reliability_values else 0.0,
+            avg_target_p_present=mean(target_p_present_values) if target_p_present_values else 0.0,
         )
         if report_path:
             out = Path(report_path)

@@ -70,10 +70,31 @@ def test_scene_preset_uses_ir_mapping_and_override():
 
 
 def test_compact_report_extracts_behavior_drop_count():
-    compact = compact_report(_report(behavior_drop_count=3, avg_gt_iou=0.61234))
+    compact = compact_report(
+        _report(
+            behavior_drop_count=3,
+            avg_gt_iou=0.61234,
+            tracking_action_counts={"keep_lock": 2},
+            decision_path_counts={"telemetry_only": 3},
+            target_source_counts={"yolo": 2, "-": 1},
+            target_modality_counts={"rgb": 3},
+            false_lock_action_counts={"keep_lock": 1},
+            false_lock_source_counts={"yolo": 1},
+            avg_target_reliability=0.42,
+            avg_target_p_present=0.50,
+        )
+    )
 
     assert compact["behavior_drop_count"] == 3
     assert compact["avg_gt_iou"] == 0.6123
+    assert compact["tracking_action_counts"] == {"keep_lock": 2}
+    assert compact["decision_path_counts"] == {"telemetry_only": 3}
+    assert compact["target_source_counts"] == {"yolo": 2, "-": 1}
+    assert compact["target_modality_counts"] == {"rgb": 3}
+    assert compact["false_lock_action_counts"] == {"keep_lock": 1}
+    assert compact["false_lock_source_counts"] == {"yolo": 1}
+    assert compact["avg_target_reliability"] == 0.42
+    assert compact["avg_target_p_present"] == 0.50
 
 
 def test_pair_row_computes_deltas_and_drop_rate():
