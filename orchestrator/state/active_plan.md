@@ -1,15 +1,121 @@
 # Active Plan
 
 ## Plan ID
-- AP-PHASE2-MODEL-DATASET-INTAKE
+- AP-MODERNITY-GAP
 
 ## Status
 - Completed
 
 ## Source Direction
+Human approved the modernity-gap plan and started execution on 2026-05-01.
+Cycle completed as measurement/decision audit only: runtime code, baseline, thresholds, training, and UI were not changed.
+Цикл должен определить, насколько современно построены основные механизмы трекинга, модели, ночного обнаружения, оценки качества и отображения.
+
+**Строго вне рамок AP-MODERNITY-GAP:** Hailo, Raspberry Pi, внедрение новых зависимостей, продвижение новой модели в baseline, изменение runtime thresholds, обучение, крупный рефакторинг без отдельного подтверждения.
+
+**Правила отчётов для этого и следующих циклов:**
+- Заголовки разделов писать по-русски.
+- Объяснения писать по-русски; имена файлов, API и кода оставлять на английском.
+- Сводить к минимуму непонятные английские термины; если термин нужен, сразу пояснять его по-русски.
+- Hailo/Raspberry не включать в отчёты и планы до отдельной команды Human.
+
+## AP-MODERNITY-GAP — аудит современности трекинга и модели
+
+### Цель
+
+Сравнить текущий GimbalProject с актуальным путём Ultralytics и определить, какие механизмы:
+
+- оставить как есть;
+- измерить глубже;
+- заменить современным способом;
+- не трогать без новых контрольных доказательств.
+
+### Задачи
+
+| ID | Задача | Статус | Результат |
+|----|--------|--------|-----------|
+| MGAP-001 | Сравнить штатные трекеры Ultralytics | ✅ DONE | Full `ByteTrack`, `BoT-SORT`, `BoT-SORT + ReID` measured; none can replace self-hold |
+| MGAP-002 | Разобрать самописные механизмы трекинга | ✅ DONE | `TargetManager`/`TemplateLockTracker` оставить; `NightSmallTargetDetector` признан главным modernity gap |
+| MGAP-003 | Обновить модельный путь | ✅ DONE | `YOLO26n` — следующий candidate-only benchmark; baseline не менять |
+| MGAP-004 | Оценить визуальное отставание | ✅ DONE | UI gap отделён от algorithm gap; не смешивать с tracking decisions |
+| MGAP-005 | Сформировать матрицу решений | ✅ DONE | См. `orchestrator/reports/REPORT-MODERNITY-GAP-20260501.md` |
+
+### Порядок работы
+
+1. Сначала восстановить актуальное состояние: git, `active_plan.md`, отчёты, wiki.
+2. Прочитать локальный Ultralytics route:
+   - `../wiki/sources/ultralytics_site_map.md`
+   - `../wiki/sources/ultralytics_yolo.md`
+3. Проверить свежую документацию Ultralytics только по нужным разделам.
+4. Не начинать переписывание кода.
+5. Сначала собрать измерения и таблицу решений.
+6. После таблицы решений запросить Human approval на конкретный следующий эксперимент.
+
+### Ожидаемый итог
+
+Документ-решение по современности проекта:
+
+- где мы уже используем актуальный путь;
+- где у нас полезная самописная логика;
+- где у нас технический долг;
+- какие 1-2 эксперимента дадут максимальный прирост без риска сломать ночной gate.
+
+### Итог
+
+Отчёт: `orchestrator/reports/REPORT-MODERNITY-GAP-20260501.md`.
+
+Решение:
+- не заменять текущий project pipeline на native ByteTrack-only, `BoT-SORT`, or `BoT-SORT + ReID`;
+- не удалять `TemplateLockTracker`, пока replacement не докажет night gate PASS;
+- считать `YOLO26` актуальным направлением для candidate experiments;
+- считать `NightSmallTargetDetector` главным modernity gap, но не менять его без dataset/model cycle;
+- ближайший безопасный эксперимент: `YOLO26n` candidate-only benchmark.
+
+---
+
+## Архив: AP-20260501-BYTETRACK-EVAL (CLOSED 2026-05-01)
+
+Human approved option B: ByteTrack / Ultralytics tracking evaluation.
+Цикл выполнен как measurement-only: runtime thresholds, baseline, GUI и lock policy не менялись.
+
+**Strict non-scope for AP-20260501-BYTETRACK-EVAL:** baseline promotion, runtime threshold changes, GUI changes, training, detector replacement.
+
+## AP-20260501-BYTETRACK-EVAL — ByteTrack / Ultralytics Tracking Evaluation
+
+Цель: дать безопасный способ сравнивать текущий project pipeline с native Ultralytics tracking (`bytetrack.yaml` / `botsort.yaml`) на тех же клипах и preset-ах.
+
+| Задача | Статус | Scope | Acceptance |
+|--------|--------|-------|------------|
+| **TE-001: Standalone tracking-eval script** | ✅ DONE | `python_scripts/run_ultralytics_tracking_eval.py` | measurement-only JSON/CSV, no runtime changes |
+| **TE-002: Helper unit tests** | ✅ DONE | `tests/test_ultralytics_tracking_eval.py` | pure helper coverage, no YOLO inference in unit tests |
+| **TE-003: Smoke measurement** | ✅ DONE | `configs/regression_pack_night.csv`, `max_frames=5` | script runs native `bytetrack.yaml` and writes artifacts |
+
+### Key Findings
+
+- `src/uav_tracker/runtime/ultralytics_backend.py` already uses `tracker='bytetrack.yaml'` for `track_frame()`.
+- Current project pipeline is not pure native ByteTrack: it combines Ultralytics track IDs with `TargetManager`, template lock, ROI assist, night detector, and lock policy.
+- Evaluation should therefore compare project pipeline metrics against native Ultralytics tracker metrics, not treat ByteTrack as absent.
+
+### Generated Smoke Artifacts
+
+- `runs/evaluations/ultralytics_tracking/smoke_tracking_eval_night_bytetrack.json`
+- `runs/evaluations/ultralytics_tracking/smoke_tracking_eval_night_bytetrack.csv`
+
+### Exit Criteria
+
+- [x] Official/current Ultralytics tracking API checked through Context7.
+- [x] Local Ultralytics wiki route read before implementation.
+- [x] Runtime code untouched.
+- [x] Standalone script supports `--tracker bytetrack|botsort`.
+- [x] Validation commands pass.
+
+---
+
+## Архив: AP-PHASE2-MODEL-DATASET-INTAKE (CLOSED 2026-05-01)
+
 Phase 1 architecture завершена: BUG-004, ARC-001, ARC-002, TEST-001, TD-003.
 AP-PHASE2 завершён: проект умеет принимать модель/датасет через формальный gate без ручной возни.
-Следующий цикл открывается только после Human approval через Codex-control protocol.
+Следующий цикл был открыт после Human approval через Codex-control protocol.
 
 **Strict non-scope for AP-PHASE2:** bird training, Hailo, UI, ByteTrack, thermal YOLO.
 

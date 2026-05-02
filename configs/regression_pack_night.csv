@@ -4,3 +4,8 @@
 #        --pack-file configs/regression_pack_night.csv --preset night
 test_videos/night_ground_large_drones.mp4,night
 test_videos/night_ground_indicator_lights.mp4,noise
+# Added from Desktop datasets for broader night/noise evaluation (2026-05-01).
+test_videos/antiuav_rgbt_20190925_193610_1_1_visible.mp4,night
+test_videos/antiuav_rgbt_20190925_200805_1_2_visible.mp4,night
+test_videos/drone_detection_V_BIRD_001.mp4,noise
+test_videos/drone_detection_V_AIRPLANE_001.mp4,noise

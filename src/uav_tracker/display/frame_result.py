@@ -42,3 +42,7 @@ class FrameOutput:
     roi_budget_candidates: int
     night_skip: int
     timings_ms: dict[str, float]
+    # ALG-001 v1: detection-first telemetry (default-safe, telemetry only).
+    target_reliability: float = 0.0
+    target_p_present: float = 0.0
+    tracking_action: str = 'global_rescan'

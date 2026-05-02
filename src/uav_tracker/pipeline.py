@@ -21,6 +21,8 @@ from uav_tracker.runtime import create_detector_backend
 from uav_tracker.detection_source import DetectionSource
 from uav_tracker.runtime.base import Detection
 from uav_tracker.runtime_config import RuntimeConfigView
+from uav_tracker.tracking.action_policy import ActionPolicy, TrackingAction
+from uav_tracker.tracking.evidence import SOURCE_RELIABILITY, TargetBelief
 from uav_tracker.tracking.lock_tracker import TemplateLockTracker
 from uav_tracker.tracking.target_manager import TargetManager
 from uav_tracker.tracking.tracked_target import TrackedTarget
@@ -37,11 +39,21 @@ from uav_tracker.display.overlay import _draw_active_reticle, _draw_target, _tar
 
 
 class SequenceGroundTruth:
-    def __init__(self, folder: Union[str, Path]):
-        self.folder = Path(folder)
-        self.label_path = self._resolve_label_path(self.folder)
+    # Project-relative directory for pre-converted MP4 GT files.
+    _PACK_GT_DIR = Path('configs/ground_truth/regression_pack')
+
+    def __init__(self, source: Union[str, Path]):
+        source = Path(source)
         self.exist: list[int] = []
         self.gt_rect: list[list[int]] = []
+        if source.is_dir():
+            # Legacy folder source: look for IR_label.json / label.json / gt.json
+            self.folder = source
+            self.label_path = self._resolve_label_path(source)
+        else:
+            # File source (e.g. MP4): look for <stem>_gt.json sibling or in pack dir
+            self.folder = source.parent
+            self.label_path = self._resolve_file_gt_path(source)
         if self.label_path is not None:
             try:
                 data = json.loads(self.label_path.read_text())
@@ -57,6 +69,24 @@ class SequenceGroundTruth:
             path = folder / name
             if path.exists():
                 return path
+        return None
+
+    @classmethod
+    def _resolve_file_gt_path(cls, file_path: Path) -> Optional[Path]:
+        """Locate a canonical _gt.json for an MP4/file source.
+
+        Search order:
+          1. Sibling: <video_stem>_gt.json  (next to the video file)
+          2. Pack dir: configs/ground_truth/regression_pack/<video_stem>_gt.json
+             (resolved relative to CWD so eval scripts run from project root work)
+        """
+        stem = file_path.stem
+        sibling = file_path.parent / f'{stem}_gt.json'
+        if sibling.exists():
+            return sibling
+        pack_gt = cls._PACK_GT_DIR / f'{stem}_gt.json'
+        if pack_gt.exists():
+            return pack_gt
         return None
 
     def bbox_for(self, index: int) -> Optional[tuple[int, int, int, int]]:
@@ -212,6 +242,10 @@ class TrackerPipeline:
         self.continuity = ContinuityTracker()
         self.tracking_sm = TrackingStateMachine(cfg)
         self.display_state = DisplayStateTracker(cfg)
+        # ALG-001 v1: detection-first decision layer (telemetry only).
+        self.action_policy = ActionPolicy()
+        self._last_belief: TargetBelief = TargetBelief.empty()
+        self._last_action: TrackingAction = TrackingAction.GLOBAL_RESCAN
 
         # RuntimeConfigView: base cfg + per-scene overrides (BUG-001 fix).
         # _adapt_auto_scene writes to _scene_overrides only; base cfg is never mutated.
@@ -426,6 +460,47 @@ class TrackerPipeline:
         if active.source in {DetectionSource.YOLO, DetectionSource.ROI, DetectionSource.LOCAL}:
             self.lock_tracker.sync_from_bbox(frame, active.raw_bbox)
 
+    def _build_target_belief(self, lock_score: float) -> TargetBelief:
+        """Summarize active target state into a TargetBelief (no side effects)."""
+        active = self.manager.get_active_target()
+        if active is None:
+            return TargetBelief.empty()
+
+        source_rel = SOURCE_RELIABILITY.get(active.source, 0.3)
+        confirm_frames = max(1, int(self.cfg.LOCK_CONFIRM_FRAMES))
+        streak_factor = min(1.0, active.hit_streak / float(confirm_frames))
+        ttl = max(1, int(self.cfg.YOLO_LOST_MAX))
+        lost_decay = max(0.0, 1.0 - active.lost_frames / float(ttl))
+
+        # Reliability blends source prior, confidence/drone_score, hit streak,
+        # lost-age decay, and lock_score (when target is held by the lock tracker).
+        reliability = (
+            0.40 * source_rel
+            + 0.20 * float(max(0.0, min(1.0, active.conf)))
+            + 0.15 * float(max(0.0, min(1.0, active.drone_score)))
+            + 0.15 * streak_factor
+            + 0.10 * float(max(0.0, min(1.0, lock_score)))
+        )
+        reliability *= lost_decay
+
+        # p_present: high while fresh, decays roughly with lost_age.
+        p_present = max(0.0, 1.0 - active.lost_frames / float(ttl))
+        # p_same_target: heuristic tying continuity to source reliability.
+        p_same_target = max(0.0, min(1.0, source_rel * (0.5 + 0.5 * streak_factor)))
+
+        return TargetBelief(
+            active_id=active.track_id,
+            bbox=active.raw_bbox,
+            last_good_bbox=active.raw_bbox if active.lost_frames == 0 else active.bbox,
+            velocity=(float(active.vx), float(active.vy)),
+            scale=1.0,
+            p_present=float(max(0.0, min(1.0, p_present))),
+            p_same_target=float(p_same_target),
+            reliability=float(max(0.0, min(1.0, reliability))),
+            lost_age=int(active.lost_frames),
+            source=str(active.source),
+        )
+
     def _compute_gt_iou(self, gt_bbox: Optional[tuple[int, int, int, int]]) -> float:
         if gt_bbox is None:
             return 0.0
@@ -559,6 +634,17 @@ class TrackerPipeline:
         self.manager.select_active()
         self.manager.update_focus_mode()
         lock_events = self.lock_telemetry.update(self.manager.is_focus_mode(), self.manager.active_id)
+
+        # ALG-001 v1: build belief + decide action (telemetry only — does not gate behavior).
+        belief = self._build_target_belief(lock_score)
+        action = self.action_policy.decide(
+            belief,
+            lock_score=float(lock_score),
+            needs_recovery=bool(self.lock_tracker.needs_recovery),
+        )
+        self._last_belief = belief
+        self._last_action = action
+
         self._sync_lock_tracker(frame)
 
         t_now = time.perf_counter()
@@ -645,6 +731,9 @@ class TrackerPipeline:
             roi_budget_candidates=self.budget.last_roi_candidates,
             night_skip=self.budget.last_night_skip,
             timings_ms=timings_ms,
+            target_reliability=float(belief.reliability),
+            target_p_present=float(belief.p_present),
+            tracking_action=str(action.value),
         )
 
 
@@ -672,6 +761,7 @@ class VideoSession:
             self.cap = cv2.VideoCapture(self.source)
             if source_path is not None:
                 self.source_name = source_path.name
+                self.gt = SequenceGroundTruth(source_path)
             if self.cap is not None:
                 src_fps = float(self.cap.get(cv2.CAP_PROP_FPS))
                 self.source_fps = src_fps if src_fps > self.cfg.SOURCE_FPS_MIN_VALID else 0.0

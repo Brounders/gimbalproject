@@ -1,0 +1,5 @@
+# source,scene
+# Night diagnostic candidate. Not accepted as GT-positive: project avg_gt_iou < 0.10.
+test_videos/night_ground_large_drones.mp4,night
+test_videos/drone_detection_V_BIRD_001.mp4,noise
+test_videos/drone_detection_V_AIRPLANE_001.mp4,noise

@@ -6,3 +6,12 @@ test_videos/Demo_IR_DRONE_146.mp4,ir
 test_videos/IR_DRONE_001.mp4,ir
 test_videos/IR_BIRD_001.mp4,noise
 test_videos/night_ground_indicator_lights.mp4,noise
+# Added from Desktop datasets for broader evaluation (2026-05-01).
+test_videos/dataset_mendeley_f1_1_EO_dji_mavic_2_range_close.mp4,day
+test_videos/drone_detection_V_DRONE_001.mp4,day
+test_videos/antiuav_rgbt_20190925_193610_1_1_visible.mp4,night
+test_videos/antiuav_rgbt_20190925_200805_1_2_visible.mp4,night
+test_videos/dataset_mendeley_f1_1_IR_dji_mavic_2_range_close.mp4,ir
+test_videos/antiuav_rgbt_20190925_200805_1_2_infrared.mp4,ir
+test_videos/drone_detection_V_BIRD_001.mp4,noise
+test_videos/drone_detection_V_AIRPLANE_001.mp4,noise

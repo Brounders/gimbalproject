@@ -75,3 +75,9 @@ REPORT-20260314-089 | Claude Mac | NEEDS_REVIEW | 2026-03-14 | orchestrator/repo
 TASK-20260501-090 | Claude Mac | Accepted | 2026-05-01 | orchestrator/reports/REPORT-INTAKE-baseline.md — MG-001 run_intake.py model intake wrapper
 REPORT-CODEX-CONTROL-20260501 | Codex Mac | ACCEPTED | 2026-05-01 | orchestrator/reports/REPORT-CODEX-CONTROL-20260501.md — Codex-control handoff
 REPORT-RISK-CLOSURE-20260501 | Codex Mac | ACCEPTED | 2026-05-01 | orchestrator/reports/REPORT-RISK-CLOSURE-20260501.md — local risk closure before next cycle
+AP-20260501-BYTETRACK-EVAL | Codex Mac | ACCEPTED | 2026-05-01 | orchestrator/reports/REPORT-BYTETRACK-EVAL-20260501.md — native Ultralytics tracking evaluation tooling
+AP-MODERNITY-GAP | Codex Mac | ACCEPTED | 2026-05-01 | orchestrator/reports/REPORT-MODERNITY-GAP-20260501.md — tracking/model modernity decision matrix
+TASK-20260501-ALG001-EVIDENCE-POLICY-V1 | Claude Code | Accepted | 2026-05-01 | orchestrator/reports/REPORT-ALGO-EVIDENCE-V1-20260501.md — detection-first evidence/policy telemetry layer
+TASK-20260501-TRACKERS-EXPANDED-PACK | Claude Code | Accepted | 2026-05-01 | orchestrator/reports/REPORT-TRACKERS-EXPANDED-PACK-20260501.md — expanded pack native tracker measurement; all native trackers rejected as self-hold replacement
+TASK-20260502-GT-INGESTION | Claude Code | Accepted | 2026-05-02 | orchestrator/reports/REPORT-GT-INGESTION-EXPANDED-PACK-20260502.md — GT ingestion for 6/14 clips; Anti-UAV avg_gt_iou=0 model gap discovered; ActionPolicy wiring DEFERRED
+TASK-20260502-GT-CANDIDATE-GATE-PACK | Codex Mac | Accepted | 2026-05-02 | orchestrator/reports/REPORT-GT-CANDIDATE-GATE-PACK-20260502.md — IR GT-positive clips found; night remains weak/diagnostic; ActionPolicy wiring still DEFERRED
