@@ -122,6 +122,31 @@ class TestActionPolicy:
         action = policy.decide(weak, lock_score=0.0)
         assert action != TrackingAction.KEEP_LOCK
 
+    def test_weak_night_runtime_evidence_drops_early(self):
+        policy = ActionPolicy()
+        belief = _belief(source='night', reliability=0.05, p_present=0.13, lost_age=1)
+        action = policy.decide(belief, lock_score=0.0)
+        assert action == TrackingAction.DROP_LOCK
+
+    def test_weak_roi_runtime_evidence_drops_early(self):
+        policy = ActionPolicy()
+        belief = _belief(source='roi', reliability=0.15, p_present=0.35, lost_age=1)
+        action = policy.decide(belief, lock_score=0.0)
+        assert action == TrackingAction.DROP_LOCK
+
+    def test_weak_yolo_evidence_is_not_suppressed_by_runtime_rule(self):
+        policy = ActionPolicy()
+        belief = _belief(source='yolo', reliability=0.05, p_present=0.13, lost_age=1)
+        action = policy.decide(belief, lock_score=0.0)
+        assert action != TrackingAction.DROP_LOCK
+
+    def test_weak_lock_and_local_are_not_suppressed_by_runtime_rule(self):
+        policy = ActionPolicy()
+        for source in ('lock', 'local'):
+            belief = _belief(source=source, reliability=0.15, p_present=0.35, lost_age=1)
+            action = policy.decide(belief, lock_score=0.0)
+            assert action != TrackingAction.DROP_LOCK
+
 
 # ---------------------------------------------------------------------------
 # Guarded behavior wiring (ALG-001 v1.1) — pure function tests.

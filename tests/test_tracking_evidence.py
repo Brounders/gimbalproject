@@ -8,6 +8,7 @@ from uav_tracker.tracking.evidence import (
     TargetBelief,
     TargetEvidence,
     compute_total_score,
+    normalize_source,
 )
 
 
@@ -127,3 +128,14 @@ class TestTargetBelief:
         )
         assert belief.reliability >= 0.6
         assert belief.lost_age == 0
+
+    def test_normalize_source_accepts_enum_style_strings(self):
+        assert normalize_source('DetectionSource.NIGHT') == 'night'
+        assert normalize_source('DetectionSource.ROI') == 'roi'
+        assert normalize_source('yolo') == 'yolo'
+        assert normalize_source('-') == '-'
+
+    def test_normalize_source_uses_string_enum_value(self):
+        from uav_tracker.detection_source import DetectionSource
+
+        assert normalize_source(DetectionSource.NIGHT) == 'night'

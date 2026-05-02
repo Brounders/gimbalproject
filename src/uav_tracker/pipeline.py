@@ -28,7 +28,7 @@ from uav_tracker.tracking.action_policy import (
     TrackingAction,
     select_behavior_intent,
 )
-from uav_tracker.tracking.evidence import SOURCE_RELIABILITY, TargetBelief
+from uav_tracker.tracking.evidence import SOURCE_RELIABILITY, TargetBelief, normalize_source
 from uav_tracker.tracking.lock_tracker import TemplateLockTracker
 from uav_tracker.tracking.target_manager import TargetManager
 from uav_tracker.tracking.tracked_target import TrackedTarget
@@ -493,7 +493,8 @@ class TrackerPipeline:
             empty.modality = self._belief_modality()
             return empty
 
-        source_rel = SOURCE_RELIABILITY.get(active.source, 0.3)
+        active_source = normalize_source(active.source)
+        source_rel = SOURCE_RELIABILITY.get(active_source, 0.3)
         confirm_frames = max(1, int(self.cfg.LOCK_CONFIRM_FRAMES))
         streak_factor = min(1.0, active.hit_streak / float(confirm_frames))
         ttl = max(1, int(self.cfg.YOLO_LOST_MAX))
@@ -525,7 +526,7 @@ class TrackerPipeline:
             p_same_target=float(p_same_target),
             reliability=float(max(0.0, min(1.0, reliability))),
             lost_age=int(active.lost_frames),
-            source=str(active.source),
+            source=active_source,
             modality=self._belief_modality(),
         )
 

@@ -22,6 +22,20 @@ SOURCE_RELIABILITY: dict[str, float] = {
 }
 
 
+def normalize_source(source: object) -> str:
+    """Return stable source labels used by policy and telemetry.
+
+    DetectionSource is a string-valued Enum, but some historical call sites
+    stored `str(enum_member)` which becomes `DetectionSource.NIGHT`.  Policy
+    rules should not depend on that representation.
+    """
+    value = getattr(source, 'value', source)
+    text = str(value).strip()
+    if text.startswith('DetectionSource.'):
+        text = text.rsplit('.', 1)[-1].lower()
+    return text
+
+
 # Component weights for total_score (sum to 1.0).
 _W_DETECTOR = 0.40
 _W_APPEARANCE = 0.20
@@ -113,6 +127,9 @@ class TargetBelief:
     lost_age: int
     source: str
     modality: str = 'rgb'
+
+    def __post_init__(self) -> None:
+        self.source = normalize_source(self.source)
 
     @classmethod
     def empty(cls) -> 'TargetBelief':

@@ -79,6 +79,10 @@ class ActionPolicy:
     night_keep_reliability_min: float = 0.70
     night_drop_reliability_max: float = 0.15
     night_drop_lost_age_min: int = 10
+    weak_runtime_sources: frozenset[str] = frozenset({'night', 'roi'})
+    weak_runtime_drop_reliability_max: float = 0.20
+    weak_runtime_drop_p_present_max: float = 0.40
+    weak_runtime_drop_lost_age_min: int = 1
 
     def _thresholds_for(self, belief: TargetBelief) -> tuple[float, float, int]:
         """Return keep/drop thresholds for the current evidence modality.
@@ -112,6 +116,14 @@ class ActionPolicy:
             return TrackingAction.REDETECT
 
         keep_reliability_min, drop_reliability_max, drop_lost_age_min = self._thresholds_for(belief)
+
+        if (
+            belief.source in self.weak_runtime_sources
+            and belief.reliability <= self.weak_runtime_drop_reliability_max
+            and belief.p_present <= self.weak_runtime_drop_p_present_max
+            and belief.lost_age >= self.weak_runtime_drop_lost_age_min
+        ):
+            return TrackingAction.DROP_LOCK
 
         if (
             belief.reliability < drop_reliability_max
