@@ -16,9 +16,10 @@ class DetectionSource(str, Enum):
     LOCK = "lock"          # Template lock tracker update
     ROI = "roi"            # ROI assist / motion crop proposal
     NIGHT = "night"        # Night MOG2 / small-target detector
+    OPERATOR = "operator"  # Human-confirmed target override
 
     # Convenience sets (used for membership checks)
     @classmethod
     def primary_sources(cls) -> frozenset["DetectionSource"]:
         """Sources that carry a valid class_id and are treated as primary signal."""
-        return frozenset({cls.YOLO, cls.ROI, cls.LOCAL, cls.LOCK})
+        return frozenset({cls.YOLO, cls.ROI, cls.LOCAL, cls.LOCK, cls.OPERATOR})

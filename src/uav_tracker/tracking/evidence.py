@@ -19,6 +19,7 @@ SOURCE_RELIABILITY: dict[str, float] = {
     'roi': 0.70,
     'lock': 0.50,
     'night': 0.40,
+    'operator': 1.00,
 }
 
 

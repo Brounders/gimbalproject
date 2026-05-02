@@ -222,6 +222,12 @@ class Config:
     # RGB-night is diagnostic-only and must not be treated as a behavior gate.
     ACTION_POLICY_BEHAVIOR_ENABLED: bool = False
 
+    # ── Operator target override (manual correction backend) ────────────────
+    # OFF by default: UI/operator input can be queued but will not alter target
+    # state until an explicit preset enables it.
+    OPERATOR_OVERRIDE_ENABLED: bool = False
+    OPERATOR_OVERRIDE_BOX_SIZE: int = 64
+
     def __post_init__(self) -> None:
         """Auto-validate on construction (Session 7 + A1d merge).
 

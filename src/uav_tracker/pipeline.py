@@ -30,6 +30,7 @@ from uav_tracker.tracking.action_policy import (
 )
 from uav_tracker.tracking.evidence import SOURCE_RELIABILITY, TargetBelief, normalize_source
 from uav_tracker.tracking.lock_tracker import TemplateLockTracker
+from uav_tracker.tracking.operator_override import OperatorTargetOverride
 from uav_tracker.tracking.target_manager import TargetManager
 from uav_tracker.tracking.tracked_target import TrackedTarget
 from utils.geometry import iou
@@ -256,6 +257,10 @@ class TrackerPipeline:
         self._last_action: TrackingAction = TrackingAction.GLOBAL_RESCAN
         self._last_decision_path: str = BEHAVIOR_TELEMETRY_ONLY
         self._behavior_drop_count: int = 0
+        self._pending_operator_override: Optional[OperatorTargetOverride] = None
+        self._last_operator_override_status: str = 'none'
+        self._last_operator_override_bbox: Optional[tuple[int, int, int, int]] = None
+        self._operator_override_count: int = 0
 
         # RuntimeConfigView: base cfg + per-scene overrides (BUG-001 fix).
         # _adapt_auto_scene writes to _scene_overrides only; base cfg is never mutated.
@@ -557,6 +562,36 @@ class TrackerPipeline:
             return 0.0
         return iou(active.raw_bbox, gt_bbox)
 
+    def request_operator_target(self, override: OperatorTargetOverride) -> bool:
+        """Queue a human target override for the next processed frame.
+
+        The command is queued even when OPERATOR_OVERRIDE_ENABLED is false so
+        telemetry can report that it was intentionally ignored by the guard.
+        """
+        self._pending_operator_override = override
+        return True
+
+    def _apply_operator_override_if_pending(self, frame: np.ndarray) -> str:
+        override = getattr(self, '_pending_operator_override', None)
+        if override is None:
+            self._last_operator_override_status = 'none'
+            self._last_operator_override_bbox = None
+            return 'none'
+
+        self._pending_operator_override = None
+        if not bool(getattr(self.cfg, 'OPERATOR_OVERRIDE_ENABLED', False)):
+            self._last_operator_override_status = 'disabled'
+            self._last_operator_override_bbox = None
+            return 'disabled'
+
+        result = self.manager.apply_operator_override(override, frame_shape=frame.shape)
+        self._last_operator_override_status = result.status
+        self._last_operator_override_bbox = result.bbox
+        if result.applied:
+            self.lock_tracker.reset()
+            self._operator_override_count += 1
+        return result.status
+
     def process_frame(
         self,
         frame: np.ndarray,
@@ -682,6 +717,7 @@ class TrackerPipeline:
         self.manager.select_active()
         self.manager.update_focus_mode()
         lock_events = self.lock_telemetry.update(self.manager.is_focus_mode(), self.manager.active_id)
+        operator_override_status = self._apply_operator_override_if_pending(frame)
 
         # ALG-001 v1: build belief + decide action.  Telemetry-only by default;
         # the guarded behavior path runs only when cfg.ACTION_POLICY_BEHAVIOR_ENABLED
@@ -789,6 +825,9 @@ class TrackerPipeline:
             target_modality=str(belief.modality),
             decision_path=str(decision_path),
             behavior_drop_count=int(self._behavior_drop_count),
+            operator_override_status=str(operator_override_status),
+            operator_override_count=int(self._operator_override_count),
+            operator_override_bbox=self._last_operator_override_bbox,
         )
 
 

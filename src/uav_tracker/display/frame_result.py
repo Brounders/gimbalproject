@@ -50,3 +50,7 @@ class FrameOutput:
     target_modality: str = 'rgb'
     decision_path: str = 'telemetry_only'
     behavior_drop_count: int = 0
+    # Operator target override backend (default-safe until UI is wired).
+    operator_override_status: str = 'none'
+    operator_override_count: int = 0
+    operator_override_bbox: Optional[tuple[int, int, int, int]] = None

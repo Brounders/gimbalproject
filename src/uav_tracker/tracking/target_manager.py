@@ -5,6 +5,7 @@ from uav_tracker.config import Config
 from uav_tracker.detection_source import DetectionSource
 from uav_tracker.runtime.base import Detection
 from uav_tracker.tracking.focus_mode_controller import FocusModeController
+from uav_tracker.tracking.operator_override import OperatorOverrideResult, OperatorTargetOverride
 from uav_tracker.tracking.tracked_target import TrackedTarget
 from utils.geometry import iou
 
@@ -100,6 +101,75 @@ class TargetManager:
             return False
         self._set_active_id(None)
         return True
+
+    def _find_operator_override_target(self, bbox: tuple[int, int, int, int]) -> Optional[int]:
+        x1, y1, x2, y2 = bbox
+        ocx = (x1 + x2) / 2.0
+        ocy = (y1 + y2) / 2.0
+        best_id = None
+        best_score = None
+        for tid, target in self.targets.items():
+            inside = x1 <= target.cx <= x2 and y1 <= target.cy <= y2
+            overlap = iou(bbox, target.raw_bbox)
+            if not inside and overlap <= 0.0:
+                continue
+            dist = self._dist(ocx, ocy, target.cx, target.cy)
+            score = (0 if inside else 1, -overlap, dist)
+            if best_score is None or score < best_score:
+                best_score = score
+                best_id = tid
+        return best_id
+
+    def apply_operator_override(
+        self,
+        override: OperatorTargetOverride,
+        *,
+        frame_shape: tuple[int, ...],
+    ) -> OperatorOverrideResult:
+        """Force active target to the operator-selected frame region.
+
+        The method prefers an existing target whose center/box overlaps the
+        operator region; otherwise it creates a dedicated auxiliary target.
+        It marks the target as operator-confirmed and force-selects it.  The
+        caller remains responsible for resetting/syncing TemplateLockTracker.
+        """
+        bbox = override.to_bbox(frame_shape)
+        if bbox is None:
+            return OperatorOverrideResult(False, 'invalid')
+
+        tid = self._find_operator_override_target(bbox)
+        if tid is None:
+            tid = self._next_aux_id
+            self._next_aux_id += 1
+
+        x1, y1, x2, y2 = bbox
+        cx = (x1 + x2) / 2.0
+        cy = (y1 + y2) / 2.0
+        self._update_or_create_target(
+            int(tid),
+            bbox,
+            cx,
+            cy,
+            1.0,
+            int(self.cfg.PREFER_CLASS_ID),
+            DetectionSource.OPERATOR,
+        )
+        target = self.targets[int(tid)]
+        target.bbox = bbox
+        target.raw_bbox = bbox
+        target.cx = cx
+        target.cy = cy
+        target.vx = 0.0
+        target.vy = 0.0
+        target.speed = 0.0
+        target.conf = 1.0
+        target.cls_id = int(self.cfg.PREFER_CLASS_ID)
+        target.drone_score = 1.0
+        target.lost_frames = 0
+        target.hit_streak = max(int(target.hit_streak), int(self.cfg.LOCK_CONFIRM_FRAMES))
+        target.source = DetectionSource.OPERATOR
+        self._set_active_id(int(tid), force=True)
+        return OperatorOverrideResult(True, 'applied', active_id=int(tid), bbox=bbox)
 
     def _is_drone_like_target(self, target: TrackedTarget, min_score: float) -> bool:
         if not self._is_primary_source(target.source):
