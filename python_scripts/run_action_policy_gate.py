@@ -57,6 +57,17 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--max-frames", type=int, default=0, help="Frame limit per source (0 = full clips).")
     p.add_argument("--out-dir", type=Path, default=Path("runs/evaluations/action_policy_gate"))
     p.add_argument("--tag", type=str, default="")
+    p.add_argument(
+        "--diagnostic",
+        action="store_true",
+        help="Mark every row diagnostic/non-blocking while still recording row failures.",
+    )
+    p.add_argument(
+        "--diagnostic-scenes",
+        type=str,
+        default="",
+        help="Comma-separated scene names to mark diagnostic/non-blocking.",
+    )
 
     p.add_argument("--max-presence-drop", type=float, default=0.01)
     p.add_argument("--max-false-lock-increase", type=float, default=0.01)
@@ -85,6 +96,10 @@ def load_pack(path: Path) -> list[dict[str, str]]:
     if not rows:
         raise ValueError(f"Pack file is empty: {path}")
     return rows
+
+
+def parse_scene_set(raw: str) -> set[str]:
+    return {item.strip().lower() for item in raw.split(",") if item.strip()}
 
 
 def resolve_source_path(raw_source: str) -> str:
@@ -216,6 +231,23 @@ def row_failures(row: dict[str, Any], args: argparse.Namespace) -> list[str]:
     return failures
 
 
+def apply_row_decision(
+    row: dict[str, Any],
+    args: argparse.Namespace,
+    *,
+    diagnostic_scenes: set[str],
+) -> list[str]:
+    reasons = row_failures(row, args)
+    scene = str(row.get("scene", "")).lower()
+    is_diagnostic = bool(row.get("diagnostic", False)) or scene in diagnostic_scenes
+
+    row["diagnostic"] = is_diagnostic
+    row["passed"] = True if is_diagnostic else len(reasons) == 0
+    row["fail_reasons"] = "" if is_diagnostic else ";".join(reasons)
+    row["diagnostic_reasons"] = ";".join(reasons) if is_diagnostic else ""
+    return reasons
+
+
 def csv_write(path: Path, rows: list[dict[str, Any]]) -> None:
     headers = [
         "source",
@@ -244,8 +276,10 @@ def csv_write(path: Path, rows: list[dict[str, Any]]) -> None:
         "off_behavior_drop_count",
         "on_behavior_drop_count",
         "on_behavior_drop_rate",
+        "diagnostic",
         "passed",
         "fail_reasons",
+        "diagnostic_reasons",
     ]
     with path.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=headers)
@@ -271,6 +305,7 @@ def mean_metrics(rows: list[dict[str, Any]]) -> dict[str, float]:
 
 def main() -> int:
     args = parse_args()
+    diagnostic_scenes = parse_scene_set(args.diagnostic_scenes)
     try:
         pack = load_pack(args.pack_file)
     except Exception as exc:
@@ -315,14 +350,15 @@ def main() -> int:
         report_files.extend([str(off_path), str(on_path)])
 
         row = pair_row(str(source), scene, preset, off, on)
-        row_reasons = row_failures(row, args)
-        row["passed"] = len(row_reasons) == 0
-        row["fail_reasons"] = ";".join(row_reasons)
-        if row_reasons:
+        if args.diagnostic:
+            row["diagnostic"] = True
+        row_reasons = apply_row_decision(row, args, diagnostic_scenes=diagnostic_scenes)
+        if row_reasons and not row["diagnostic"]:
             failures.append(f"{row['source']}: {row['fail_reasons']}")
         rows.append(row)
         print(
-            f"[clip] {source_name} scene={scene} preset={preset} pass={row['passed']} "
+            f"[clip] {source_name} scene={scene} preset={preset} "
+            f"diagnostic={row['diagnostic']} pass={row['passed']} "
             f"presence {row['off_presence']:.3f}->{row['on_presence']:.3f} "
             f"false_lock {row['off_false_lock']:.3f}->{row['on_false_lock']:.3f} "
             f"idchg/min {row['off_idchg_pm']:.2f}->{row['on_idchg_pm']:.2f} "
@@ -341,6 +377,8 @@ def main() -> int:
         "conf": args.conf,
         "small_target": args.small_target,
         "max_frames": args.max_frames,
+        "diagnostic": bool(args.diagnostic),
+        "diagnostic_scenes": sorted(diagnostic_scenes),
         "thresholds": {
             "max_presence_drop": args.max_presence_drop,
             "max_false_lock_increase": args.max_false_lock_increase,

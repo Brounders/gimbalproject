@@ -1,9 +1,11 @@
 from argparse import Namespace
 
 from python_scripts.run_action_policy_gate import (
+    apply_row_decision,
     compact_report,
     load_pack,
     pair_row,
+    parse_scene_set,
     row_failures,
     scene_preset,
 )
@@ -137,3 +139,43 @@ def test_row_failures_rejects_noise_false_lock_increase():
     )
 
     assert "noise_false_lock_increase>0.01" in row_failures(row, _thresholds())
+
+
+def test_parse_scene_set_normalizes_csv_values():
+    assert parse_scene_set(" night,IR, noise ,,") == {"night", "ir", "noise"}
+
+
+def test_apply_row_decision_keeps_regular_failures_blocking():
+    row = pair_row(
+        "day.mp4",
+        "day",
+        "default",
+        _report(active_presence_rate=0.90),
+        _report(active_presence_rate=0.80),
+    )
+
+    reasons = apply_row_decision(row, _thresholds(), diagnostic_scenes={"night"})
+
+    assert reasons == ["presence_drop>0.01"]
+    assert row["diagnostic"] is False
+    assert row["passed"] is False
+    assert row["fail_reasons"] == "presence_drop>0.01"
+    assert row["diagnostic_reasons"] == ""
+
+
+def test_apply_row_decision_makes_diagnostic_scene_nonblocking():
+    row = pair_row(
+        "night.mp4",
+        "night",
+        "night",
+        _report(active_presence_rate=0.90),
+        _report(active_presence_rate=0.80),
+    )
+
+    reasons = apply_row_decision(row, _thresholds(), diagnostic_scenes={"night"})
+
+    assert reasons == ["presence_drop>0.01"]
+    assert row["diagnostic"] is True
+    assert row["passed"] is True
+    assert row["fail_reasons"] == ""
+    assert row["diagnostic_reasons"] == "presence_drop>0.01"

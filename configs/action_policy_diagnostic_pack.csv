@@ -1,0 +1,7 @@
+# source,scene
+# Visible-night diagnostic-only pack for ActionPolicy OFF/ON measurement.
+# Run with:
+# PYTHONPATH=src tracker_env/bin/python python_scripts/run_action_policy_gate.py --pack-file configs/action_policy_diagnostic_pack.csv --diagnostic-scenes night --tag diagnostic_night_
+test_videos/night_ground_large_drones.mp4,night
+test_videos/antiuav_rgbt_20190925_193610_1_1_visible.mp4,night
+test_videos/antiuav_rgbt_20190925_200805_1_2_visible.mp4,night
