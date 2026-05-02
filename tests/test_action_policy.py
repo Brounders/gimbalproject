@@ -1,9 +1,16 @@
-"""Unit tests for ActionPolicy (ALG-001 v1)."""
+"""Unit tests for ActionPolicy (ALG-001 v1) + guarded behavior wiring (v1.1)."""
 from __future__ import annotations
 
 import pytest
 
-from uav_tracker.tracking.action_policy import ActionPolicy, TrackingAction
+from uav_tracker.tracking.action_policy import (
+    BEHAVIOR_FORCE_DROP,
+    BEHAVIOR_OBSERVE,
+    BEHAVIOR_TELEMETRY_ONLY,
+    ActionPolicy,
+    TrackingAction,
+    select_behavior_intent,
+)
 from uav_tracker.tracking.evidence import TargetBelief
 
 
@@ -71,3 +78,54 @@ class TestActionPolicy:
         belief = _belief(reliability=0.85, lost_age=0)
         results = {policy.decide(belief, lock_score=0.7) for _ in range(20)}
         assert results == {TrackingAction.KEEP_LOCK}
+
+    def test_ir_strong_evidence_yields_keep_lock(self):
+        """IR-source belief with high reliability still resolves to KEEP_LOCK.
+
+        TargetBelief.modality='ir' is sensor metadata; it does not change
+        the deterministic decision but must not invalidate it either.
+        """
+        policy = ActionPolicy()
+        belief = _belief(reliability=0.85, lost_age=0, source='lock', modality='ir')
+        action = policy.decide(belief, lock_score=0.7)
+        assert action == TrackingAction.KEEP_LOCK
+
+    def test_weak_evidence_does_not_keep_lock(self):
+        """Weak/lost evidence must NOT yield KEEP_LOCK regardless of modality."""
+        policy = ActionPolicy()
+        weak = _belief(reliability=0.05, lost_age=15, source='night', modality='night')
+        action = policy.decide(weak, lock_score=0.0)
+        assert action != TrackingAction.KEEP_LOCK
+
+
+# ---------------------------------------------------------------------------
+# Guarded behavior wiring (ALG-001 v1.1) — pure function tests.
+# ---------------------------------------------------------------------------
+
+
+class TestSelectBehaviorIntent:
+    def test_off_always_returns_telemetry_only(self):
+        for action in TrackingAction:
+            assert select_behavior_intent(action, behavior_enabled=False) == BEHAVIOR_TELEMETRY_ONLY
+
+    def test_on_keep_lock_is_observe(self):
+        assert select_behavior_intent(TrackingAction.KEEP_LOCK, behavior_enabled=True) == BEHAVIOR_OBSERVE
+
+    def test_on_local_validate_is_observe(self):
+        assert select_behavior_intent(TrackingAction.LOCAL_VALIDATE, behavior_enabled=True) == BEHAVIOR_OBSERVE
+
+    def test_on_expand_roi_is_observe(self):
+        assert select_behavior_intent(TrackingAction.EXPAND_ROI, behavior_enabled=True) == BEHAVIOR_OBSERVE
+
+    def test_on_global_rescan_is_observe(self):
+        assert select_behavior_intent(TrackingAction.GLOBAL_RESCAN, behavior_enabled=True) == BEHAVIOR_OBSERVE
+
+    def test_on_redetect_is_observe(self):
+        assert select_behavior_intent(TrackingAction.REDETECT, behavior_enabled=True) == BEHAVIOR_OBSERVE
+
+    def test_on_drop_lock_is_force_drop(self):
+        assert select_behavior_intent(TrackingAction.DROP_LOCK, behavior_enabled=True) == BEHAVIOR_FORCE_DROP
+
+    def test_off_drop_lock_still_telemetry(self):
+        """Critical safety: even DROP_LOCK is telemetry-only when flag is off."""
+        assert select_behavior_intent(TrackingAction.DROP_LOCK, behavior_enabled=False) == BEHAVIOR_TELEMETRY_ONLY

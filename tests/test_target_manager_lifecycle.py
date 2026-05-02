@@ -554,3 +554,56 @@ class TestReacquireRadiusCap:
         raw = cfg.LOCK_REACQUIRE_DIST + min(90, int(5.0 * 1.8) + 1 * 12)
         capped = min(cfg.LOCK_REACQUIRE_DIST_MAX, raw)
         assert capped == raw  # cap not hit
+
+
+# ---------------------------------------------------------------------------
+# release_active() — public API used by ALG-001 v1.1 guarded behavior.
+# ---------------------------------------------------------------------------
+
+
+class TestReleaseActive:
+    """Public release_active replaces the previous private _set_active_id(None) call."""
+
+    def test_release_with_no_active_returns_false(self):
+        mgr = TargetManager(_cfg())
+        assert mgr.active_id is None
+        assert mgr.release_active() is False
+        assert mgr.active_id is None
+
+    def test_release_clears_active_id(self):
+        mgr = TargetManager(_cfg())
+        mgr.update_from_yolo([_det(7, 100.0, 100.0)])
+        # Ensure an active id was selected (best-effort: test only proceeds if so).
+        if mgr.active_id is None:
+            mgr.active_id = 7  # fallback for environments where select doesn't auto-pick
+        assert mgr.active_id is not None
+        result = mgr.release_active()
+        assert result is True
+        assert mgr.active_id is None
+
+    def test_release_does_not_remove_targets(self):
+        """release_active only clears active_id; targets dict is left intact."""
+        mgr = TargetManager(_cfg())
+        mgr.update_from_yolo([_det(7, 100.0, 100.0)])
+        target_count_before = len(mgr.targets)
+        mgr.active_id = 7
+        mgr.release_active()
+        assert mgr.active_id is None
+        assert len(mgr.targets) == target_count_before
+
+    def test_release_resets_switch_cooldown(self):
+        """Releasing must clear the active-switch cooldown so a new target can lock."""
+        mgr = TargetManager(_cfg())
+        mgr.active_id = 9
+        mgr._active_switch_cooldown = 30
+        mgr.release_active()
+        assert mgr.active_id is None
+        assert mgr._active_switch_cooldown == 0
+
+    def test_release_is_idempotent(self):
+        """Calling release_active twice is safe and second call returns False."""
+        mgr = TargetManager(_cfg())
+        mgr.active_id = 5
+        assert mgr.release_active() is True
+        assert mgr.release_active() is False
+        assert mgr.active_id is None

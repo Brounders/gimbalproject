@@ -85,6 +85,22 @@ class TargetManager:
         self._active_switch_cooldown = max(0, int(self.cfg.ACTIVE_ID_SWITCH_COOLDOWN_FRAMES))
         return True
 
+    def release_active(self) -> bool:
+        """Public API to release the currently active target.
+
+        Idempotent: clears `active_id` and resets the active-switch cooldown
+        without touching `self.targets` (lock_tracker reset is the caller's
+        responsibility).  Returns True if there was an active id to clear,
+        False if already empty.
+
+        Used by guarded ActionPolicy behavior wiring (ALG-001 v1.1) so it
+        does not have to call the private `_set_active_id` shim.
+        """
+        if self.active_id is None:
+            return False
+        self._set_active_id(None)
+        return True
+
     def _is_drone_like_target(self, target: TrackedTarget, min_score: float) -> bool:
         if not self._is_primary_source(target.source):
             return False

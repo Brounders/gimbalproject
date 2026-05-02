@@ -3,9 +3,19 @@
 Maps a TargetBelief + lock_score to one of TrackingAction values.
 No ML, no randomness; pure thresholded rules.
 
-Telemetry-only by default: pipeline records the decision but does not (yet)
-change behavior based on it.  Behavior wiring is reserved for a follow-up task
-that must come with a quality-gate justification.
+Two layers:
+
+1. Decision (`ActionPolicy.decide`) — deterministic, side-effect free, always
+   produced as telemetry.
+2. Behavior intent (`select_behavior_intent`) — guarded, off by default.
+   The pipeline only acts on the intent when the explicit
+   `Config.ACTION_POLICY_BEHAVIOR_ENABLED` flag is set.  When OFF the layer
+   is pure telemetry and pipeline behavior is identical to the pre-existing
+   TemplateLockTracker / TargetManager path.
+
+The IR-first night gate semantics are encoded in TargetBelief.modality.
+Behavior wiring is intentionally conservative: it can only ADD a drop
+signal (release a clearly-stale lock one tick earlier), never extend hold.
 """
 from __future__ import annotations
 
@@ -22,6 +32,32 @@ class TrackingAction(str, Enum):
     GLOBAL_RESCAN = 'global_rescan'
     REDETECT = 'redetect'
     DROP_LOCK = 'drop_lock'
+
+
+# Behavior intent strings — kept as plain strings (not Enum) so they can be
+# safely embedded in FrameOutput.decision_path for telemetry consumers.
+BEHAVIOR_TELEMETRY_ONLY = 'telemetry_only'
+BEHAVIOR_OBSERVE = 'behavior_guarded:observe'
+BEHAVIOR_FORCE_DROP = 'behavior_guarded:force_drop'
+
+
+def select_behavior_intent(action: 'TrackingAction', behavior_enabled: bool) -> str:
+    """Pure mapping action -> behavior intent string.
+
+    When `behavior_enabled` is False (default), always returns
+    `BEHAVIOR_TELEMETRY_ONLY` and the pipeline must not act on the action.
+
+    When True, only DROP_LOCK currently has a behavioral effect; every other
+    action keeps the pre-existing TargetManager/LockTracker path intact
+    (`BEHAVIOR_OBSERVE`).  This conservative mapping guarantees that enabling
+    the flag never extends a lock; it can only drop a clearly-stale lock one
+    tick earlier than the natural age-based drop.
+    """
+    if not behavior_enabled:
+        return BEHAVIOR_TELEMETRY_ONLY
+    if action == TrackingAction.DROP_LOCK:
+        return BEHAVIOR_FORCE_DROP
+    return BEHAVIOR_OBSERVE
 
 
 @dataclass

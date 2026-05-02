@@ -21,7 +21,13 @@ from uav_tracker.runtime import create_detector_backend
 from uav_tracker.detection_source import DetectionSource
 from uav_tracker.runtime.base import Detection
 from uav_tracker.runtime_config import RuntimeConfigView
-from uav_tracker.tracking.action_policy import ActionPolicy, TrackingAction
+from uav_tracker.tracking.action_policy import (
+    BEHAVIOR_FORCE_DROP,
+    BEHAVIOR_TELEMETRY_ONLY,
+    ActionPolicy,
+    TrackingAction,
+    select_behavior_intent,
+)
 from uav_tracker.tracking.evidence import SOURCE_RELIABILITY, TargetBelief
 from uav_tracker.tracking.lock_tracker import TemplateLockTracker
 from uav_tracker.tracking.target_manager import TargetManager
@@ -242,10 +248,14 @@ class TrackerPipeline:
         self.continuity = ContinuityTracker()
         self.tracking_sm = TrackingStateMachine(cfg)
         self.display_state = DisplayStateTracker(cfg)
-        # ALG-001 v1: detection-first decision layer (telemetry only).
+        # ALG-001 v1: detection-first decision layer (telemetry only by default).
+        # ALG-001 v1.1: guarded behavior wiring controlled by
+        # cfg.ACTION_POLICY_BEHAVIOR_ENABLED.  See select_behavior_intent.
         self.action_policy = ActionPolicy()
         self._last_belief: TargetBelief = TargetBelief.empty()
         self._last_action: TrackingAction = TrackingAction.GLOBAL_RESCAN
+        self._last_decision_path: str = BEHAVIOR_TELEMETRY_ONLY
+        self._behavior_drop_count: int = 0
 
         # RuntimeConfigView: base cfg + per-scene overrides (BUG-001 fix).
         # _adapt_auto_scene writes to _scene_overrides only; base cfg is never mutated.
@@ -460,11 +470,28 @@ class TrackerPipeline:
         if active.source in {DetectionSource.YOLO, DetectionSource.ROI, DetectionSource.LOCAL}:
             self.lock_tracker.sync_from_bbox(frame, active.raw_bbox)
 
+    def _belief_modality(self) -> str:
+        """Map current auto-scene state to TargetBelief.modality.
+
+        IR-first night gate semantics:
+          - 'day' / unknown        → 'rgb'  (RGB primary)
+          - 'ir'                   → 'ir'   (thermal primary, accepted gate)
+          - 'night' (RGB-night)    → 'night' (diagnostic-only — see report)
+        """
+        scene = getattr(self, '_auto_scene_state', 'day')
+        if scene == 'ir':
+            return 'ir'
+        if scene == 'night':
+            return 'night'
+        return 'rgb'
+
     def _build_target_belief(self, lock_score: float) -> TargetBelief:
         """Summarize active target state into a TargetBelief (no side effects)."""
         active = self.manager.get_active_target()
         if active is None:
-            return TargetBelief.empty()
+            empty = TargetBelief.empty()
+            empty.modality = self._belief_modality()
+            return empty
 
         source_rel = SOURCE_RELIABILITY.get(active.source, 0.3)
         confirm_frames = max(1, int(self.cfg.LOCK_CONFIRM_FRAMES))
@@ -499,7 +526,27 @@ class TrackerPipeline:
             reliability=float(max(0.0, min(1.0, reliability))),
             lost_age=int(active.lost_frames),
             source=str(active.source),
+            modality=self._belief_modality(),
         )
+
+    def _apply_action_policy_behavior(self, action: TrackingAction) -> str:
+        """Guarded behavior wiring: side-effects only when explicitly enabled.
+
+        Returns the decision_path tag for telemetry.  When the feature flag
+        is off the pipeline behavior is identical to the pre-existing
+        TemplateLockTracker / TargetManager path.
+
+        The only behavioral effect when enabled is DROP_LOCK: the active
+        target id is cleared and the lock_tracker reset.  This can only
+        accelerate releasing a clearly-stale lock; it can never extend hold.
+        """
+        behavior_enabled = bool(getattr(self.cfg, 'ACTION_POLICY_BEHAVIOR_ENABLED', False))
+        intent = select_behavior_intent(action, behavior_enabled)
+        if intent == BEHAVIOR_FORCE_DROP:
+            self.manager.release_active()
+            self.lock_tracker.reset()
+            self._behavior_drop_count += 1
+        return intent
 
     def _compute_gt_iou(self, gt_bbox: Optional[tuple[int, int, int, int]]) -> float:
         if gt_bbox is None:
@@ -635,15 +682,19 @@ class TrackerPipeline:
         self.manager.update_focus_mode()
         lock_events = self.lock_telemetry.update(self.manager.is_focus_mode(), self.manager.active_id)
 
-        # ALG-001 v1: build belief + decide action (telemetry only — does not gate behavior).
+        # ALG-001 v1: build belief + decide action.  Telemetry-only by default;
+        # the guarded behavior path runs only when cfg.ACTION_POLICY_BEHAVIOR_ENABLED
+        # is set and currently only accelerates DROP_LOCK.
         belief = self._build_target_belief(lock_score)
         action = self.action_policy.decide(
             belief,
             lock_score=float(lock_score),
             needs_recovery=bool(self.lock_tracker.needs_recovery),
         )
+        decision_path = self._apply_action_policy_behavior(action)
         self._last_belief = belief
         self._last_action = action
+        self._last_decision_path = decision_path
 
         self._sync_lock_tracker(frame)
 
@@ -734,6 +785,9 @@ class TrackerPipeline:
             target_reliability=float(belief.reliability),
             target_p_present=float(belief.p_present),
             tracking_action=str(action.value),
+            target_modality=str(belief.modality),
+            decision_path=str(decision_path),
+            behavior_drop_count=int(self._behavior_drop_count),
         )
 
 

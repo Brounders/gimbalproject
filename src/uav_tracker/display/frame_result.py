@@ -46,3 +46,7 @@ class FrameOutput:
     target_reliability: float = 0.0
     target_p_present: float = 0.0
     tracking_action: str = 'global_rescan'
+    # ALG-001 v1.1: guarded behavior wiring (default-safe, off-path).
+    target_modality: str = 'rgb'
+    decision_path: str = 'telemetry_only'
+    behavior_drop_count: int = 0

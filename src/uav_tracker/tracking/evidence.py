@@ -93,6 +93,14 @@ class TargetBelief:
     """Aggregate belief about the active target across frames.
 
     Pure summary — does not modify pipeline state.
+
+    `modality` is a sensor/scene tag in {'rgb', 'ir', 'night', 'unknown'}
+    used by downstream consumers (e.g. ActionPolicy) to apply IR-first
+    night gate semantics: RGB is primary in daylight, IR/thermal is the
+    primary night evidence, RGB-night observations are diagnostic.
+
+    The default 'rgb' keeps existing call sites backward compatible; the
+    pipeline overrides it from the auto-scene state.
     """
     active_id: Optional[int]
     bbox: Optional[tuple[int, int, int, int]]
@@ -104,6 +112,7 @@ class TargetBelief:
     reliability: float
     lost_age: int
     source: str
+    modality: str = 'rgb'
 
     @classmethod
     def empty(cls) -> 'TargetBelief':
@@ -118,4 +127,5 @@ class TargetBelief:
             reliability=0.0,
             lost_age=0,
             source='-',
+            modality='rgb',
         )

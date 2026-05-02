@@ -211,6 +211,17 @@ class Config:
     SMOOTH_BBOX_HOLD_FRAMES: int = 4            # hold last bbox N frames after target dropout
     DISPLAY_STATE_HOLD_FRAMES: int = 3          # hold display tracking state N frames on downgrade
 
+    # ── ActionPolicy guarded behavior wiring (ALG-001 v1.1) ──────────────────
+    # OFF by default: pipeline records ActionPolicy decisions as telemetry only
+    # and TemplateLockTracker/TargetManager behavior is unchanged.
+    # ON: TrackingAction.DROP_LOCK additionally clears the active target and
+    # resets the template lock one tick earlier than the natural age-based drop.
+    # All other actions remain observation-only — the flag can never extend a
+    # lock, only accelerate dropping a clearly-stale one.
+    # Night gate semantics: IR/thermal is the primary night evidence; visible
+    # RGB-night is diagnostic-only and must not be treated as a behavior gate.
+    ACTION_POLICY_BEHAVIOR_ENABLED: bool = False
+
     def __post_init__(self) -> None:
         """Auto-validate on construction (Session 7 + A1d merge).
 
