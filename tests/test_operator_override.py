@@ -22,9 +22,13 @@ from uav_tracker.tracking.tracked_target import TrackedTarget
 class _FakeLockTracker:
     def __init__(self):
         self.reset_count = 0
+        self.sync_calls = []
 
     def reset(self):
         self.reset_count += 1
+
+    def sync_from_bbox(self, frame, bbox):
+        self.sync_calls.append((frame.shape, bbox))
 
 
 def _target(tid: int, bbox: tuple[int, int, int, int]) -> TrackedTarget:
@@ -75,6 +79,7 @@ class TestTargetManagerOperatorOverride:
         assert active.hit_streak == 5
         assert active.drone_score == 1.0
         assert mgr.active_id == result.active_id
+        assert mgr.is_focus_mode() is True
 
     def test_operator_override_prefers_existing_target_inside_bbox(self):
         cfg = Config(OPERATOR_OVERRIDE_ENABLED=True, LOCK_CONFIRM_FRAMES=4)
@@ -122,15 +127,17 @@ class TestPipelineOperatorOverride:
         assert pipe.manager.get_active_target() is None
         assert pipe.lock_tracker.reset_count == 0
 
-    def test_pipeline_applies_override_and_resets_template_lock(self):
+    def test_pipeline_applies_override_and_seeds_template_lock(self):
         pipe = self._pipeline(enabled=True)
         pipe.request_operator_target(OperatorTargetOverride.from_bbox((10, 10, 30, 30)))
+        frame = np.zeros((80, 80, 3), dtype=np.uint8)
 
-        status = pipe._apply_operator_override_if_pending(np.zeros((80, 80, 3), dtype=np.uint8))
+        status = pipe._apply_operator_override_if_pending(frame)
 
         assert status == 'applied'
         assert pipe.manager.get_active_target() is not None
         assert pipe.manager.get_active_target().source == DetectionSource.OPERATOR
-        assert pipe.lock_tracker.reset_count == 1
+        assert pipe.lock_tracker.reset_count == 0
+        assert pipe.lock_tracker.sync_calls == [((80, 80, 3), (10, 10, 30, 30))]
         assert pipe._operator_override_count == 1
         assert pipe._last_operator_override_bbox == (10, 10, 30, 30)

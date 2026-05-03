@@ -13,6 +13,18 @@ class FocusModeController:
     def is_active(self) -> bool:
         return bool(self._cfg.LOCK_FOCUS_ONLY and self._active)
 
+    def force_active(self) -> bool:
+        """Immediately enter focus mode for an externally confirmed target."""
+        if not self._cfg.LOCK_FOCUS_ONLY:
+            self._active = False
+            self._enter_streak = 0
+            self._exit_streak = 0
+            return False
+        self._active = True
+        self._enter_streak = max(1, int(self._cfg.LOCK_MODE_ACQUIRE_FRAMES))
+        self._exit_streak = 0
+        return True
+
     def update(self, confirmed: bool) -> bool:
         if not self._cfg.LOCK_FOCUS_ONLY:
             self._active = False

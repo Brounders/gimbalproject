@@ -169,6 +169,7 @@ class TargetManager:
         target.hit_streak = max(int(target.hit_streak), int(self.cfg.LOCK_CONFIRM_FRAMES))
         target.source = DetectionSource.OPERATOR
         self._set_active_id(int(tid), force=True)
+        self._focus_ctrl.force_active()
         return OperatorOverrideResult(True, 'applied', active_id=int(tid), bbox=bbox)
 
     def _is_drone_like_target(self, target: TrackedTarget, min_score: float) -> bool:

@@ -26,6 +26,9 @@ def update_stats(window, stats: dict) -> None:
     roi_budget_candidates = int(stats.get('roi_budget_candidates', 0))
     night_skip = int(stats.get('night_skip', 0))
     scan_strategy = str(stats.get('scan_strategy', '-'))
+    operator_override_status = str(stats.get('operator_override_status', 'none'))
+    operator_override_count = int(stats.get('operator_override_count', 0))
+    operator_override_bbox = stats.get('operator_override_bbox')
 
     if tracker_mode == 'TRACK':
         window._target_present_latched = True
@@ -115,7 +118,8 @@ def update_stats(window, stats: dict) -> None:
     window.panel_target_summary.setText(
         f"Цель: {'ID ' + str(active_id) if active_id is not None else ('временная потеря' if target_present else 'не обнаружена')}\n"
         f"Источник: {active_source}\n"
-        f"Lock score: {lock_score:.2f} | strategy: {scan_strategy}"
+        f"Lock score: {lock_score:.2f} | strategy: {scan_strategy}\n"
+        f"Operator override: {operator_override_status}"
     )
     window.panel_quality_summary.setText(
         f"{quality_main}\n"
@@ -127,6 +131,11 @@ def update_stats(window, stats: dict) -> None:
     for event in stats.get('lock_events', []):
         window._log(f"[f{frame_index + 1}] {event}")
         window.panel_events_view.appendPlainText(f"[f{frame_index + 1}] {event}")
+
+    if operator_override_count > getattr(window, '_last_operator_override_count', 0):
+        window._last_operator_override_count = operator_override_count
+        window._log(f"[f{frame_index + 1}] operator override applied: {operator_override_bbox}")
+        window.panel_events_view.appendPlainText(f"[f{frame_index + 1}] operator override applied: {operator_override_bbox}")
 
     if tracker_mode == 'TRACK' and active_id is not None:
         if window._target_lock_start is None:
@@ -154,7 +163,10 @@ def update_stats(window, stats: dict) -> None:
     window._rp_name_label.setText(
         f'ID {active_id}' if active_id is not None else ('Потеря сигнала' if tracker_mode == 'LOST' else 'Нет цели')
     )
-    window._rp_sub_label.setText(f'{active_source} · {operator_mode}')
+    if active_source == 'operator':
+        window._rp_sub_label.setText(f'Оператор · {operator_mode}')
+    else:
+        window._rp_sub_label.setText(f'{active_source} · {operator_mode}')
 
     if tracker_mode == 'TRACK':
         window._rp_live_badge.setObjectName('LiveBadge')

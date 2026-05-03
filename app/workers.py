@@ -12,6 +12,7 @@ from uav_tracker.config import Config
 from uav_tracker.evaluation import evaluate_source
 from uav_tracker.exceptions import InferenceDeviceError, ModelNotFoundError, SourceOpenError
 from uav_tracker.pipeline import TrackerPipeline, VideoSession
+from uav_tracker.tracking.operator_override import OperatorTargetOverride
 
 
 class TrackerWorker(QThread):
@@ -30,12 +31,30 @@ class TrackerWorker(QThread):
         self.lock_log_path = lock_log_path.strip()
         self._stop_event = threading.Event()
         self._switch_event = threading.Event()
+        self._operator_lock = threading.Lock()
+        self._pending_operator_point: tuple[int, int] | None = None
 
     def stop(self):
         self._stop_event.set()
 
     def request_switch_target(self):
         self._switch_event.set()
+
+    def request_operator_target(self, frame_x: int, frame_y: int):
+        with self._operator_lock:
+            self._pending_operator_point = (int(frame_x), int(frame_y))
+
+    def _pop_operator_override(self) -> OperatorTargetOverride | None:
+        with self._operator_lock:
+            point = self._pending_operator_point
+            self._pending_operator_point = None
+        if point is None:
+            return None
+        return OperatorTargetOverride.from_click(
+            point[0],
+            point[1],
+            box_size=int(getattr(self.cfg, 'OPERATOR_OVERRIDE_BOX_SIZE', 64)),
+        )
 
     def run(self):
         reason = 'stopped'
@@ -68,6 +87,11 @@ class TrackerWorker(QThread):
                 if not ret:
                     reason = 'eof'
                     break
+
+                operator_override = self._pop_operator_override()
+                if operator_override is not None:
+                    pipeline.request_operator_target(operator_override)
+                    self.log_ready.emit(f'Оператор выбрал цель: x={operator_override.point[0]} y={operator_override.point[1]}')
 
                 result = pipeline.process_frame(
                     frame,
@@ -123,6 +147,9 @@ class TrackerWorker(QThread):
                         'roi_budget_candidates': result.roi_budget_candidates,
                         'night_skip': result.night_skip,
                         'timings_ms': result.timings_ms,
+                        'operator_override_status': result.operator_override_status,
+                        'operator_override_count': result.operator_override_count,
+                        'operator_override_bbox': result.operator_override_bbox,
                     }
                 )
         except ModelNotFoundError as exc:

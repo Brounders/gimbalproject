@@ -78,6 +78,7 @@ class MainWindow(QMainWindow):
         self._had_target_in_session = False
         self._auto_scene_detect_enabled = False
         self._target_lock_start: float | None = None
+        self._last_operator_override_count = 0
 
         self._session_history: list[str] = []
         self._recent_sources: list[str] = []
@@ -260,6 +261,7 @@ class MainWindow(QMainWindow):
         self.start_btn.clicked.connect(self._start)
         self.stop_btn.clicked.connect(self._stop)
         self.eval_btn.clicked.connect(self._evaluate)
+        self.video_stage.operator_target_requested.connect(self._request_operator_target)
 
         self.command_palette_shortcut = QShortcut(QKeySequence('Ctrl+K'), self)
         self.command_palette_shortcut.activated.connect(self._open_command_palette)
@@ -325,6 +327,7 @@ class MainWindow(QMainWindow):
 
     def _set_video_idle_state(self, detail: str | None = None) -> None:
         self._preview_pixmap = None
+        self.video_stage.clear_frame_size()
         self.video_label.clear()
         self.video_label.setText(self._video_idle_text(detail))
 
@@ -387,6 +390,14 @@ class MainWindow(QMainWindow):
         if worker is not None and self._job_state == 'tracking':
             worker.request_switch_target()
 
+    def _request_operator_target(self, frame_x: int, frame_y: int) -> None:
+        with self._worker_lock:
+            worker = self.worker
+        if worker is None or self._job_state != 'tracking':
+            return
+        worker.request_operator_target(frame_x, frame_y)
+        self._log(f'Запрошен ручной выбор цели: x={frame_x} y={frame_y}')
+
     def _on_scenario_changed(self):
         if self._updating_controls:
             self._refresh_header_state()
@@ -441,6 +452,7 @@ class MainWindow(QMainWindow):
         cfg.SHOW_GT_OVERLAY = self.show_gt_check.isChecked()
         cfg.SHOW_DEBUG_TIMINGS = self.timing_check.isChecked()
         cfg.SHOW_TRAILS = self.show_trails_check.isChecked()
+        cfg.OPERATOR_OVERRIDE_ENABLED = True
 
         cfg = apply_overrides(cfg, self._profile_extras)
         cfg = apply_runtime_preset(
@@ -616,6 +628,7 @@ class MainWindow(QMainWindow):
         h, w, ch = rgb.shape
         image = QImage(rgb.data, w, h, ch * w, QImage.Format_RGB888)
         self._preview_pixmap = QPixmap.fromImage(image)
+        self.video_stage.set_frame_size(w, h)
         self._render_preview_pixmap()
 
     def _update_stats(self, stats: dict):

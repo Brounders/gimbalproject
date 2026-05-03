@@ -472,7 +472,7 @@ class TrackerPipeline:
         if active is None:
             self.lock_tracker.reset()
             return
-        if active.source in {DetectionSource.YOLO, DetectionSource.ROI, DetectionSource.LOCAL}:
+        if active.source in {DetectionSource.YOLO, DetectionSource.ROI, DetectionSource.LOCAL, DetectionSource.OPERATOR}:
             self.lock_tracker.sync_from_bbox(frame, active.raw_bbox)
 
     def _belief_modality(self) -> str:
@@ -588,7 +588,7 @@ class TrackerPipeline:
         self._last_operator_override_status = result.status
         self._last_operator_override_bbox = result.bbox
         if result.applied:
-            self.lock_tracker.reset()
+            self.lock_tracker.sync_from_bbox(frame, result.bbox)
             self._operator_override_count += 1
         return result.status
 
@@ -789,7 +789,7 @@ class TrackerPipeline:
         self.budget.update(timings_ms)
 
         visible = len(self.manager.display_targets())
-        active_source = active.source if active is not None else '-'
+        active_source = normalize_source(active.source) if active is not None else '-'
         return FrameOutput(
             frame=rendered,
             fps=fps,
