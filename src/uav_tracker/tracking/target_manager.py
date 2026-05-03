@@ -172,6 +172,18 @@ class TargetManager:
         self._focus_ctrl.force_active()
         return OperatorOverrideResult(True, 'applied', active_id=int(tid), bbox=bbox)
 
+    def confirm_active_as_operator(self) -> bool:
+        active = self.get_active_target()
+        if active is None:
+            return False
+        active.source = DetectionSource.OPERATOR
+        active.conf = 1.0
+        active.drone_score = 1.0
+        active.lost_frames = 0
+        active.hit_streak = max(int(active.hit_streak), int(self.cfg.LOCK_CONFIRM_FRAMES))
+        self._focus_ctrl.force_active()
+        return True
+
     def _is_drone_like_target(self, target: TrackedTarget, min_score: float) -> bool:
         if not self._is_primary_source(target.source):
             return False
@@ -446,7 +458,10 @@ class TargetManager:
             if tid not in seen_ids:
                 target.lost_frames += 1
                 target.hit_streak = max(0, target.hit_streak - 1)
-                ttl = self.cfg.YOLO_LOST_MAX if self._is_primary_source(target.source) else self.cfg.NIGHT_LOST_MAX
+                if target.source == DetectionSource.OPERATOR:
+                    ttl = max(int(self.cfg.YOLO_LOST_MAX), int(getattr(self.cfg, 'OPERATOR_HOLD_GRACE_FRAMES', 20)))
+                else:
+                    ttl = self.cfg.YOLO_LOST_MAX if self._is_primary_source(target.source) else self.cfg.NIGHT_LOST_MAX
                 if target.lost_frames > ttl:
                     dead.append(tid)
         for tid in dead:

@@ -262,6 +262,9 @@ class MainWindow(QMainWindow):
         self.stop_btn.clicked.connect(self._stop)
         self.eval_btn.clicked.connect(self._evaluate)
         self.video_stage.operator_target_requested.connect(self._request_operator_target)
+        self.video_stage.operator_bbox_requested.connect(self._request_operator_bbox)
+        self.operator_confirm_btn.clicked.connect(self._request_operator_confirm)
+        self.operator_release_btn.clicked.connect(self._request_operator_release)
 
         self.command_palette_shortcut = QShortcut(QKeySequence('Ctrl+K'), self)
         self.command_palette_shortcut.activated.connect(self._open_command_palette)
@@ -398,6 +401,30 @@ class MainWindow(QMainWindow):
         worker.request_operator_target(frame_x, frame_y)
         self._log(f'Запрошен ручной выбор цели: x={frame_x} y={frame_y}')
 
+    def _request_operator_bbox(self, bbox: tuple[int, int, int, int]) -> None:
+        with self._worker_lock:
+            worker = self.worker
+        if worker is None or self._job_state != 'tracking':
+            return
+        worker.request_operator_bbox(bbox)
+        self._log(f'Запрошено ручное выделение цели: bbox={bbox}')
+
+    def _request_operator_confirm(self) -> None:
+        with self._worker_lock:
+            worker = self.worker
+        if worker is None or self._job_state != 'tracking':
+            return
+        worker.request_operator_confirm()
+        self._log('Запрошено подтверждение текущей цели оператором')
+
+    def _request_operator_release(self) -> None:
+        with self._worker_lock:
+            worker = self.worker
+        if worker is None or self._job_state != 'tracking':
+            return
+        worker.request_operator_release()
+        self._log('Запрошен сброс операторской цели')
+
     def _on_scenario_changed(self):
         if self._updating_controls:
             self._refresh_header_state()
@@ -453,6 +480,7 @@ class MainWindow(QMainWindow):
         cfg.SHOW_DEBUG_TIMINGS = self.timing_check.isChecked()
         cfg.SHOW_TRAILS = self.show_trails_check.isChecked()
         cfg.OPERATOR_OVERRIDE_ENABLED = True
+        cfg.OPERATOR_ANNOTATION_LOG_ENABLED = True
 
         cfg = apply_overrides(cfg, self._profile_extras)
         cfg = apply_runtime_preset(
@@ -496,8 +524,10 @@ class MainWindow(QMainWindow):
         safe_source = ''.join(ch if ch.isalnum() or ch in {'-', '_'} else '_' for ch in source_name)[:40] or 'source'
         ts = time.strftime('%Y%m%d_%H%M%S')
         lock_log_path = ROOT / 'runs' / 'lock_events' / f'{ts}_{scenario_key}_{safe_source}.jsonl'
+        annotation_log_path = ROOT / 'runs' / 'operator_annotations' / f'{ts}_{scenario_key}_{safe_source}.jsonl'
         cfg.LOCK_EVENT_LOG_ENABLED = True
         cfg.LOCK_EVENT_LOG_PATH = str(lock_log_path)
+        cfg.OPERATOR_ANNOTATION_LOG_PATH = str(annotation_log_path)
 
         with self._worker_lock:
             self.worker = TrackerWorker(cfg, source, output_path, small_target_mode, lock_log_path=str(lock_log_path))
@@ -523,6 +553,7 @@ class MainWindow(QMainWindow):
             f'adaptive={cfg.ADAPTIVE_SCAN_ENABLED} lock_tracker={cfg.LOCK_TRACKER_ENABLED}'
         )
         self._log(f'Lock events -> {lock_log_path}')
+        self._log(f'Operator annotations -> {annotation_log_path}')
 
     def _stop(self):
         with self._worker_lock:

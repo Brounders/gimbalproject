@@ -31,6 +31,7 @@ from uav_tracker.tracking.action_policy import (
 from uav_tracker.tracking.evidence import SOURCE_RELIABILITY, TargetBelief, normalize_source
 from uav_tracker.tracking.lock_tracker import TemplateLockTracker
 from uav_tracker.tracking.operator_override import OperatorTargetOverride
+from uav_tracker.tracking.operator_seed import refine_operator_seed_bbox
 from uav_tracker.tracking.target_manager import TargetManager
 from uav_tracker.tracking.tracked_target import TrackedTarget
 from utils.geometry import iou
@@ -364,6 +365,12 @@ class TrackerPipeline:
             return True, 'GLOBAL-SCAN'
         if not self.manager.is_focus_mode() or active is None:
             return True, 'GLOBAL-SCAN'
+        if (
+            normalize_source(active.source) == 'operator'
+            and self.cfg.LOCK_TRACKER_ENABLED
+            and active.lost_frames <= int(getattr(self.cfg, 'OPERATOR_HOLD_GRACE_FRAMES', 20))
+        ):
+            return False, 'OPERATOR-LOCK'
         if active.lost_frames > self.cfg.LOCK_LOST_GRACE:
             return True, 'GLOBAL-RECOVERY'
         interval = self.budget.effective_global_scan_interval(self.frame_counter)
@@ -571,6 +578,18 @@ class TrackerPipeline:
         self._pending_operator_override = override
         return True
 
+    def request_operator_confirm(self) -> bool:
+        if not bool(getattr(self.cfg, 'OPERATOR_OVERRIDE_ENABLED', False)):
+            return False
+        return self.manager.confirm_active_as_operator()
+
+    def request_operator_release(self) -> bool:
+        if not bool(getattr(self.cfg, 'OPERATOR_OVERRIDE_ENABLED', False)):
+            return False
+        released = self.manager.release_active()
+        self.lock_tracker.reset()
+        return released
+
     def _apply_operator_override_if_pending(self, frame: np.ndarray) -> str:
         override = getattr(self, '_pending_operator_override', None)
         if override is None:
@@ -583,6 +602,16 @@ class TrackerPipeline:
             self._last_operator_override_status = 'disabled'
             self._last_operator_override_bbox = None
             return 'disabled'
+
+        if bool(getattr(self.cfg, 'OPERATOR_REFINE_SEED_BBOX', True)):
+            seed_bbox = override.to_bbox(frame.shape)
+            refined_bbox = refine_operator_seed_bbox(
+                frame,
+                seed_bbox,
+                padding=int(getattr(self.cfg, 'OPERATOR_REFINE_PADDING', 18)),
+            ) if seed_bbox is not None else None
+            if refined_bbox is not None:
+                override = OperatorTargetOverride.from_bbox(refined_bbox, frame_index=override.frame_index, reason=override.reason)
 
         result = self.manager.apply_operator_override(override, frame_shape=frame.shape)
         self._last_operator_override_status = result.status

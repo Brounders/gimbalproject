@@ -38,3 +38,23 @@ def map_widget_point_to_frame(
     fx = int((px - x0) / scale)
     fy = int((py - y0) / scale)
     return min(frame_w - 1, max(0, fx)), min(frame_h - 1, max(0, fy))
+
+
+def map_widget_bbox_to_frame(
+    *,
+    widget_size: tuple[int, int],
+    frame_size: tuple[int, int],
+    bbox: tuple[int, int, int, int],
+) -> Optional[tuple[int, int, int, int]]:
+    x1, y1, x2, y2 = [int(v) for v in bbox]
+    left, right = sorted((x1, x2))
+    top, bottom = sorted((y1, y2))
+    p1 = map_widget_point_to_frame(widget_size=widget_size, frame_size=frame_size, point=(left, top))
+    p2 = map_widget_point_to_frame(widget_size=widget_size, frame_size=frame_size, point=(right, bottom))
+    if p1 is None or p2 is None:
+        return None
+    fx1, fy1 = p1
+    fx2, fy2 = p2
+    if fx2 <= fx1 or fy2 <= fy1:
+        return None
+    return fx1, fy1, fx2, fy2

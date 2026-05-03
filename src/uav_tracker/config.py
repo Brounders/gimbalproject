@@ -227,6 +227,12 @@ class Config:
     # state until an explicit preset enables it.
     OPERATOR_OVERRIDE_ENABLED: bool = False
     OPERATOR_OVERRIDE_BOX_SIZE: int = 64
+    OPERATOR_HOLD_GRACE_FRAMES: int = 20
+    OPERATOR_REFINE_SEED_BBOX: bool = True
+    OPERATOR_REFINE_PADDING: int = 18
+    OPERATOR_TEMPLATE_COUNT: int = 3
+    OPERATOR_ANNOTATION_LOG_ENABLED: bool = False
+    OPERATOR_ANNOTATION_LOG_PATH: str = ''
 
     def __post_init__(self) -> None:
         """Auto-validate on construction (Session 7 + A1d merge).

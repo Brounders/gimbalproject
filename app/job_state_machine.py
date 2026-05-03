@@ -91,6 +91,15 @@ def set_job_state(window, state: str) -> None:
     window.start_btn.setEnabled(window._state_machine.can_start() and not busy)
     window.eval_btn.setEnabled(window._state_machine.can_evaluate() and not busy)
     window.stop_btn.setEnabled(window._state_machine.can_stop())
+    for name in (
+        'operator_confirm_btn',
+        'operator_release_btn',
+        '_dock_operator_confirm_btn',
+        '_dock_operator_release_btn',
+    ):
+        widget = getattr(window, name, None)
+        if widget is not None:
+            widget.setEnabled(state == 'tracking')
 
     for widget in [
         window.scenario_combo,

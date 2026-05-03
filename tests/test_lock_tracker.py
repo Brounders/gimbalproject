@@ -29,6 +29,7 @@ class TestTemplateLockTrackerReset(unittest.TestCase):
     def test_reset_clears_all_state(self):
         t = TemplateLockTracker(_cfg())
         t.template = np.zeros((10, 10), dtype=np.uint8)
+        t._templates = [np.zeros((10, 10), dtype=np.uint8)]
         t.bbox = (0, 0, 10, 10)
         t.last_score = 0.9
         t._consecutive_low_score = 5
@@ -37,6 +38,7 @@ class TestTemplateLockTrackerReset(unittest.TestCase):
         t.reset()
 
         self.assertIsNone(t.template)
+        self.assertEqual(t._templates, [])
         self.assertIsNone(t.bbox)
         self.assertEqual(t.last_score, 0.0)
         self.assertEqual(t._consecutive_low_score, 0)
@@ -84,6 +86,34 @@ class TestTemplateLockTrackerPredictNoTemplate(unittest.TestCase):
         self.assertIsNone(det)
         self.assertEqual(score, 0.0)
         self.assertIsNone(roi)
+
+
+class TestTemplateLockTrackerMultiTemplate(unittest.TestCase):
+    def test_sync_keeps_bounded_template_bank(self):
+        frame = _gray_frame()
+        frame[20:40, 20:40] = 255
+        t = TemplateLockTracker(_cfg(OPERATOR_TEMPLATE_COUNT=2))
+
+        t.sync_from_bbox(frame, (20, 20, 40, 40))
+        t.sync_from_bbox(frame, (20, 20, 40, 40))
+        t.sync_from_bbox(frame, (20, 20, 40, 40))
+
+        self.assertEqual(len(t._templates), 2)
+
+    def test_predict_uses_template_bank(self):
+        frame1 = _gray_frame()
+        frame1[20:40, 20:40] = 80
+        frame1[24:32, 26:36] = 255
+        frame2 = _gray_frame()
+        frame2[28:48, 28:48] = 80
+        frame2[32:40, 34:44] = 255
+        t = TemplateLockTracker(_cfg(OPERATOR_TEMPLATE_COUNT=2, LOCK_TRACKER_MIN_SCORE=0.1))
+        t.sync_from_bbox(frame1, (20, 20, 40, 40))
+
+        det, score, _roi = t.predict(frame2)
+
+        self.assertIsNotNone(det)
+        self.assertGreaterEqual(score, 0.1)
 
 
 if __name__ == '__main__':

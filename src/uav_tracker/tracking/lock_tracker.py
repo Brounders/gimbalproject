@@ -10,6 +10,7 @@ class TemplateLockTracker:
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.template: np.ndarray | None = None
+        self._templates: list[np.ndarray] = []
         self.bbox: tuple[int, int, int, int] | None = None
         self.last_score: float = 0.0
         self._consecutive_low_score: int = 0  # BUG-003: drift detection counter
@@ -17,6 +18,7 @@ class TemplateLockTracker:
 
     def reset(self) -> None:
         self.template = None
+        self._templates = []
         self.bbox = None
         self.last_score = 0.0
         self._consecutive_low_score = 0
@@ -47,9 +49,13 @@ class TemplateLockTracker:
             return
         if self.template is None or self.template.shape != patch.shape:
             self.template = patch.copy()
+            self._templates = [self.template.copy()]
         else:
             alpha = float(self.cfg.LOCK_TRACKER_UPDATE_ALPHA)
             self.template = cv2.addWeighted(patch, alpha, self.template, 1.0 - alpha, 0.0)
+            self._templates.append(self.template.copy())
+            max_templates = max(1, int(getattr(self.cfg, 'OPERATOR_TEMPLATE_COUNT', 3)))
+            self._templates = self._templates[-max_templates:]
         self.bbox = clipped
 
     def predict(self, frame: np.ndarray) -> tuple[dict, float, tuple[int, int, int, int]] | tuple[None, float, None]:
@@ -72,12 +78,20 @@ class TemplateLockTracker:
 
         gray = self._gray(frame)
         search = gray[sy1:sy2, sx1:sx2]
-        if search.shape[0] < self.template.shape[0] or search.shape[1] < self.template.shape[1]:
+        templates = self._templates or [self.template]
+        best = None
+        for template in templates:
+            if search.shape[0] < template.shape[0] or search.shape[1] < template.shape[1]:
+                continue
+            response = cv2.matchTemplate(search, template, cv2.TM_CCOEFF_NORMED)
+            _min_val, max_val, _min_loc, max_loc = cv2.minMaxLoc(response)
+            candidate = (float(max_val), max_loc, template)
+            if best is None or candidate[0] > best[0]:
+                best = candidate
+        if best is None:
             return None, 0.0, None
 
-        response = cv2.matchTemplate(search, self.template, cv2.TM_CCOEFF_NORMED)
-        _min_val, max_val, _min_loc, max_loc = cv2.minMaxLoc(response)
-        score = float(max_val)
+        score, max_loc, best_template = best
         self.last_score = score
 
         # BUG-003: track consecutive low-score frames → detect template drift/corruption
@@ -94,8 +108,8 @@ class TemplateLockTracker:
 
         px1 = sx1 + int(max_loc[0])
         py1 = sy1 + int(max_loc[1])
-        px2 = px1 + self.template.shape[1]
-        py2 = py1 + self.template.shape[0]
+        px2 = px1 + best_template.shape[1]
+        py2 = py1 + best_template.shape[0]
         pred_bbox = self._clip_bbox((px1, py1, px2, py2), frame.shape[:2])
         if pred_bbox is None:
             return None, score, (sx1, sy1, sx2, sy2)

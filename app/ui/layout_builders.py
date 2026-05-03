@@ -112,6 +112,18 @@ def build_topbar(window) -> QFrame:
     window.next_target_btn.setEnabled(False)
     layout.addWidget(window.next_target_btn)
 
+    window.operator_confirm_btn = QPushButton('✓')
+    window.operator_confirm_btn.setObjectName('ModeBtn')
+    window.operator_confirm_btn.setToolTip('Подтвердить текущую цель оператором')
+    window.operator_confirm_btn.setEnabled(False)
+    layout.addWidget(window.operator_confirm_btn)
+
+    window.operator_release_btn = QPushButton('✕')
+    window.operator_release_btn.setObjectName('ModeBtn')
+    window.operator_release_btn.setToolTip('Сбросить операторскую цель')
+    window.operator_release_btn.setEnabled(False)
+    layout.addWidget(window.operator_release_btn)
+
     sep5 = QLabel()
     sep5.setObjectName('TopBarSep')
     layout.addWidget(sep5)
@@ -162,6 +174,18 @@ def build_header(window) -> QFrame:
     window.next_target_btn.setToolTip('Переключить на следующую доступную цель')
     window.next_target_btn.setEnabled(False)
     layout.addWidget(window.next_target_btn)
+
+    window.operator_confirm_btn = QPushButton('Подтвердить')
+    window.operator_confirm_btn.setProperty('variant', 'ghost')
+    window.operator_confirm_btn.setToolTip('Подтвердить текущую цель оператором')
+    window.operator_confirm_btn.setEnabled(False)
+    layout.addWidget(window.operator_confirm_btn)
+
+    window.operator_release_btn = QPushButton('Сбросить')
+    window.operator_release_btn.setProperty('variant', 'ghost')
+    window.operator_release_btn.setToolTip('Сбросить операторскую цель')
+    window.operator_release_btn.setEnabled(False)
+    layout.addWidget(window.operator_release_btn)
 
     window.expert_btn = QPushButton('Эксперт')
     window.expert_btn.setProperty('variant', 'ghost')
@@ -433,6 +457,22 @@ def build_dock(window) -> QFrame:
     dock_next.clicked.connect(window._request_next_target)
     window._dock_next_btn = dock_next
     layout.addWidget(dock_next)
+
+    dock_confirm = QPushButton('✓')
+    dock_confirm.setObjectName('DockIconBtn')
+    dock_confirm.setToolTip('Подтвердить текущую цель')
+    dock_confirm.setEnabled(False)
+    dock_confirm.clicked.connect(window._request_operator_confirm)
+    window._dock_operator_confirm_btn = dock_confirm
+    layout.addWidget(dock_confirm)
+
+    dock_release = QPushButton('✕')
+    dock_release.setObjectName('DockIconBtn')
+    dock_release.setToolTip('Сбросить операторскую цель')
+    dock_release.setEnabled(False)
+    dock_release.clicked.connect(window._request_operator_release)
+    window._dock_operator_release_btn = dock_release
+    layout.addWidget(dock_release)
 
     return dock
 

@@ -97,6 +97,36 @@ class TestTargetManagerOperatorOverride:
         assert mgr.active_id == 42
         assert mgr.targets[42].source == DetectionSource.OPERATOR
 
+    def test_confirm_active_as_operator_marks_existing_target(self):
+        mgr = TargetManager(Config(LOCK_CONFIRM_FRAMES=3))
+        mgr.targets[7] = _target(7, (10, 10, 30, 30))
+        mgr.active_id = 7
+
+        assert mgr.confirm_active_as_operator() is True
+
+        active = mgr.get_active_target()
+        assert active.source == DetectionSource.OPERATOR
+        assert active.conf == 1.0
+        assert active.drone_score == 1.0
+        assert active.hit_streak == 3
+        assert mgr.is_focus_mode() is True
+
+    def test_operator_target_survives_lost_frames_until_operator_grace(self):
+        cfg = Config(YOLO_LOST_MAX=2, OPERATOR_HOLD_GRACE_FRAMES=5)
+        mgr = TargetManager(cfg)
+        mgr.apply_operator_override(
+            OperatorTargetOverride.from_bbox((10, 10, 30, 30)),
+            frame_shape=(80, 80, 3),
+        )
+        tid = mgr.active_id
+
+        for _ in range(5):
+            mgr.age_targets(set())
+
+        assert tid in mgr.targets
+        mgr.age_targets(set())
+        assert tid not in mgr.targets
+
 
 class TestPipelineOperatorOverride:
     def _pipeline(self, enabled: bool) -> TrackerPipeline:
@@ -108,6 +138,8 @@ class TestPipelineOperatorOverride:
         pipe._last_operator_override_status = 'none'
         pipe._last_operator_override_bbox = None
         pipe._operator_override_count = 0
+        pipe.frame_counter = 1
+        pipe.budget = type('Budget', (), {'effective_global_scan_interval': lambda self, frame_counter: 6})()
         return pipe
 
     def test_pipeline_queues_override_until_frame_shape_is_available(self):
@@ -141,3 +173,32 @@ class TestPipelineOperatorOverride:
         assert pipe.lock_tracker.sync_calls == [((80, 80, 3), (10, 10, 30, 30))]
         assert pipe._operator_override_count == 1
         assert pipe._last_operator_override_bbox == (10, 10, 30, 30)
+
+    def test_pipeline_release_operator_target_clears_lock(self):
+        pipe = self._pipeline(enabled=True)
+        pipe.request_operator_target(OperatorTargetOverride.from_bbox((10, 10, 30, 30)))
+        pipe._apply_operator_override_if_pending(np.zeros((80, 80, 3), dtype=np.uint8))
+
+        assert pipe.request_operator_release() is True
+
+        assert pipe.manager.active_id is None
+        assert pipe.lock_tracker.reset_count == 1
+
+    def test_pipeline_confirm_operator_target_marks_existing_active(self):
+        pipe = self._pipeline(enabled=True)
+        pipe.manager.targets[9] = _target(9, (20, 20, 50, 50))
+        pipe.manager.active_id = 9
+
+        assert pipe.request_operator_confirm() is True
+
+        assert pipe.manager.targets[9].source == DetectionSource.OPERATOR
+
+    def test_operator_target_prefers_lock_tracking_over_global_scan(self):
+        pipe = self._pipeline(enabled=True)
+        pipe.request_operator_target(OperatorTargetOverride.from_bbox((10, 10, 30, 30)))
+        pipe._apply_operator_override_if_pending(np.zeros((80, 80, 3), dtype=np.uint8))
+
+        run_global, strategy = pipe._should_run_global_scan()
+
+        assert run_global is False
+        assert strategy == 'OPERATOR-LOCK'

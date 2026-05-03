@@ -32,7 +32,9 @@ class TrackerWorker(QThread):
         self._stop_event = threading.Event()
         self._switch_event = threading.Event()
         self._operator_lock = threading.Lock()
-        self._pending_operator_point: tuple[int, int] | None = None
+        self._pending_operator_override: OperatorTargetOverride | None = None
+        self._operator_confirm_event = threading.Event()
+        self._operator_release_event = threading.Event()
 
     def stop(self):
         self._stop_event.set()
@@ -42,24 +44,45 @@ class TrackerWorker(QThread):
 
     def request_operator_target(self, frame_x: int, frame_y: int):
         with self._operator_lock:
-            self._pending_operator_point = (int(frame_x), int(frame_y))
+            self._pending_operator_override = OperatorTargetOverride.from_click(
+                int(frame_x),
+                int(frame_y),
+                box_size=int(getattr(self.cfg, 'OPERATOR_OVERRIDE_BOX_SIZE', 64)),
+            )
+
+    def request_operator_bbox(self, bbox: tuple[int, int, int, int]):
+        with self._operator_lock:
+            self._pending_operator_override = OperatorTargetOverride.from_bbox(bbox)
+
+    def request_operator_confirm(self):
+        self._operator_confirm_event.set()
+
+    def request_operator_release(self):
+        self._operator_release_event.set()
 
     def _pop_operator_override(self) -> OperatorTargetOverride | None:
         with self._operator_lock:
-            point = self._pending_operator_point
-            self._pending_operator_point = None
-        if point is None:
-            return None
-        return OperatorTargetOverride.from_click(
-            point[0],
-            point[1],
-            box_size=int(getattr(self.cfg, 'OPERATOR_OVERRIDE_BOX_SIZE', 64)),
-        )
+            override = self._pending_operator_override
+            self._pending_operator_override = None
+        return override
+
+    def _pop_operator_confirm(self) -> bool:
+        if not self._operator_confirm_event.is_set():
+            return False
+        self._operator_confirm_event.clear()
+        return True
+
+    def _pop_operator_release(self) -> bool:
+        if not self._operator_release_event.is_set():
+            return False
+        self._operator_release_event.clear()
+        return True
 
     def run(self):
         reason = 'stopped'
         session = VideoSession(self.cfg, self.source, output_path=self.output_path, manage_cv_windows=False)
         event_log_handle = None
+        annotation_log_handle = None
         try:
             resolved_lock_log = self.lock_log_path
             if not resolved_lock_log and self.cfg.LOCK_EVENT_LOG_ENABLED and self.cfg.LOCK_EVENT_LOG_PATH:
@@ -69,6 +92,11 @@ class TrackerWorker(QThread):
                 lock_log_file.parent.mkdir(parents=True, exist_ok=True)
                 event_log_handle = lock_log_file.open('a', encoding='utf-8')
                 self.log_ready.emit(f'Лог lock-событий: {resolved_lock_log}')
+            if self.cfg.OPERATOR_ANNOTATION_LOG_ENABLED and self.cfg.OPERATOR_ANNOTATION_LOG_PATH:
+                annotation_log_file = Path(self.cfg.OPERATOR_ANNOTATION_LOG_PATH)
+                annotation_log_file.parent.mkdir(parents=True, exist_ok=True)
+                annotation_log_handle = annotation_log_file.open('a', encoding='utf-8')
+                self.log_ready.emit(f'Лог operator-разметки: {annotation_log_file}')
 
             session.open()
             self.log_ready.emit(f'Источник открыт: {self.source}')
@@ -91,7 +119,16 @@ class TrackerWorker(QThread):
                 operator_override = self._pop_operator_override()
                 if operator_override is not None:
                     pipeline.request_operator_target(operator_override)
-                    self.log_ready.emit(f'Оператор выбрал цель: x={operator_override.point[0]} y={operator_override.point[1]}')
+                    if operator_override.point is not None:
+                        self.log_ready.emit(f'Оператор выбрал цель: x={operator_override.point[0]} y={operator_override.point[1]}')
+                    else:
+                        self.log_ready.emit(f'Оператор выделил цель: bbox={operator_override.bbox}')
+                if self._pop_operator_confirm():
+                    pipeline.request_operator_confirm()
+                    self.log_ready.emit('Оператор подтвердил текущую цель')
+                if self._pop_operator_release():
+                    pipeline.request_operator_release()
+                    self.log_ready.emit('Оператор сбросил текущую цель')
 
                 result = pipeline.process_frame(
                     frame,
@@ -118,6 +155,21 @@ class TrackerWorker(QThread):
                             'budget_load': round(float(result.budget_load), 4),
                         }
                         event_log_handle.write(json.dumps(payload, ensure_ascii=False) + '\n')
+                if (
+                    annotation_log_handle is not None
+                    and result.operator_override_status == 'applied'
+                    and result.operator_override_bbox is not None
+                ):
+                    payload = {
+                        'frame_index': int(result.frame_index),
+                        'source': str(self.source),
+                        'bbox_xyxy': list(result.operator_override_bbox),
+                        'active_id': result.active_id,
+                        'active_source': result.active_source,
+                        'event': 'operator_bbox',
+                    }
+                    annotation_log_handle.write(json.dumps(payload, ensure_ascii=False) + '\n')
+                    annotation_log_handle.flush()
 
                 self.stats_ready.emit(
                     {
@@ -170,6 +222,8 @@ class TrackerWorker(QThread):
         finally:
             if event_log_handle is not None:
                 event_log_handle.close()
+            if annotation_log_handle is not None:
+                annotation_log_handle.close()
             session.close()
 
         self.finished.emit(reason)
