@@ -1,7 +1,7 @@
 # Active Plan
 
 ## Plan ID
-- AP-OPERATOR-SEEDED-LOCK-UI-V1
+- AP-OPERATOR-ASSISTED-TRACKING-V2
 
 ## Status
 - Completed
@@ -13,44 +13,46 @@
 - none
 
 ## Source Direction
-Human reported that manual clicking did not help on clips where the drone is
-visually obvious but the detector does not see it.  Codex therefore changed
-the goal from "select existing detection" to "operator-seeded template lock":
-clicking the drone creates an operator-confirmed target and seeds the visual
-lock path without requiring YOLO detection.
+Human requested all six modernization ideas in one pass and asked how manual
+operator selection can also help train the detector model. Codex implemented
+V2 as operator-assisted tracking plus operator annotation logging.
 
-## AP-OPERATOR-SEEDED-LOCK-UI-V1 — Manual Click → Operator-Seeded Lock
+## AP-OPERATOR-ASSISTED-TRACKING-V2 — Operator-Assisted Tracking + Annotation
 
 ### Цель
 
-Подключить ручной выбор цели к PySide6 UI и сделать так, чтобы клик оператора
-запускал удержание через `TemplateLockTracker`, даже если detector не видит
-дрон.
+Усилить ручной выбор цели так, чтобы оператор мог не только кликнуть точку, но
+и выделить bbox, подтвердить/сбросить цель, а pipeline мог удерживать
+operator target через visual/template path без обязательного detector lock.
 
 ### Результат
 
 | ID | Задача | Статус | Результат |
 |----|--------|--------|-----------|
-| OPSEED-001 | UI coordinate mapping | ✅ DONE | `app/ui/video_mapping.py`, tests for KeepAspectRatio letterbox mapping |
-| OPSEED-002 | VideoStage click signal | ✅ DONE | left click emits frame coordinates only inside displayed frame |
-| OPSEED-003 | Worker request bridge | ✅ DONE | thread-safe latest-click queue, converts to `OperatorTargetOverride` |
-| OPSEED-004 | GUI config/wiring | ✅ DONE | GUI sessions enable `OPERATOR_OVERRIDE_ENABLED`; click goes to worker |
-| OPSEED-005 | Operator-seeded template lock | ✅ DONE | operator override force-enters focus mode and seeds template from bbox |
-| OPSEED-006 | Telemetry/report/state | ✅ DONE | operator status/count/bbox forwarded and reported |
+| OPV2-001 | Drag-to-select bbox | ✅ DONE | `VideoStage` emits click or bbox; mapping tested |
+| OPV2-002 | Auto seed refinement | ✅ DONE | contrast blob refinement with safe fallback |
+| OPV2-003 | Operator hold policy | ✅ DONE | `OPERATOR_HOLD_GRACE_FRAMES`; confirm active as operator |
+| OPV2-004 | Multi-template lock | ✅ DONE | bounded template bank in `TemplateLockTracker` |
+| OPV2-005 | Operator lock-first path | ✅ DONE | active `operator` source uses `OPERATOR-LOCK` path |
+| OPV2-006 | Confirm / release controls | ✅ DONE | UI and worker commands for confirm/release |
+| OPV2-007 | Annotation logging for training | ✅ DONE | `runs/operator_annotations/*.jsonl` operator bbox events |
 
 ### Итоговое решение
 
-**Backend + UI wiring PASS.**
+**PASS for code/test validation.**
 
-Ручной клик теперь не зависит от наличия YOLO detection в выбранной области:
-pipeline создаёт `operator` target, переводит tracker в focus-mode и
-инициализирует `TemplateLockTracker` выбранной областью.
+Ручной выбор теперь является operator-assisted mode, а не простой подсказкой
+detector. Успешные operator bbox события сохраняются как будущий материал для
+конвертации в YOLO labels.
 
 ### Отчёт
 
-- `orchestrator/reports/REPORT-OPERATOR-SEEDED-LOCK-UI-20260503.md`
+- `orchestrator/reports/REPORT-OPERATOR-ASSISTED-TRACKING-V2-20260503.md`
 
 ### Следующий шаг
 
-Human/Codex GUI smoke: вручную проверить клип, где detector не видит визуально
-заметный дрон, и оценить реальную устойчивость template lock после клика.
+Полевой GUI smoke и затем отдельный цикл:
+
+- конвертер `operator_annotations.jsonl` → YOLO labels;
+- отбор кадров по operator events;
+- mini fine-tune/eval на провальных клипах.
