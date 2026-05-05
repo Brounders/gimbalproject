@@ -185,6 +185,39 @@ class MainWindow(QMainWindow):
         else:
             self.showFullScreen()
 
+    def _toggle_left_drawer(self):
+        expanded = not bool(getattr(self, '_left_drawer_expanded', False))
+        self._left_drawer_expanded = expanded
+        if hasattr(self, 'left_drawer'):
+            self.left_drawer.setVisible(expanded)
+        if hasattr(self, 'left_rail_container'):
+            self.left_rail_container.setFixedWidth(318 if expanded else 72)
+        if hasattr(self, '_rail_source_btn'):
+            self._rail_source_btn.setProperty('active', 'true' if expanded else 'false')
+            refresh_widget_style(self._rail_source_btn)
+
+    def _toggle_bottom_drawer(self):
+        if not hasattr(self, 'bottom_drawer'):
+            return
+        self.bottom_drawer.toggle()
+        expanded = bool(getattr(self.bottom_drawer, '_expanded', False))
+        if expanded and hasattr(self, 'inspector_module'):
+            self.inspector_module.setVisible(True)
+        if hasattr(self, 'bottom_drawer_toggle_btn'):
+            self.bottom_drawer_toggle_btn.setText('Диагностика ▾' if expanded else 'Диагностика ▴')
+
+    def _toggle_record_enabled(self):
+        if self._job_state != 'idle':
+            return
+        self.record_check.setChecked(not self.record_check.isChecked())
+
+    def _sync_record_shortcuts(self):
+        if hasattr(self, '_rail_record_btn'):
+            checked = self.record_check.isChecked()
+            self._rail_record_btn.setProperty('active', 'true' if checked else 'false')
+            self._rail_record_btn.setText('REC' if checked else 'REC')
+            refresh_widget_style(self._rail_record_btn)
+
     def _refresh_record_controls(self):
         recording_enabled = self.record_check.isChecked()
         controls_enabled = recording_enabled and self._job_state == 'idle'
@@ -193,6 +226,7 @@ class MainWindow(QMainWindow):
         self.output_browse_btn.setVisible(recording_enabled)
         self.output_edit.setEnabled(controls_enabled)
         self.output_browse_btn.setEnabled(controls_enabled)
+        self._sync_record_shortcuts()
 
     def _build_workspaces(self):
         return
@@ -232,10 +266,17 @@ class MainWindow(QMainWindow):
         self.output_browse_btn.clicked.connect(self._browse_output)
         self.record_check.stateChanged.connect(self._refresh_record_controls)
         self.record_check.stateChanged.connect(self._refresh_header_state)
+        self.record_check.stateChanged.connect(self._sync_record_shortcuts)
         self.camera_index_spin.valueChanged.connect(self._refresh_header_state)
         self.source_path_edit.textChanged.connect(self._refresh_header_state)
 
         self.next_target_btn.clicked.connect(self._request_next_target)
+        if hasattr(self, '_rail_source_btn'):
+            self._rail_source_btn.clicked.connect(self._toggle_left_drawer)
+        if hasattr(self, '_rail_record_btn'):
+            self._rail_record_btn.clicked.connect(self._toggle_record_enabled)
+        if hasattr(self, 'bottom_drawer_toggle_btn'):
+            self.bottom_drawer_toggle_btn.clicked.connect(self._toggle_bottom_drawer)
         if hasattr(self, 'menu_btn'):
             self.menu_btn.clicked.connect(self._show_help)
         self.expert_btn.clicked.connect(self._toggle_expert_mode)

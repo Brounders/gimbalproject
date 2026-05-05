@@ -96,10 +96,17 @@ def set_job_state(window, state: str) -> None:
         'operator_release_btn',
         '_dock_operator_confirm_btn',
         '_dock_operator_release_btn',
+        '_rail_record_btn',
+        '_rail_source_btn',
     ):
         widget = getattr(window, name, None)
         if widget is not None:
-            widget.setEnabled(state == 'tracking')
+            if name == '_rail_source_btn':
+                widget.setEnabled(True)
+            elif name == '_rail_record_btn':
+                widget.setEnabled(not busy)
+            else:
+                widget.setEnabled(state == 'tracking')
 
     for widget in [
         window.scenario_combo,
