@@ -9,32 +9,30 @@ from __future__ import annotations
 from PySide6.QtWidgets import QWidget
 
 # ── Color tokens (oklch → sRGB approximations) ───────────────────────────────
-BG0     = '#1F3247'   # deep blue-steel viewport
-BG1     = '#2A3340'   # steel shell
-BG2     = '#3A434F'   # lifted panel
+BG0     = '#1D1F26'   # oklch(26% 0.01 250) — deepest background
+BG1     = '#23252E'   # oklch(30% 0.011 250)
+BG2     = '#292C36'   # oklch(34% 0.012 250)
 
-FG0     = '#F2F7FB'
-FG1     = '#DDE8F2'
-FG2     = '#B7C7D6'
-FG3     = '#8497A8'
+FG0     = '#F3F4F7'   # oklch(98% 0.004 250) — near white
+FG1     = '#E1E3E9'   # oklch(90% 0.006 250) — main text
+FG2     = '#B4B9C5'   # oklch(74% 0.008 250) — secondary
+FG3     = '#898FA1'   # oklch(60% 0.010 250) — muted
 
-ACC     = '#8FA4B8'
-ACC_DIM = 'rgba(143,164,184,0.14)'
-ACC_MID = 'rgba(143,164,184,0.22)'
-ACC_LINE= 'rgba(143,164,184,0.55)'
+ACC     = '#7BC0DE'   # oklch(80% 0.13 210)  — blue accent
+ACC_DIM = 'rgba(123,192,222,0.18)'
+ACC_MID = 'rgba(123,192,222,0.28)'
+ACC_LINE= 'rgba(123,192,222,0.55)'
 
-OK      = '#5FD884'
-WARN    = '#F2B84B'
-BAD     = '#E05252'
+OK      = '#5CCB78'   # oklch(82% 0.14 145) — green
+WARN    = '#CDB038'   # oklch(84% 0.14 78)  — amber
+BAD     = '#E06555'   # oklch(72% 0.18 25)  — red
 
-GLASS   = 'rgba(255,255,255,0.08)'
-GLASS2  = 'rgba(255,255,255,0.12)'
-GLASS_BD= 'rgba(255,255,255,0.16)'
-GLASS_HL= 'rgba(255,255,255,0.24)'
-DARK25  = 'rgba(6,14,22,0.34)'
-DARK40  = 'rgba(6,14,22,0.48)'
-
-SHADOW  = '0px 10px 32px rgba(6,14,22,0.34)'
+GLASS   = 'rgba(255,255,255,0.07)'
+GLASS2  = 'rgba(255,255,255,0.11)'
+GLASS_BD= 'rgba(255,255,255,0.10)'
+GLASS_HL= 'rgba(255,255,255,0.18)'
+DARK25  = 'rgba(0,0,0,0.25)'
+DARK40  = 'rgba(0,0,0,0.40)'
 
 MONO    = '"JetBrains Mono", "Cascadia Code", "Fira Code", "Menlo", monospace'
 SANS    = '"Inter", "Segoe UI", "Noto Sans", system-ui, sans-serif'
@@ -42,8 +40,7 @@ SANS    = '"Inter", "Segoe UI", "Noto Sans", system-ui, sans-serif'
 APP_STYLESHEET = f"""
 /* ── Base ──────────────────────────────────────────────────────────────────── */
 QMainWindow {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                                stop:0 #2A4361, stop:0.45 #1F3247, stop:1 #0A121A);
+    background: {BG0};
 }}
 QWidget {{
     color: {FG1};
@@ -52,8 +49,7 @@ QWidget {{
     background: transparent;
 }}
 QWidget#CentralRoot {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                                stop:0 #2A4361, stop:0.48 #1F3247, stop:1 #0A121A);
+    background: {BG0};
 }}
 QMenuBar {{
     background: {BG1};
@@ -97,13 +93,11 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
 
 /* ── Top pill ──────────────────────────────────────────────────────────────── */
 QFrame#TopBar {{
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 rgba(255,255,255,0.16),
-                                stop:1 rgba(255,255,255,0.06));
-    border: 1px solid {GLASS_BD};
-    border-radius: 18px;
-    min-height: 40px;
-    max-height: 40px;
+    background: {GLASS2};
+    border: 1px solid {GLASS_HL};
+    border-radius: 999px;
+    min-height: 46px;
+    max-height: 46px;
 }}
 QLabel#BrandName {{
     font-size: 11px;
@@ -127,29 +121,27 @@ QLabel#TopBarSep {{
     max-height: 14px;
 }}
 QFrame#ModeSelector {{
-    background: rgba(255,255,255,0.08);
-    border: 1px solid {GLASS_BD};
-    border-radius: 9px;
+    background: {DARK25};
+    border-radius: 999px;
 }}
 QPushButton#ModeBtn {{
     background: transparent;
     border: none;
-    border-radius: 6px;
+    border-radius: 999px;
     color: {FG2};
     font-family: {MONO};
-    font-size: 10px;
-    font-weight: 600;
-    padding: 4px 9px;
-    min-height: 24px;
+    font-size: 11px;
+    padding: 5px 14px;
+    min-height: 28px;
 }}
 QPushButton#ModeBtn:hover {{
     background: rgba(255,255,255,0.08);
     color: {FG0};
 }}
 QPushButton#ModeBtn[active="true"] {{
-    background: rgba(143,164,184,0.16);
-    color: {FG0};
-    border: 1px solid rgba(143,164,184,0.45);
+    background: rgba(255,255,255,0.14);
+    color: {ACC};
+    border: 1px solid {GLASS_HL};
 }}
 QLabel#HeaderStatus {{
     font-family: {MONO};
@@ -184,11 +176,6 @@ QLabel#RecordIndicator[recording="true"] {{
 /* ── Left rail ─────────────────────────────────────────────────────────────── */
 QFrame#LeftControlRail {{
     background: transparent;
-}}
-QFrame#GlassPanel {{
-    background: rgba(18,34,48,0.68);
-    border: 1px solid {GLASS_BD};
-    border-radius: 14px;
 }}
 QLabel#RailSectionTitle {{
     font-size: 10px;
@@ -263,20 +250,20 @@ QCheckBox::indicator:checked {{
 
 /* ── Video stage ───────────────────────────────────────────────────────────── */
 QFrame#VideoStage {{
-    background: #0A121A;
-    border: 1px solid rgba(255,255,255,0.10);
-    border-radius: 18px;
+    background: #0A0D12;
+    border: 1px solid {GLASS_BD};
+    border-radius: 24px;
 }}
 QLabel#VideoSurface {{
-    background: #0A121A;
-    border-radius: 16px;
+    background: #0A0D12;
+    border-radius: 20px;
 }}
 
 /* ── Right panel cards ─────────────────────────────────────────────────────── */
 QFrame#ActiveTargetCard {{
-    background: rgba(18,34,48,0.72);
+    background: {GLASS};
     border: 1px solid {GLASS_BD};
-    border-radius: 14px;
+    border-radius: 18px;
 }}
 QLabel#LiveBadge {{
     background: {ACC_DIM};
@@ -292,7 +279,7 @@ QLabel#ActiveTargetId {{
     color: {FG2};
 }}
 QLabel#ActiveTargetName {{
-    font-size: 20px;
+    font-size: 26px;
     font-weight: 500;
     color: {FG0};
 }}
@@ -306,7 +293,7 @@ QLabel#MetricKey {{
     color: {FG3};
 }}
 QLabel#MetricVal {{
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 500;
     color: {FG0};
 }}
@@ -331,9 +318,9 @@ QLabel#ChipBad    {{ background: rgba(224,101,85,0.18);  color: {BAD};  border-r
 
 /* Runtime stats card */
 QFrame#RuntimeCard {{
-    background: rgba(18,34,48,0.62);
+    background: {GLASS};
     border: 1px solid {GLASS_BD};
-    border-radius: 14px;
+    border-radius: 16px;
 }}
 QLabel#RuntimeTitle {{
     font-size: 10px;
@@ -342,7 +329,7 @@ QLabel#RuntimeTitle {{
 }}
 QLabel#RuntimeVal {{
     font-family: {MONO};
-    font-size: 22px;
+    font-size: 28px;
     font-weight: 400;
     color: {FG0};
 }}
@@ -353,9 +340,9 @@ QLabel#RuntimeUnit {{
 
 /* ── Inspector / diagnostics ───────────────────────────────────────────────── */
 QGroupBox {{
-    background: rgba(18,34,48,0.54);
+    background: {GLASS};
     border: 1px solid {GLASS_BD};
-    border-radius: 14px;
+    border-radius: 16px;
     padding: 16px 12px 10px;
     margin-top: 8px;
     font-size: 10px;
@@ -372,7 +359,7 @@ QGroupBox::title {{
     background: transparent;
 }}
 QFrame#InspectorCard {{
-    background: rgba(6,14,22,0.30);
+    background: rgba(0,0,0,0.18);
     border: 1px solid {GLASS_BD};
     border-radius: 12px;
 }}
@@ -387,9 +374,9 @@ QLabel#InspectorValue {{
     color: {FG1};
 }}
 QFrame#TargetInfoCard {{
-    background: rgba(6,14,22,0.70);
+    background: rgba(10,13,18,0.72);
     border: 1px solid {GLASS_BD};
-    border-radius: 12px;
+    border-radius: 14px;
 }}
 QLabel#TargetCardRow {{
     font-family: {MONO};
@@ -408,11 +395,11 @@ QLabel#TargetCardState[state="idle"] {{ color: {FG3}; }}
 
 /* ── Dock ──────────────────────────────────────────────────────────────────── */
 QFrame#Dock {{
-    background: rgba(255,255,255,0.10);
-    border: 1px solid {GLASS_BD};
-    border-radius: 18px;
-    min-height: 48px;
-    max-height: 48px;
+    background: {GLASS2};
+    border: 1px solid {GLASS_HL};
+    border-radius: 999px;
+    min-height: 60px;
+    max-height: 60px;
 }}
 QPushButton#DockBtn {{
     background: transparent;
@@ -433,13 +420,13 @@ QPushButton#DockBtn:disabled {{
 QPushButton#DockIconBtn {{
     background: transparent;
     border: none;
-    border-radius: 12px;
+    border-radius: 999px;
     color: {FG1};
-    font-size: 15px;
-    min-width: 36px;
-    max-width: 36px;
-    min-height: 36px;
-    max-height: 36px;
+    font-size: 16px;
+    min-width: 44px;
+    max-width: 44px;
+    min-height: 44px;
+    max-height: 44px;
 }}
 QPushButton#DockIconBtn:hover {{
     background: rgba(255,255,255,0.08);
@@ -448,14 +435,14 @@ QPushButton#DockIconBtn:disabled {{
     color: {FG3};
 }}
 QPushButton#DockPrimary {{
-    background: rgba(143,164,184,0.14);
+    background: {ACC_DIM};
     border: 1px solid {ACC_LINE};
-    border-radius: 12px;
-    color: {FG0};
-    font-size: 12px;
+    border-radius: 999px;
+    color: {ACC};
+    font-size: 13px;
     font-weight: 600;
-    min-height: 36px;
-    padding: 0 16px;
+    min-height: 44px;
+    padding: 0 20px;
 }}
 QPushButton#DockPrimary:hover {{
     background: {ACC_MID};
@@ -468,11 +455,11 @@ QPushButton#DockPrimary:disabled {{
 QPushButton#DockDestructive {{
     background: transparent;
     border: none;
-    border-radius: 12px;
+    border-radius: 999px;
     color: {BAD};
-    font-size: 12px;
-    min-height: 36px;
-    padding: 0 13px;
+    font-size: 13px;
+    min-height: 44px;
+    padding: 0 16px;
 }}
 QPushButton#DockDestructive:hover {{
     background: rgba(224,101,85,0.12);
@@ -484,8 +471,8 @@ QFrame#DockSep {{
     background: {GLASS_BD};
     min-width: 1px;
     max-width: 1px;
-    min-height: 18px;
-    max-height: 18px;
+    min-height: 22px;
+    max-height: 22px;
 }}
 QLabel#BottomConsoleText {{
     font-family: {MONO};
@@ -550,31 +537,6 @@ QPushButton[active="true"] {{
 }}
 QPushButton[active="true"]:hover {{
     background: {ACC_MID};
-}}
-
-/* ── DTS / table surfaces ─────────────────────────────────────────────────── */
-QDialog {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                                stop:0 #2A4361, stop:0.55 #1F3247, stop:1 #0A121A);
-}}
-QTableWidget {{
-    background: rgba(18,34,48,0.70);
-    border: 1px solid {GLASS_BD};
-    border-radius: 14px;
-    gridline-color: rgba(255,255,255,0.06);
-    color: {FG1};
-    selection-background-color: rgba(143,164,184,0.20);
-    selection-color: {FG0};
-}}
-QHeaderView::section {{
-    background: rgba(255,255,255,0.08);
-    color: {FG2};
-    border: none;
-    border-bottom: 1px solid {GLASS_BD};
-    padding: 6px 8px;
-    font-family: {MONO};
-    font-size: 10px;
-    font-weight: 600;
 }}
 """
 
