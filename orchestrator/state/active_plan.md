@@ -1,7 +1,7 @@
 # Active Plan
 
 ## Plan ID
-- AP-OPERATOR-UI-REDESIGN-V1
+- AP-DTS-TRAINING-DESK-V1
 
 ## Status
 - Completed
@@ -13,42 +13,43 @@
 - none
 
 ## Source Direction
-Human provided `/Users/bround/Downloads/UI/Gimbal Operator UI.html` and
-`/Users/bround/Downloads/UI/tweaks-panel.jsx` as visual references and asked to
-change only graphics while preserving current functionality.
+Human accepted the Training Desk/admin concept and requested implementation in
+one pass with a `DTS` button in the UI.  Codex implemented the first review
+desk for operator annotation control without starting training automatically.
 
-## AP-OPERATOR-UI-REDESIGN-V1 — Operator UI Visual Refresh
+## AP-DTS-TRAINING-DESK-V1 — Data Training Station
 
 ### Цель
 
-Перенести текущий PySide6 UI ближе к steel-blue glass/HUD visual language from
-the reference without changing tracking/runtime logic.
+Добавить operator annotation admin layer: обзор, фильтры, preview, статусы,
+принятие/отклонение/staging, чтобы ручная разметка проходила review перед
+экспортом и обучением.
 
 ### Результат
 
 | ID | Задача | Статус | Результат |
 |----|--------|--------|-----------|
-| UIR-001 | Reference audit | ✅ DONE | HTML/JSX reference compared with current PySide6 UI |
-| UIR-002 | Theme pass | ✅ DONE | steel-blue palette, glass panels, compact controls |
-| UIR-003 | Layout constants | ✅ DONE | tighter shell, narrower rails, lighter dock |
-| UIR-004 | DTS visual integration | ✅ DONE | table/dialog style aligned with main theme |
-| UIR-005 | Preview/validation | ✅ DONE | offscreen preview generated |
+| DTS-001 | Data layer | ✅ DONE | `app/training_desk_data.py`, jsonl loader, review state |
+| DTS-002 | Training Desk dialog | ✅ DONE | фильтры, таблица, preview, карточка записи |
+| DTS-003 | Review controls | ✅ DONE | `Принять`, `Отклонить`, `В training pack` |
+| DTS-004 | Main UI entry | ✅ DONE | кнопка `DTS` в topbar |
+| DTS-005 | Tests/report/state | ✅ DONE | data-layer tests + report |
 
 ### Итоговое решение
 
-**PASS for visual-only refresh.**
+**PASS for V1 admin layer.**
 
-No runtime/tracking files were changed.
+DTS пока не запускает обучение. Он создаёт контролируемый review buffer между
+операторской разметкой и будущим training pack.
 
 ### Отчёт
 
-- `orchestrator/reports/REPORT-OPERATOR-UI-REDESIGN-20260505.md`
+- `orchestrator/reports/REPORT-DTS-TRAINING-DESK-20260505.md`
 
 ### Следующий шаг
 
-Human visual review. If accepted, next UI cycle can be structural:
+Связать DTS с export/staging:
 
-- floating vertical rail;
-- full-bleed video surface;
-- HUD cards over video instead of fixed side panels;
-- optional tweaks panel inspired by the JSX reference.
+- экспортировать только accepted/staged records;
+- показать путь к созданному training pack;
+- добавить ручной training launcher только после визуальной проверки pack.
