@@ -7,12 +7,11 @@ SRC = ROOT / 'src'
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from PySide6.QtCore import Qt, QTime, QTimer
+from PySide6.QtCore import QTime, QTimer
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFrame,
-    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -26,7 +25,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.ui.components import BottomDrawer, IconButton, MetricTile, StatusBadge
 from app.ui.theme import refresh_widget_style
 
 
@@ -84,7 +82,9 @@ def build_topbar(window) -> QFrame:
     sep2.setObjectName('TopBarSep')
     layout.addWidget(sep2)
 
-    window.top_state_badge = StatusBadge('IDLE', 'idle')
+    window.top_state_badge = QLabel('IDLE')
+    window.top_state_badge.setObjectName('HeaderStatus')
+    window.top_state_badge.setProperty('state', 'idle')
     layout.addWidget(window.top_state_badge)
 
     window.header_source_label = QLabel('CAM 0')
@@ -99,6 +99,10 @@ def build_topbar(window) -> QFrame:
     window.record_indicator_label.setObjectName('RecordIndicator')
     window.record_indicator_label.setProperty('recording', False)
     layout.addWidget(window.record_indicator_label)
+
+    sep4 = QLabel()
+    sep4.setObjectName('TopBarSep')
+    layout.addWidget(sep4)
 
     window.expert_btn = QPushButton('EXPERT')
     window.expert_btn.setObjectName('ModeBtn')
@@ -119,6 +123,24 @@ def build_topbar(window) -> QFrame:
     window.fullscreen_btn.setFixedWidth(34)
     window.fullscreen_btn.setToolTip('Полный экран')
     layout.addWidget(window.fullscreen_btn)
+
+    window.next_target_btn = QPushButton('NT')
+    window.next_target_btn.setObjectName('ModeBtn')
+    window.next_target_btn.setToolTip('Следующая цель')
+    window.next_target_btn.setEnabled(False)
+    layout.addWidget(window.next_target_btn)
+
+    window.operator_confirm_btn = QPushButton('✓')
+    window.operator_confirm_btn.setObjectName('ModeBtn')
+    window.operator_confirm_btn.setToolTip('Подтвердить текущую цель оператором')
+    window.operator_confirm_btn.setEnabled(False)
+    layout.addWidget(window.operator_confirm_btn)
+
+    window.operator_release_btn = QPushButton('✕')
+    window.operator_release_btn.setObjectName('ModeBtn')
+    window.operator_release_btn.setToolTip('Сбросить операторскую цель')
+    window.operator_release_btn.setEnabled(False)
+    layout.addWidget(window.operator_release_btn)
 
     sep5 = QLabel()
     sep5.setObjectName('TopBarSep')
@@ -218,9 +240,7 @@ def build_header(window) -> QFrame:
 def build_left_rail(window) -> QWidget:
     rail = QFrame()
     rail.setObjectName('LeftRailStack')
-    rail.setFixedWidth(72)
-    window.left_rail_container = rail
-    window._left_drawer_expanded = False
+    rail.setFixedWidth(318)
 
     layout = QHBoxLayout(rail)
     layout.setContentsMargins(0, 0, 0, 0)
@@ -233,38 +253,43 @@ def build_left_rail(window) -> QWidget:
     dock_layout.setContentsMargins(8, 8, 8, 8)
     dock_layout.setSpacing(8)
 
-    window._rail_source_btn = IconButton('SRC', 'Открыть источник и запись')
-    dock_layout.addWidget(window._rail_source_btn)
+    rail_rec = QLabel('REC')
+    rail_rec.setObjectName('RailGlyphRec')
+    rail_rec.setToolTip('Запись включается в панели источника')
+    dock_layout.addWidget(rail_rec)
 
-    window._rail_record_btn = IconButton('REC', 'Включить/выключить запись')
-    window._rail_record_btn.setObjectName('RailIconBtnRec')
-    dock_layout.addWidget(window._rail_record_btn)
+    rail_lock = QLabel('LOCK')
+    rail_lock.setObjectName('RailGlyphLock')
+    rail_lock.setToolTip('Захват/ручное подтверждение цели в верхней панели и нижнем доке')
+    dock_layout.addWidget(rail_lock)
 
-    window.next_target_btn = IconButton('NT', 'Следующая цель')
-    window.next_target_btn.setEnabled(False)
-    dock_layout.addWidget(window.next_target_btn)
+    rail_nt = QLabel('NT')
+    rail_nt.setObjectName('RailGlyph')
+    rail_nt.setToolTip('Следующая цель')
+    dock_layout.addWidget(rail_nt)
 
-    window.operator_confirm_btn = IconButton('✓', 'Подтвердить текущую цель')
-    window.operator_confirm_btn.setEnabled(False)
-    dock_layout.addWidget(window.operator_confirm_btn)
-
-    window.operator_release_btn = IconButton('×', 'Сбросить операторскую цель')
-    window.operator_release_btn.setEnabled(False)
-    dock_layout.addWidget(window.operator_release_btn)
-
-    capture_hint = QLabel('Клик\nили\nрамка')
-    capture_hint.setObjectName('RailHint')
-    capture_hint.setAlignment(Qt.AlignCenter)
-    capture_hint.setToolTip('Ручной захват выполняется кликом или рамкой по видео')
-    dock_layout.addWidget(capture_hint)
+    zoom = QFrame()
+    zoom.setObjectName('RailZoomBlock')
+    zoom_layout = QVBoxLayout(zoom)
+    zoom_layout.setContentsMargins(4, 6, 4, 6)
+    zoom_layout.setSpacing(3)
+    zoom_title = QLabel('ZOOM')
+    zoom_title.setObjectName('RailZoomTitle')
+    zoom_in = QLabel('+')
+    zoom_in.setObjectName('RailZoomBtn')
+    zoom_val = QLabel('x1.0')
+    zoom_val.setObjectName('RailZoomVal')
+    zoom_out = QLabel('-')
+    zoom_out.setObjectName('RailZoomBtn')
+    for widget in (zoom_title, zoom_in, zoom_val, zoom_out):
+        zoom_layout.addWidget(widget)
+    dock_layout.addWidget(zoom)
 
     dock_layout.addStretch(1)
     layout.addWidget(dock)
 
     drawer = QFrame()
     drawer.setObjectName('RailDrawer')
-    drawer.setVisible(False)
-    window.left_drawer = drawer
     drawer_layout = QVBoxLayout(drawer)
     drawer_layout.setContentsMargins(0, 0, 0, 0)
     drawer_layout.setSpacing(8)
@@ -275,7 +300,7 @@ def build_left_rail(window) -> QWidget:
     src_layout.setContentsMargins(12, 12, 12, 12)
     src_layout.setSpacing(8)
 
-    src_title = QLabel('ИСТОЧНИК')
+    src_title = QLabel('SOURCE')
     src_title.setObjectName('RailSectionTitle')
     src_layout.addWidget(src_title)
 
@@ -309,7 +334,7 @@ def build_left_rail(window) -> QWidget:
     rec_layout.setContentsMargins(12, 12, 12, 12)
     rec_layout.setSpacing(8)
 
-    rec_title = QLabel('ЗАПИСЬ / ОЦЕНКА')
+    rec_title = QLabel('REC / DATA')
     rec_title.setObjectName('RailSectionTitle')
     rec_layout.addWidget(rec_title)
 
@@ -339,10 +364,13 @@ def build_left_rail(window) -> QWidget:
 
 
 def build_right_panel(window) -> QWidget:
+    from PySide6.QtWidgets import QGridLayout, QScrollArea
+    from PySide6.QtCore import Qt
+
     col = QFrame()
     col.setObjectName('RightHudPanel')
     col.setFixedWidth(244)
-    col.setMaximumHeight(360)
+    col.setMaximumHeight(760)
 
     layout = QVBoxLayout(col)
     layout.setContentsMargins(0, 52, 0, 0)
@@ -428,38 +456,52 @@ def build_right_panel(window) -> QWidget:
     rt.setObjectName('RuntimeCard')
     rt_layout = QGridLayout(rt)
     rt_layout.setContentsMargins(10, 10, 10, 10)
-    rt_layout.setHorizontalSpacing(8)
-    rt_layout.setVerticalSpacing(8)
+    rt_layout.setHorizontalSpacing(12)
+    rt_layout.setVerticalSpacing(6)
 
     rt_title = QLabel('ТЕЛЕМЕТРИЯ ТРЕКЕРА')
     rt_title.setObjectName('RuntimeTitle')
     rt_layout.addWidget(rt_title, 0, 0, 1, 3)
 
-    fps_tile = MetricTile('FPS')
-    budget_tile = MetricTile('БЮДЖЕТ')
-    target_tile = MetricTile('ЦЕЛЕЙ')
-    window._rp_rt_fps_k = fps_tile.key_label
-    window._rp_rt_fps_v = fps_tile.value_label
-    window._rp_rt_bdg_k = budget_tile.key_label
-    window._rp_rt_bdg_v = budget_tile.value_label
-    window._rp_rt_tgt_k = target_tile.key_label
-    window._rp_rt_tgt_v = target_tile.value_label
-    rt_layout.addWidget(fps_tile, 1, 0)
-    rt_layout.addWidget(budget_tile, 1, 1)
-    rt_layout.addWidget(target_tile, 1, 2)
+    window._rp_rt_fps_k = QLabel('FPS')
+    window._rp_rt_fps_v = QLabel('—')
+    window._rp_rt_bdg_k = QLabel('БЮДЖЕТ')
+    window._rp_rt_bdg_v = QLabel('—')
+    window._rp_rt_tgt_k = QLabel('ЦЕЛЕЙ')
+    window._rp_rt_tgt_v = QLabel('—')
+
+    for i, (k, v) in enumerate(((window._rp_rt_fps_k, window._rp_rt_fps_v),
+                                 (window._rp_rt_bdg_k, window._rp_rt_bdg_v),
+                                 (window._rp_rt_tgt_k, window._rp_rt_tgt_v))):
+        k.setObjectName('RuntimeTitle')
+        v.setObjectName('RuntimeVal')
+        rt_layout.addWidget(k, 1, i)
+        rt_layout.addWidget(v, 2, i)
 
     layout.addWidget(rt)
-    layout.addStretch(1)
+
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(True)
+    scroll.setFrameShape(QFrame.NoFrame)
+    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+    window.inspector_module = build_inspector_drawer(window)
+    window.inspector_module.setVisible(True)
+    scroll.setWidget(window.inspector_module)
+    layout.addWidget(scroll, 1)
 
     return col
 
 
 def build_dock(window) -> QFrame:
-    dock = BottomDrawer()
-    window.bottom_drawer = dock
+    dock = QFrame()
+    dock.setObjectName('Dock')
     dock.setMinimumWidth(720)
-    dock.setMaximumWidth(1040)
-    layout = dock.header_layout
+    dock.setMaximumWidth(980)
+
+    layout = QHBoxLayout(dock)
+    layout.setContentsMargins(12, 0, 12, 0)
+    layout.setSpacing(6)
 
     window.bottom_console_label = QLabel('готово к запуску')
     window.bottom_console_label.setObjectName('BottomConsoleText')
@@ -506,26 +548,6 @@ def build_dock(window) -> QFrame:
     dock_release.clicked.connect(window._request_operator_release)
     window._dock_operator_release_btn = dock_release
     layout.addWidget(dock_release)
-
-    sep3 = QFrame()
-    sep3.setObjectName('DockSep')
-    layout.addWidget(sep3)
-
-    window.bottom_drawer_toggle_btn = QPushButton('Диагностика ▴')
-    window.bottom_drawer_toggle_btn.setObjectName('DrawerToggleBtn')
-    window.bottom_drawer_toggle_btn.setToolTip('Показать/скрыть диагностику')
-    layout.addWidget(window.bottom_drawer_toggle_btn)
-
-    scroll = QScrollArea()
-    scroll.setObjectName('DrawerScroll')
-    scroll.setWidgetResizable(True)
-    scroll.setFrameShape(QFrame.NoFrame)
-    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-    scroll.setMinimumHeight(220)
-    window.inspector_module = build_inspector_drawer(window)
-    window.inspector_module.setVisible(True)
-    scroll.setWidget(window.inspector_module)
-    dock.body_layout.addWidget(scroll, 1)
 
     return dock
 

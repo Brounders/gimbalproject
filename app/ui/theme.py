@@ -214,8 +214,8 @@ QFrame#LeftControlRail, QFrame#LeftRailStack {{
 }}
 QFrame#RailDock {{
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 rgba(255,255,255,0.10),
-                                stop:1 rgba(255,255,255,0.035));
+                                stop:0 rgba(255,255,255,0.12),
+                                stop:1 rgba(255,255,255,0.04));
     border: 1px solid {GLASS_BD};
     border-radius: 18px;
 }}
@@ -233,45 +233,6 @@ QLabel#RailSectionTitle {{
     font-size: 10px;
     font-weight: 600;
     color: {FG3};
-}}
-QPushButton#RailIconBtn, QPushButton#RailIconBtnRec {{
-    background: rgba(255,255,255,0.055);
-    border: 1px solid {GLASS_BD};
-    border-radius: 11px;
-    color: {FG2};
-    font-family: {MONO};
-    font-size: 10px;
-    font-weight: 700;
-    padding: 0;
-}}
-QPushButton#RailIconBtn:hover, QPushButton#RailIconBtnRec:hover {{
-    background: rgba(255,255,255,0.10);
-    color: {FG0};
-    border-color: {GLASS_HL};
-}}
-QPushButton#RailIconBtn:disabled, QPushButton#RailIconBtnRec:disabled {{
-    color: rgba(183,199,214,0.38);
-    border-color: rgba(255,255,255,0.07);
-}}
-QPushButton#RailIconBtn[active="true"] {{
-    background: rgba(143,164,184,0.14);
-    border-color: rgba(143,164,184,0.45);
-    color: {FG0};
-}}
-QPushButton#RailIconBtnRec[active="true"] {{
-    background: rgba(224,82,82,0.14);
-    border-color: rgba(224,82,82,0.45);
-    color: #f1b1b1;
-}}
-QLabel#RailHint {{
-    background: rgba(0,0,0,0.16);
-    border: 1px solid rgba(255,255,255,0.10);
-    border-radius: 10px;
-    color: {FG3};
-    font-family: {MONO};
-    font-size: 8px;
-    font-weight: 600;
-    padding: 6px 2px;
 }}
 QLabel#RailGlyph, QLabel#RailGlyphRec, QLabel#RailGlyphLock {{
     background: rgba(255,255,255,0.06);
@@ -469,11 +430,6 @@ QFrame#RuntimeCard {{
     border: 1px solid {GLASS_BD};
     border-radius: 14px;
 }}
-QFrame#MetricTile {{
-    background: rgba(255,255,255,0.055);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 9px;
-}}
 QLabel#RuntimeTitle {{
     font-size: 10px;
     font-weight: 600;
@@ -545,44 +501,15 @@ QLabel#TargetCardState[state="lock"] {{ color: {OK}; }}
 QLabel#TargetCardState[state="lost"] {{ color: {WARN}; }}
 QLabel#TargetCardState[state="idle"] {{ color: {FG3}; }}
 
-/* ── Bottom drawer / dock ─────────────────────────────────────────────────── */
-QFrame#BottomDrawer, QFrame#Dock {{
+/* ── Dock ──────────────────────────────────────────────────────────────────── */
+QFrame#Dock {{
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 rgba(255,255,255,0.12),
-                                stop:1 rgba(255,255,255,0.045));
+                                stop:0 rgba(255,255,255,0.14),
+                                stop:1 rgba(255,255,255,0.05));
     border: 1px solid {GLASS_BD};
     border-radius: 18px;
     min-height: 48px;
-}}
-QFrame#BottomDrawerHeader {{
-    background: transparent;
-    min-height: 48px;
     max-height: 48px;
-}}
-QFrame#BottomDrawerBody {{
-    background: transparent;
-    border: none;
-}}
-QScrollArea#DrawerScroll {{
-    background: transparent;
-    border: none;
-}}
-QScrollArea#DrawerScroll QWidget {{
-    background: transparent;
-}}
-QPushButton#DrawerToggleBtn {{
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.10);
-    border-radius: 10px;
-    color: {FG2};
-    font-family: {MONO};
-    font-size: 10px;
-    min-height: 32px;
-    padding: 0 12px;
-}}
-QPushButton#DrawerToggleBtn:hover {{
-    background: rgba(255,255,255,0.07);
-    color: {FG0};
 }}
 QPushButton#DockBtn {{
     background: transparent;
