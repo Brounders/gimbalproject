@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
     QFrame,
-    QGridLayout,
     QHBoxLayout,
     QInputDialog,
     QMainWindow,
@@ -104,26 +103,36 @@ class MainWindow(QMainWindow):
         central = QWidget()
         central.setObjectName('CentralRoot')
         self.setCentralWidget(central)
-        root = QGridLayout(central)
-        root.setContentsMargins(24, 24, 24, 24)
-        root.setSpacing(0)
+        root = QVBoxLayout(central)
+        root.setContentsMargins(24, 24, 24, 18)
+        root.setSpacing(14)
 
         self._workspace_order = ['operator']
         self.workspace_indexes = {'operator': 0}
         self.sidebar_buttons = {}
 
-        stage = self.build_video_stage()
-        topbar = self.build_topbar()
-        left_rail = self.build_left_rail()
-        right_panel = self.build_right_panel()
-        dock = self.build_dock()
+        # ── Top pill (centred) ──────────────────────────────────────────────
+        topbar_row = QHBoxLayout()
+        topbar_row.setContentsMargins(0, 0, 0, 0)
+        topbar_row.addWidget(self.build_topbar())
+        root.addLayout(topbar_row)
 
-        # One-cell overlay HUD: video is the base layer, controls float above it.
-        root.addWidget(stage, 0, 0)
-        root.addWidget(topbar, 0, 0, Qt.AlignTop)
-        root.addWidget(left_rail, 0, 0, Qt.AlignLeft | Qt.AlignVCenter)
-        root.addWidget(right_panel, 0, 0, Qt.AlignRight | Qt.AlignTop)
-        root.addWidget(dock, 0, 0, Qt.AlignBottom | Qt.AlignHCenter)
+        # ── Body: left | video | right ──────────────────────────────────────
+        body = QHBoxLayout()
+        body.setContentsMargins(0, 0, 0, 0)
+        body.setSpacing(14)
+        body.addWidget(self.build_left_rail(), 0)
+        body.addWidget(self.build_video_stage(), 1)
+        body.addWidget(self.build_right_panel(), 0)
+        root.addLayout(body, 1)
+
+        # ── Dock pill (centred) ─────────────────────────────────────────────
+        dock_row = QHBoxLayout()
+        dock_row.setContentsMargins(0, 0, 0, 0)
+        dock_row.addStretch(1)
+        dock_row.addWidget(self.build_dock())
+        dock_row.addStretch(1)
+        root.addLayout(dock_row)
 
         self.log_view = QPlainTextEdit()
         self.log_view.setReadOnly(True)
@@ -139,7 +148,6 @@ class MainWindow(QMainWindow):
         quit_action = QAction('Выход', self)
         quit_action.triggered.connect(self.close)
         self.menuBar().addAction(quit_action)
-        self.menuBar().setVisible(False)
 
     def build_topbar(self) -> QFrame:
         return _build_topbar(self)
@@ -152,7 +160,7 @@ class MainWindow(QMainWindow):
         self.video_label = self.video_stage.surface
         (self.target_info_card, self._tc_id, self._tc_conf,
          self._tc_fps, self._tc_time, self._tc_state) = build_target_info_card()
-        self.target_info_card.hide()
+        self.video_stage.add_overlay_top_right(self.target_info_card)
         return self.video_stage
 
     def build_right_panel(self) -> QWidget:
@@ -236,8 +244,6 @@ class MainWindow(QMainWindow):
         self.source_path_edit.textChanged.connect(self._refresh_header_state)
 
         self.next_target_btn.clicked.connect(self._request_next_target)
-        if hasattr(self, 'menu_btn'):
-            self.menu_btn.clicked.connect(self._show_help)
         self.expert_btn.clicked.connect(self._toggle_expert_mode)
         self.dts_btn.clicked.connect(self._open_training_desk)
         self.fullscreen_btn.clicked.connect(self._toggle_fullscreen)

@@ -52,13 +52,8 @@ QWidget {{
     background: transparent;
 }}
 QWidget#CentralRoot {{
-    background:
-        qradialgradient(cx:0.70, cy:0.30, radius:0.72,
-                        stop:0 #355979, stop:0.58 transparent),
-        qradialgradient(cx:0.20, cy:0.80, radius:0.68,
-                        stop:0 #284564, stop:0.62 transparent),
-        qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                        stop:0 #2A4361, stop:1 #1F3247);
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                stop:0 #2A4361, stop:0.48 #1F3247, stop:1 #0A121A);
 }}
 QMenuBar {{
     background: {BG1};
@@ -103,18 +98,12 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
 /* ── Top pill ──────────────────────────────────────────────────────────────── */
 QFrame#TopBar {{
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 rgba(255,255,255,0.14),
-                                stop:1 rgba(255,255,255,0.05));
+                                stop:0 rgba(255,255,255,0.16),
+                                stop:1 rgba(255,255,255,0.06));
     border: 1px solid {GLASS_BD};
     border-radius: 18px;
-    min-height: 32px;
-    max-height: 32px;
-}}
-QLabel#BrandMark {{
-    background: qconicalgradient(cx:0.5, cy:0.5, angle:220,
-                                 stop:0 {ACC}, stop:0.50 #7B8FA6, stop:1 {ACC});
-    border: 1px solid rgba(143,164,184,0.42);
-    border-radius: 5px;
+    min-height: 40px;
+    max-height: 40px;
 }}
 QLabel#BrandName {{
     font-size: 11px;
@@ -122,7 +111,7 @@ QLabel#BrandName {{
     color: {FG0};
 }}
 QLabel#BrandSub {{
-    font-size: 9px;
+    font-size: 11px;
     color: {FG3};
 }}
 QLabel#TopBarClock {{
@@ -151,7 +140,7 @@ QPushButton#ModeBtn {{
     font-size: 10px;
     font-weight: 600;
     padding: 4px 9px;
-    min-height: 22px;
+    min-height: 24px;
 }}
 QPushButton#ModeBtn:hover {{
     background: rgba(255,255,255,0.08);
@@ -169,22 +158,6 @@ QLabel#HeaderStatus {{
     border-radius: 999px;
     padding: 4px 10px;
     background: rgba(0,0,0,0.3);
-}}
-QPushButton#TopIconBtn {{
-    background: rgba(255,255,255,0.08);
-    border: 1px solid {GLASS_BD};
-    border-radius: 7px;
-    color: {FG2};
-    font-size: 12px;
-    min-width: 22px;
-    max-width: 22px;
-    min-height: 22px;
-    max-height: 22px;
-    padding: 0;
-}}
-QPushButton#TopIconBtn:hover {{
-    background: rgba(255,255,255,0.14);
-    color: {FG0};
 }}
 QLabel#HeaderStatus[state="idle"]       {{ background: rgba(0,0,0,0.30); color: {FG3}; }}
 QLabel#HeaderStatus[state="running"]    {{ background: rgba(92,203,120,0.20); color: {OK}; }}
@@ -209,23 +182,11 @@ QLabel#RecordIndicator[recording="true"] {{
 }}
 
 /* ── Left rail ─────────────────────────────────────────────────────────────── */
-QFrame#LeftControlRail, QFrame#LeftRailStack {{
-    background: transparent;
-}}
-QFrame#RailDock {{
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 rgba(255,255,255,0.12),
-                                stop:1 rgba(255,255,255,0.04));
-    border: 1px solid {GLASS_BD};
-    border-radius: 18px;
-}}
-QFrame#RailDrawer {{
+QFrame#LeftControlRail {{
     background: transparent;
 }}
 QFrame#GlassPanel {{
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 rgba(255,255,255,0.13),
-                                stop:1 rgba(255,255,255,0.05));
+    background: rgba(18,34,48,0.68);
     border: 1px solid {GLASS_BD};
     border-radius: 14px;
 }}
@@ -233,55 +194,6 @@ QLabel#RailSectionTitle {{
     font-size: 10px;
     font-weight: 600;
     color: {FG3};
-}}
-QLabel#RailGlyph, QLabel#RailGlyphRec, QLabel#RailGlyphLock {{
-    background: rgba(255,255,255,0.06);
-    border: 1px solid {GLASS_BD};
-    border-radius: 11px;
-    color: {FG2};
-    font-family: {MONO};
-    font-size: 9px;
-    font-weight: 700;
-    qproperty-alignment: AlignCenter;
-    min-height: 42px;
-    max-height: 42px;
-}}
-QLabel#RailGlyphRec {{
-    color: #f1b1b1;
-    background: rgba(224,82,82,0.16);
-    border-color: rgba(224,82,82,0.50);
-}}
-QLabel#RailGlyphLock {{
-    color: #b8efc6;
-    background: rgba(82,210,115,0.14);
-    border-color: rgba(82,210,115,0.50);
-}}
-QFrame#RailZoomBlock {{
-    background: rgba(255,255,255,0.05);
-    border: 1px solid {GLASS_BD};
-    border-radius: 10px;
-}}
-QLabel#RailZoomTitle {{
-    color: {FG3};
-    font-family: {MONO};
-    font-size: 9px;
-    font-weight: 700;
-    qproperty-alignment: AlignCenter;
-}}
-QLabel#RailZoomBtn {{
-    color: {FG0};
-    font-family: {MONO};
-    font-size: 22px;
-    font-weight: 600;
-    qproperty-alignment: AlignCenter;
-    min-height: 30px;
-}}
-QLabel#RailZoomVal {{
-    color: {FG0};
-    font-family: {MONO};
-    font-size: 12px;
-    font-weight: 700;
-    qproperty-alignment: AlignCenter;
 }}
 QPushButton#QuickModeBtn {{
     background: {DARK25};
@@ -352,22 +264,17 @@ QCheckBox::indicator:checked {{
 /* ── Video stage ───────────────────────────────────────────────────────────── */
 QFrame#VideoStage {{
     background: #0A121A;
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 0px;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 18px;
 }}
 QLabel#VideoSurface {{
     background: #0A121A;
-    border-radius: 0px;
+    border-radius: 16px;
 }}
 
 /* ── Right panel cards ─────────────────────────────────────────────────────── */
-QFrame#RightHudPanel {{
-    background: transparent;
-}}
 QFrame#ActiveTargetCard {{
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 rgba(255,255,255,0.14),
-                                stop:1 rgba(255,255,255,0.05));
+    background: rgba(18,34,48,0.72);
     border: 1px solid {GLASS_BD};
     border-radius: 14px;
 }}
@@ -424,9 +331,7 @@ QLabel#ChipBad    {{ background: rgba(224,101,85,0.18);  color: {BAD};  border-r
 
 /* Runtime stats card */
 QFrame#RuntimeCard {{
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 rgba(255,255,255,0.12),
-                                stop:1 rgba(255,255,255,0.045));
+    background: rgba(18,34,48,0.62);
     border: 1px solid {GLASS_BD};
     border-radius: 14px;
 }}
@@ -448,7 +353,7 @@ QLabel#RuntimeUnit {{
 
 /* ── Inspector / diagnostics ───────────────────────────────────────────────── */
 QGroupBox {{
-    background: rgba(18,34,48,0.50);
+    background: rgba(18,34,48,0.54);
     border: 1px solid {GLASS_BD};
     border-radius: 14px;
     padding: 16px 12px 10px;
@@ -503,9 +408,7 @@ QLabel#TargetCardState[state="idle"] {{ color: {FG3}; }}
 
 /* ── Dock ──────────────────────────────────────────────────────────────────── */
 QFrame#Dock {{
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 rgba(255,255,255,0.14),
-                                stop:1 rgba(255,255,255,0.05));
+    background: rgba(255,255,255,0.10);
     border: 1px solid {GLASS_BD};
     border-radius: 18px;
     min-height: 48px;

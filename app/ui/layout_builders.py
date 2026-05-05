@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
-    QSizePolicy,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -31,26 +30,14 @@ from app.ui.theme import refresh_widget_style
 def build_topbar(window) -> QFrame:
     bar = QFrame()
     bar.setObjectName('TopBar')
-    bar.setMinimumWidth(980)
-    bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
     layout = QHBoxLayout(bar)
-    layout.setContentsMargins(10, 0, 10, 0)
-    layout.setSpacing(12)
-
-    window.menu_btn = QPushButton('☰')
-    window.menu_btn.setObjectName('TopIconBtn')
-    window.menu_btn.setToolTip('Справка')
-    layout.addWidget(window.menu_btn)
-
-    brand_mark = QLabel()
-    brand_mark.setObjectName('BrandMark')
-    brand_mark.setFixedSize(18, 18)
-    layout.addWidget(brand_mark)
+    layout.setContentsMargins(12, 0, 12, 0)
+    layout.setSpacing(10)
 
     brand_name = QLabel('GIMBAL')
     brand_name.setObjectName('BrandName')
-    brand_sub = QLabel('ОПЕРАТОРСКАЯ СТАНЦИЯ')
+    brand_sub = QLabel('OPERATOR UI')
     brand_sub.setObjectName('BrandSub')
     layout.addWidget(brand_name)
     layout.addWidget(brand_sub)
@@ -65,12 +52,12 @@ def build_topbar(window) -> QFrame:
     mode_layout.setContentsMargins(3, 3, 3, 3)
     mode_layout.setSpacing(2)
 
+    window.quick_auto_btn = QPushButton('АВТО')
+    window.quick_day_btn = QPushButton('ДЕНЬ')
+    window.quick_night_btn = QPushButton('НОЧЬ')
     window.quick_ir_btn = QPushButton('IR')
-    window.quick_day_btn = QPushButton('EO')
-    window.quick_night_btn = QPushButton('NV')
-    window.quick_auto_btn = QPushButton('AUTO')
-    for btn in (window.quick_ir_btn, window.quick_day_btn,
-                window.quick_night_btn, window.quick_auto_btn):
+    for btn in (window.quick_auto_btn, window.quick_day_btn,
+                window.quick_night_btn, window.quick_ir_btn):
         btn.setObjectName('ModeBtn')
         mode_layout.addWidget(btn)
     window.quick_auto_btn.setProperty('active', 'true')
@@ -89,7 +76,7 @@ def build_topbar(window) -> QFrame:
 
     window.header_source_label = QLabel('CAM 0')
     window.header_source_label.setObjectName('BrandSub')
-    layout.addWidget(window.header_source_label, 1)
+    layout.addWidget(window.header_source_label)
 
     sep3 = QLabel()
     sep3.setObjectName('TopBarSep')
@@ -124,7 +111,7 @@ def build_topbar(window) -> QFrame:
     window.fullscreen_btn.setToolTip('Полный экран')
     layout.addWidget(window.fullscreen_btn)
 
-    window.next_target_btn = QPushButton('NT')
+    window.next_target_btn = QPushButton('↕ TARGET')
     window.next_target_btn.setObjectName('ModeBtn')
     window.next_target_btn.setToolTip('Следующая цель')
     window.next_target_btn.setEnabled(False)
@@ -239,68 +226,20 @@ def build_header(window) -> QFrame:
 
 def build_left_rail(window) -> QWidget:
     rail = QFrame()
-    rail.setObjectName('LeftRailStack')
-    rail.setFixedWidth(318)
+    rail.setObjectName('LeftControlRail')
+    rail.setFixedWidth(240)
 
-    layout = QHBoxLayout(rail)
+    layout = QVBoxLayout(rail)
     layout.setContentsMargins(0, 0, 0, 0)
-    layout.setSpacing(8)
-
-    dock = QFrame()
-    dock.setObjectName('RailDock')
-    dock.setFixedWidth(64)
-    dock_layout = QVBoxLayout(dock)
-    dock_layout.setContentsMargins(8, 8, 8, 8)
-    dock_layout.setSpacing(8)
-
-    rail_rec = QLabel('REC')
-    rail_rec.setObjectName('RailGlyphRec')
-    rail_rec.setToolTip('Запись включается в панели источника')
-    dock_layout.addWidget(rail_rec)
-
-    rail_lock = QLabel('LOCK')
-    rail_lock.setObjectName('RailGlyphLock')
-    rail_lock.setToolTip('Захват/ручное подтверждение цели в верхней панели и нижнем доке')
-    dock_layout.addWidget(rail_lock)
-
-    rail_nt = QLabel('NT')
-    rail_nt.setObjectName('RailGlyph')
-    rail_nt.setToolTip('Следующая цель')
-    dock_layout.addWidget(rail_nt)
-
-    zoom = QFrame()
-    zoom.setObjectName('RailZoomBlock')
-    zoom_layout = QVBoxLayout(zoom)
-    zoom_layout.setContentsMargins(4, 6, 4, 6)
-    zoom_layout.setSpacing(3)
-    zoom_title = QLabel('ZOOM')
-    zoom_title.setObjectName('RailZoomTitle')
-    zoom_in = QLabel('+')
-    zoom_in.setObjectName('RailZoomBtn')
-    zoom_val = QLabel('x1.0')
-    zoom_val.setObjectName('RailZoomVal')
-    zoom_out = QLabel('-')
-    zoom_out.setObjectName('RailZoomBtn')
-    for widget in (zoom_title, zoom_in, zoom_val, zoom_out):
-        zoom_layout.addWidget(widget)
-    dock_layout.addWidget(zoom)
-
-    dock_layout.addStretch(1)
-    layout.addWidget(dock)
-
-    drawer = QFrame()
-    drawer.setObjectName('RailDrawer')
-    drawer_layout = QVBoxLayout(drawer)
-    drawer_layout.setContentsMargins(0, 0, 0, 0)
-    drawer_layout.setSpacing(8)
+    layout.setSpacing(10)
 
     src_panel = QFrame()
     src_panel.setObjectName('GlassPanel')
     src_layout = QVBoxLayout(src_panel)
-    src_layout.setContentsMargins(12, 12, 12, 12)
+    src_layout.setContentsMargins(14, 14, 14, 14)
     src_layout.setSpacing(8)
 
-    src_title = QLabel('SOURCE')
+    src_title = QLabel('ИСТОЧНИК')
     src_title.setObjectName('RailSectionTitle')
     src_layout.addWidget(src_title)
 
@@ -323,18 +262,18 @@ def build_left_rail(window) -> QWidget:
     window.source_path_edit.setPlaceholderText('/путь/к/видео.mp4')
     src_layout.addWidget(window.source_path_edit)
 
-    window.source_browse_btn = QPushButton('Выбрать')
+    window.source_browse_btn = QPushButton('Выбрать...')
     src_layout.addWidget(window.source_browse_btn)
 
-    drawer_layout.addWidget(src_panel)
+    layout.addWidget(src_panel)
 
     rec_panel = QFrame()
     rec_panel.setObjectName('GlassPanel')
     rec_layout = QVBoxLayout(rec_panel)
-    rec_layout.setContentsMargins(12, 12, 12, 12)
+    rec_layout.setContentsMargins(14, 14, 14, 14)
     rec_layout.setSpacing(8)
 
-    rec_title = QLabel('REC / DATA')
+    rec_title = QLabel('ЗАПИСЬ')
     rec_title.setObjectName('RailSectionTitle')
     rec_layout.addWidget(rec_title)
 
@@ -349,17 +288,16 @@ def build_left_rail(window) -> QWidget:
     window.output_edit = QLineEdit(str(ROOT / 'runs' / 'gui_output.mp4'))
     rec_layout.addWidget(window.output_edit)
 
-    window.output_browse_btn = QPushButton('Сохранить в...')
+    window.output_browse_btn = QPushButton('Куда сохранить...')
     rec_layout.addWidget(window.output_browse_btn)
 
     window.eval_btn = QPushButton('Оценка')
     window.eval_btn.setProperty('variant', 'ghost')
     rec_layout.addWidget(window.eval_btn)
 
-    drawer_layout.addWidget(rec_panel)
+    layout.addWidget(rec_panel)
 
-    drawer_layout.addStretch(1)
-    layout.addWidget(drawer, 1)
+    layout.addStretch(1)
     return rail
 
 
@@ -368,19 +306,18 @@ def build_right_panel(window) -> QWidget:
     from PySide6.QtCore import Qt
 
     col = QFrame()
-    col.setObjectName('RightHudPanel')
-    col.setFixedWidth(244)
-    col.setMaximumHeight(760)
+    col.setObjectName('LeftControlRail')
+    col.setFixedWidth(300)
 
     layout = QVBoxLayout(col)
-    layout.setContentsMargins(0, 52, 0, 0)
+    layout.setContentsMargins(0, 0, 0, 0)
     layout.setSpacing(10)
 
     card = QFrame()
     card.setObjectName('ActiveTargetCard')
     card_layout = QVBoxLayout(card)
-    card_layout.setContentsMargins(10, 10, 10, 10)
-    card_layout.setSpacing(8)
+    card_layout.setContentsMargins(18, 18, 18, 18)
+    card_layout.setSpacing(12)
 
     hdr = QHBoxLayout()
     hdr.setContentsMargins(0, 0, 0, 0)
@@ -455,8 +392,8 @@ def build_right_panel(window) -> QWidget:
     rt = QFrame()
     rt.setObjectName('RuntimeCard')
     rt_layout = QGridLayout(rt)
-    rt_layout.setContentsMargins(10, 10, 10, 10)
-    rt_layout.setHorizontalSpacing(12)
+    rt_layout.setContentsMargins(16, 14, 16, 14)
+    rt_layout.setHorizontalSpacing(20)
     rt_layout.setVerticalSpacing(6)
 
     rt_title = QLabel('ТЕЛЕМЕТРИЯ ТРЕКЕРА')
@@ -496,12 +433,10 @@ def build_right_panel(window) -> QWidget:
 def build_dock(window) -> QFrame:
     dock = QFrame()
     dock.setObjectName('Dock')
-    dock.setMinimumWidth(720)
-    dock.setMaximumWidth(980)
 
     layout = QHBoxLayout(dock)
-    layout.setContentsMargins(12, 0, 12, 0)
-    layout.setSpacing(6)
+    layout.setContentsMargins(10, 0, 10, 0)
+    layout.setSpacing(5)
 
     window.bottom_console_label = QLabel('готово к запуску')
     window.bottom_console_label.setObjectName('BottomConsoleText')
