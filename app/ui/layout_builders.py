@@ -95,6 +95,11 @@ def build_topbar(window) -> QFrame:
     window.expert_btn.setObjectName('ModeBtn')
     layout.addWidget(window.expert_btn)
 
+    window.dts_btn = QPushButton('DTS')
+    window.dts_btn.setObjectName('ModeBtn')
+    window.dts_btn.setToolTip('Training Desk: контроль ручной разметки')
+    layout.addWidget(window.dts_btn)
+
     window.expert_badge = QLabel('EXP')
     window.expert_badge.setObjectName('ChipAccent')
     window.expert_badge.setVisible(False)
@@ -190,6 +195,11 @@ def build_header(window) -> QFrame:
     window.expert_btn = QPushButton('Эксперт')
     window.expert_btn.setProperty('variant', 'ghost')
     layout.addWidget(window.expert_btn)
+
+    window.dts_btn = QPushButton('DTS')
+    window.dts_btn.setProperty('variant', 'ghost')
+    window.dts_btn.setToolTip('Training Desk: контроль ручной разметки')
+    layout.addWidget(window.dts_btn)
 
     window.expert_badge = QLabel('EXP')
     window.expert_badge.setObjectName('HeaderMeta')

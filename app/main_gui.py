@@ -58,6 +58,7 @@ from app.ui.layout_builders import (
     build_right_panel as _build_right_panel,
     build_topbar as _build_topbar,
 )
+from app.ui.training_desk import TrainingDeskDialog
 from app.workers import EvaluationWorker, TrackerWorker
 
 
@@ -79,6 +80,7 @@ class MainWindow(QMainWindow):
         self._auto_scene_detect_enabled = False
         self._target_lock_start: float | None = None
         self._last_operator_override_count = 0
+        self._training_desk_dialog: TrainingDeskDialog | None = None
 
         self._session_history: list[str] = []
         self._recent_sources: list[str] = []
@@ -245,6 +247,7 @@ class MainWindow(QMainWindow):
 
         self.next_target_btn.clicked.connect(self._request_next_target)
         self.expert_btn.clicked.connect(self._toggle_expert_mode)
+        self.dts_btn.clicked.connect(self._open_training_desk)
         self.fullscreen_btn.clicked.connect(self._toggle_fullscreen)
         self.model_browse_btn.clicked.connect(self._browse_model)
 
@@ -386,6 +389,14 @@ class MainWindow(QMainWindow):
         self.expert_badge.setVisible(True)
         self.expert_btn.setProperty('variant', 'primary')
         refresh_widget_style(self.expert_btn)
+
+    def _open_training_desk(self):
+        if self._training_desk_dialog is None:
+            self._training_desk_dialog = TrainingDeskDialog(ROOT, self)
+        self._training_desk_dialog.reload()
+        self._training_desk_dialog.show()
+        self._training_desk_dialog.raise_()
+        self._training_desk_dialog.activateWindow()
 
     def _request_next_target(self) -> None:
         with self._worker_lock:
