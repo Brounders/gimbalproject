@@ -1,7 +1,7 @@
 # Active Plan
 
 ## Plan ID
-- AP-OPERATOR-ASSISTED-TRACKING-V2
+- AP-DTS-TRAINING-DESK-V1
 
 ## Status
 - Completed
@@ -13,46 +13,43 @@
 - none
 
 ## Source Direction
-Human requested all six modernization ideas in one pass and asked how manual
-operator selection can also help train the detector model. Codex implemented
-V2 as operator-assisted tracking plus operator annotation logging.
+Human accepted the Training Desk/admin concept and requested implementation in
+one pass with a `DTS` button in the UI.  Codex implemented the first review
+desk for operator annotation control without starting training automatically.
 
-## AP-OPERATOR-ASSISTED-TRACKING-V2 — Operator-Assisted Tracking + Annotation
+## AP-DTS-TRAINING-DESK-V1 — Data Training Station
 
 ### Цель
 
-Усилить ручной выбор цели так, чтобы оператор мог не только кликнуть точку, но
-и выделить bbox, подтвердить/сбросить цель, а pipeline мог удерживать
-operator target через visual/template path без обязательного detector lock.
+Добавить operator annotation admin layer: обзор, фильтры, preview, статусы,
+принятие/отклонение/staging, чтобы ручная разметка проходила review перед
+экспортом и обучением.
 
 ### Результат
 
 | ID | Задача | Статус | Результат |
 |----|--------|--------|-----------|
-| OPV2-001 | Drag-to-select bbox | ✅ DONE | `VideoStage` emits click or bbox; mapping tested |
-| OPV2-002 | Auto seed refinement | ✅ DONE | contrast blob refinement with safe fallback |
-| OPV2-003 | Operator hold policy | ✅ DONE | `OPERATOR_HOLD_GRACE_FRAMES`; confirm active as operator |
-| OPV2-004 | Multi-template lock | ✅ DONE | bounded template bank in `TemplateLockTracker` |
-| OPV2-005 | Operator lock-first path | ✅ DONE | active `operator` source uses `OPERATOR-LOCK` path |
-| OPV2-006 | Confirm / release controls | ✅ DONE | UI and worker commands for confirm/release |
-| OPV2-007 | Annotation logging for training | ✅ DONE | `runs/operator_annotations/*.jsonl` operator bbox events |
+| DTS-001 | Data layer | ✅ DONE | `app/training_desk_data.py`, jsonl loader, review state |
+| DTS-002 | Training Desk dialog | ✅ DONE | фильтры, таблица, preview, карточка записи |
+| DTS-003 | Review controls | ✅ DONE | `Принять`, `Отклонить`, `В training pack` |
+| DTS-004 | Main UI entry | ✅ DONE | кнопка `DTS` в topbar |
+| DTS-005 | Tests/report/state | ✅ DONE | data-layer tests + report |
 
 ### Итоговое решение
 
-**PASS for code/test validation.**
+**PASS for V1 admin layer.**
 
-Ручной выбор теперь является operator-assisted mode, а не простой подсказкой
-detector. Успешные operator bbox события сохраняются как будущий материал для
-конвертации в YOLO labels.
+DTS пока не запускает обучение. Он создаёт контролируемый review buffer между
+операторской разметкой и будущим training pack.
 
 ### Отчёт
 
-- `orchestrator/reports/REPORT-OPERATOR-ASSISTED-TRACKING-V2-20260503.md`
+- `orchestrator/reports/REPORT-DTS-TRAINING-DESK-20260505.md`
 
 ### Следующий шаг
 
-Полевой GUI smoke и затем отдельный цикл:
+Связать DTS с export/staging:
 
-- конвертер `operator_annotations.jsonl` → YOLO labels;
-- отбор кадров по operator events;
-- mini fine-tune/eval на провальных клипах.
+- экспортировать только accepted/staged records;
+- показать путь к созданному training pack;
+- добавить ручной training launcher только после визуальной проверки pack.
