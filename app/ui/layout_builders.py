@@ -32,12 +32,12 @@ def build_topbar(window) -> QFrame:
     bar.setObjectName('TopBar')
 
     layout = QHBoxLayout(bar)
-    layout.setContentsMargins(14, 0, 14, 0)
-    layout.setSpacing(14)
+    layout.setContentsMargins(12, 0, 12, 0)
+    layout.setSpacing(10)
 
     brand_name = QLabel('GIMBAL')
     brand_name.setObjectName('BrandName')
-    brand_sub = QLabel('система сопровождения')
+    brand_sub = QLabel('OPERATOR UI')
     brand_sub.setObjectName('BrandSub')
     layout.addWidget(brand_name)
     layout.addWidget(brand_sub)
@@ -91,7 +91,7 @@ def build_topbar(window) -> QFrame:
     sep4.setObjectName('TopBarSep')
     layout.addWidget(sep4)
 
-    window.expert_btn = QPushButton('Эксперт')
+    window.expert_btn = QPushButton('EXPERT')
     window.expert_btn.setObjectName('ModeBtn')
     layout.addWidget(window.expert_btn)
 
@@ -111,7 +111,7 @@ def build_topbar(window) -> QFrame:
     window.fullscreen_btn.setToolTip('Полный экран')
     layout.addWidget(window.fullscreen_btn)
 
-    window.next_target_btn = QPushButton('↕ Цель')
+    window.next_target_btn = QPushButton('↕ TARGET')
     window.next_target_btn.setObjectName('ModeBtn')
     window.next_target_btn.setToolTip('Следующая цель')
     window.next_target_btn.setEnabled(False)
@@ -227,7 +227,7 @@ def build_header(window) -> QFrame:
 def build_left_rail(window) -> QWidget:
     rail = QFrame()
     rail.setObjectName('LeftControlRail')
-    rail.setFixedWidth(260)
+    rail.setFixedWidth(240)
 
     layout = QVBoxLayout(rail)
     layout.setContentsMargins(0, 0, 0, 0)
@@ -307,7 +307,7 @@ def build_right_panel(window) -> QWidget:
 
     col = QFrame()
     col.setObjectName('LeftControlRail')
-    col.setFixedWidth(340)
+    col.setFixedWidth(300)
 
     layout = QVBoxLayout(col)
     layout.setContentsMargins(0, 0, 0, 0)
@@ -435,8 +435,8 @@ def build_dock(window) -> QFrame:
     dock.setObjectName('Dock')
 
     layout = QHBoxLayout(dock)
-    layout.setContentsMargins(12, 0, 12, 0)
-    layout.setSpacing(4)
+    layout.setContentsMargins(10, 0, 10, 0)
+    layout.setSpacing(5)
 
     window.bottom_console_label = QLabel('готово к запуску')
     window.bottom_console_label.setObjectName('BottomConsoleText')

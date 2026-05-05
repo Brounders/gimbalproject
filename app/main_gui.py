@@ -104,8 +104,8 @@ class MainWindow(QMainWindow):
         central.setObjectName('CentralRoot')
         self.setCentralWidget(central)
         root = QVBoxLayout(central)
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(10)
+        root.setContentsMargins(24, 24, 24, 18)
+        root.setSpacing(14)
 
         self._workspace_order = ['operator']
         self.workspace_indexes = {'operator': 0}
@@ -114,15 +114,13 @@ class MainWindow(QMainWindow):
         # ── Top pill (centred) ──────────────────────────────────────────────
         topbar_row = QHBoxLayout()
         topbar_row.setContentsMargins(0, 0, 0, 0)
-        topbar_row.addStretch(1)
         topbar_row.addWidget(self.build_topbar())
-        topbar_row.addStretch(1)
         root.addLayout(topbar_row)
 
         # ── Body: left | video | right ──────────────────────────────────────
         body = QHBoxLayout()
         body.setContentsMargins(0, 0, 0, 0)
-        body.setSpacing(12)
+        body.setSpacing(14)
         body.addWidget(self.build_left_rail(), 0)
         body.addWidget(self.build_video_stage(), 1)
         body.addWidget(self.build_right_panel(), 0)
