@@ -247,6 +247,9 @@ class Config:
     AUTO_SCENE_STABILITY_WINDOW: int = 30       # sliding-window size for scene stability ratio
     # TASK-103d: Unified Proposal Layer trust-based target selection.
     TRUST_SWITCH_MARGIN: float = 0.25           # best must beat active by 25% to switch
+    # TASK-103e: Lock health release gate.
+    LOCK_HEALTH_MIN_TRUST: float = 0.50         # trust below this = "untrusted for current scene"
+    LOCK_HEALTH_RELEASE_STREAK: int = 80        # last-resort release after N untrusted frames (> cooldown=30)
 
     # ── Bbox Smoothing (display-side EMA to reduce visual jitter) ────────────
     SMOOTH_BBOX_ALPHA: float = 0.35             # EMA alpha for position (higher = more responsive)

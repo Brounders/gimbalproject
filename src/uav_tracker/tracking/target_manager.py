@@ -6,7 +6,7 @@ from uav_tracker.detection_source import DetectionSource
 from uav_tracker.runtime.base import Detection
 from uav_tracker.tracking.focus_mode_controller import FocusModeController
 from uav_tracker.tracking.operator_override import OperatorOverrideResult, OperatorTargetOverride
-from uav_tracker.tracking.proposal_trust import build_proposals
+from uav_tracker.tracking.proposal_trust import build_proposals, source_trust
 from uav_tracker.tracking.tracked_target import TrackedTarget
 from uav_tracker.tracking.evidence import normalize_source
 from utils.geometry import iou
@@ -22,6 +22,7 @@ class TargetManager:
         self._focus_ctrl = FocusModeController(cfg)
         self._active_switch_cooldown = 0
         self._night_key_to_tid: dict[tuple, int] = {}
+        self._low_trust_streak: int = 0  # TASK-103e: frames active source trust < threshold
 
     def _smooth_bbox(self, old_bbox, new_bbox, alpha):
         if old_bbox is None:
@@ -79,6 +80,7 @@ class TargetManager:
         if new_tid is None:
             self.active_id = None
             self._active_switch_cooldown = 0
+            self._low_trust_streak = 0  # TASK-103e
             return True
         tid = int(new_tid)
         if self.active_id == tid:
@@ -87,6 +89,7 @@ class TargetManager:
             return False
         self.active_id = tid
         self._active_switch_cooldown = max(0, int(self.cfg.ACTIVE_ID_SWITCH_COOLDOWN_FRAMES))
+        self._low_trust_streak = 0  # TASK-103e: reset on every active switch
         return True
 
     def release_active(self) -> bool:
@@ -585,12 +588,35 @@ class TargetManager:
                 self._set_active_id(best.target_id)
             return
 
+        # TASK-103e: Lock health gate — runs in both code paths below.
+        # Tracks consecutive frames where the active source is untrusted for
+        # the current scene (trust < LOCK_HEALTH_MIN_TRUST).  After
+        # LOCK_HEALTH_RELEASE_STREAK consecutive untrusted frames the active
+        # target is released (→ SCAN).  Default streak=80 is well above the
+        # switch cooldown (60 frames in tracking_live_auto preset) so this
+        # fires only as a last-resort when the standard trust-switch has also
+        # failed to fire (i.e. no better alternative ever appeared).
+        def _run_health_gate() -> None:
+            _ha = self.get_active_target()
+            if _ha is None:
+                return
+            _min_trust = float(getattr(self.cfg, 'LOCK_HEALTH_MIN_TRUST', 0.50))
+            if source_trust(normalize_source(_ha.source), scene) < _min_trust:
+                self._low_trust_streak += 1
+                _streak = int(getattr(self.cfg, 'LOCK_HEALTH_RELEASE_STREAK', 80))
+                if self._low_trust_streak >= _streak:
+                    self._set_active_id(None)
+            else:
+                self._low_trust_streak = 0
+
         if best.target_id == current.track_id:
-            return  # Best is already active — nothing to do.
+            _run_health_gate()
+            return  # Best is already active — nothing to switch.
 
         # Build current proposal for comparison.
         curr_proposals = [p for p in proposals if p.target_id == current.track_id]
         if not curr_proposals:
+            _run_health_gate()
             return
         curr = curr_proposals[0]
 
@@ -598,6 +624,8 @@ class TargetManager:
         if best.total_score > curr.total_score * (1.0 + margin):
             if self._can_switch_active(best.target_id):
                 self._set_active_id(best.target_id)
+
+        _run_health_gate()
 
     def switch_target(self):
         ids = list(self.targets.keys())
