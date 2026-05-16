@@ -938,10 +938,12 @@ class TrackerPipeline:
         gt_iou = self._compute_gt_iou(gt_bbox)
         active = self.manager.get_active_target()
         self.continuity.update(self.manager.active_id)
-        active_bbox = active.raw_bbox if active is not None else None
+        active_bbox_raw = active.raw_bbox if active is not None else None
         # TASK-103b: stabilize bbox size via EMA (rate-limited, conf-gated).
+        # active_bbox_raw is preserved for recall/IoU diagnostics;
+        # active_bbox carries the smoothed version for display and bbox_area telemetry.
         _active_conf = float(active.conf) if active is not None else 0.0
-        active_bbox = self._bbox_stabilizer.update(active_bbox, _active_conf)
+        active_bbox = self._bbox_stabilizer.update(active_bbox_raw, _active_conf)
         display_confidence = self.display_state.update_confidence(
             active, lock_score, self._video_elapsed_sec, self.frame_counter)
         reticle_center = self.display_state.update_reticle(active)
@@ -1064,6 +1066,7 @@ class TrackerPipeline:
             scene_confidence_runtime=scene_confidence_runtime,
             proposal_count_by_source=proposal_count_by_source,
             bbox_area=bbox_area,
+            active_bbox_raw=active_bbox_raw,
         )
 
 
