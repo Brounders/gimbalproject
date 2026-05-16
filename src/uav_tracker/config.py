@@ -1,6 +1,6 @@
 import warnings
-from dataclasses import dataclass
-from typing import Optional, Union
+from dataclasses import dataclass, field
+from typing import Any, Optional, Union
 
 # RuntimeConfigView is defined at the bottom of this module (after Config).
 
@@ -41,6 +41,10 @@ class Config:
     IMG_SIZE: int = 640
     DEVICE: str = 'mps'
     CLASSES: Optional[list] = None
+    IGNORE_ZONES: list[dict[str, Any]] = field(default_factory=list)
+    DETECTION_MAX_AREA_RATIO: float = 0.0
+    DETECTION_MAX_WIDTH_RATIO: float = 0.0
+    DETECTION_MAX_HEIGHT_RATIO: float = 0.0
     PREFER_CLASS_ID: int = 0
     SMALL_TARGET_IMG_SIZE: int = 960
     SMALL_TARGET_CONF: float = 0.15
@@ -119,6 +123,9 @@ class Config:
     SHOW_ONLY_ACTIVE_ON_LOCK: bool = True
     LOCK_EVENT_LOG_ENABLED: bool = False
     LOCK_EVENT_LOG_PATH: str = ''
+    FRAME_TELEMETRY_LOG_ENABLED: bool = False
+    FRAME_TELEMETRY_LOG_PATH: str = 'runs/telemetry/frame_results.jsonl'
+    FRAME_TELEMETRY_FLUSH_EVERY: int = 30
     YOLO_LOST_MAX: int = 12
 
     # ── select_active() scoring weights (target_manager.py) ─────────────────
@@ -164,6 +171,25 @@ class Config:
     NIGHT_MAX_AR: float = 3.0
     NIGHT_TRACK_DIST: int = 42
     NIGHT_LOST_MAX: int = 8
+    NIGHT_MAX_DETECTIONS: int = 0
+    NIGHT_MIN_SPEED: float = 0.0
+    NIGHT_MAX_SPEED: float = 0.0
+    NIGHT_HOTSPOT_ENABLED: bool = False
+    NIGHT_HOTSPOT_KERNEL: int = 17
+    NIGHT_HOTSPOT_THRESH: int = 18
+    NIGHT_HOTSPOT_TOP_K: int = 0
+    NIGHT_CONTOUR_ENABLED: bool = True
+    NIGHT_PEAK_ENABLED: bool = False
+    NIGHT_PEAK_THRESH: int = 28
+    NIGHT_PEAK_BOX: int = 24
+    NIGHT_PEAK_NMS_DIST: int = 12
+    NIGHT_PEAK_TOP_K: int = 0
+    NIGHT_PEAK_REQUIRE_MOTION: bool = False
+    NIGHT_PEAK_MIN_MOTION_PIXELS: int = 1
+    NIGHT_STICKY_ENABLED: bool = False
+    NIGHT_STICKY_RADIUS: int = 80
+    NIGHT_STICKY_MISSING_MAX: int = 4
+    NIGHT_ACTIVE_HOLD_RADIUS: int = 0
     NIGHT_RUN_WHEN_PRIMARY_SEEN: bool = False
     NIGHT_PRIMARY_COOLDOWN: int = 4
 
@@ -196,14 +222,29 @@ class Config:
     AUTO_SCENE_NIGHT_CONF: float = 0.12         # CONF_THRESH override in night scene
     AUTO_SCENE_NIGHT_MOT_THRESH: int = 12       # NIGHT_MOT_THRESH override in night scene
     AUTO_SCENE_NIGHT_DIFF_THRESH: int = 8       # NIGHT_DIFF_THRESH override in night scene
+    AUTO_SCENE_DAY_NIGHT_ENABLED: bool = False  # day scene must not run motion/night detector by default
+    AUTO_SCENE_NIGHT_NIGHT_ENABLED: bool = True
     # IR/thermal detection: low-saturation heuristic (HSV S channel).
     AUTO_SCENE_IR_SAT_MAX: int = 25             # mean HSV-S < this → IR candidate
+    AUTO_SCENE_IR_NIGHT_ENABLED: bool = True
     AUTO_SCENE_IR_CONF: float = 0.10            # CONF_THRESH override in IR scene
     AUTO_SCENE_IR_MOT_THRESH: int = 8           # NIGHT_MOT_THRESH override in IR scene
     AUTO_SCENE_IR_DIFF_THRESH: int = 6          # NIGHT_DIFF_THRESH override in IR scene
+    AUTO_SCENE_IR_PEAK_ENABLED: bool = True
+    AUTO_SCENE_IR_CONTOUR_ENABLED: bool = False
+    AUTO_SCENE_IR_PEAK_THRESH: int = 24
+    AUTO_SCENE_IR_PEAK_BOX: int = 28
+    AUTO_SCENE_IR_PEAK_NMS_DIST: int = 14
+    AUTO_SCENE_IR_PEAK_TOP_K: int = 80
+    AUTO_SCENE_IR_PEAK_REQUIRE_MOTION: bool = True
+    AUTO_SCENE_IR_PEAK_MIN_MOTION_PIXELS: int = 1
     # Lock hardening for night/IR: more hits required before confirming lock.
     AUTO_SCENE_NIGHT_LOCK_CONFIRM: int = 8      # LOCK_CONFIRM_FRAMES override in night/IR
     AUTO_SCENE_NIGHT_DRONE_LOCK_SCORE: float = 0.75  # DRONE_LOCK_SCORE_MIN override in night/IR
+    # TASK-103c v2: multi-ROI + 5-feature classifier parameters.
+    AUTO_SCENE_IR_EDGE_MAX: float = 0.12        # max edge_density for IR (above = EO-overcast guard)
+    AUTO_SCENE_IR_HOT_FRAC: float = 0.005       # min hot_pixel_frac to confirm IR (hot spots)
+    AUTO_SCENE_STABILITY_WINDOW: int = 30       # sliding-window size for scene stability ratio
 
     # ── Bbox Smoothing (display-side EMA to reduce visual jitter) ────────────
     SMOOTH_BBOX_ALPHA: float = 0.35             # EMA alpha for position (higher = more responsive)
@@ -226,6 +267,7 @@ class Config:
     # OFF by default: UI/operator input can be queued but will not alter target
     # state until an explicit preset enables it.
     OPERATOR_OVERRIDE_ENABLED: bool = False
+    OPERATOR_OVERRIDE_INSTANT_LOCK: bool = True
     OPERATOR_OVERRIDE_BOX_SIZE: int = 64
     OPERATOR_HOLD_GRACE_FRAMES: int = 20
     OPERATOR_REFINE_SEED_BBOX: bool = True

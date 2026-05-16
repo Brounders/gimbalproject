@@ -298,10 +298,14 @@ class TrackerPipeline:
         # _adapt_auto_scene writes to _scene_overrides only; base cfg is never mutated.
         self._runtime_cfg = RuntimeConfigView(cfg)
 
-        # Auto scene detection state (TASK-020).
-        self._auto_scene_state = 'day'       # 'day' or 'night'
-        self._auto_scene_streak = 0          # consecutive frames in candidate state
+        # Auto scene detection state (TASK-020 / TASK-103c v2).
+        self._auto_scene_state = 'day'       # 'day', 'night', or 'ir'
+        self._auto_scene_streak = 0          # consecutive samples in candidate state
         self._auto_scene_frame_tick = 0
+        # TASK-103c: sliding-window history for scene stability ratio.
+        self._auto_scene_history: deque = deque()
+        # TASK-103c: previous sample frame (grayscale) for motion density feature.
+        self._prev_sample_gray: np.ndarray | None = None
 
     def _update_video_time(self, source_fps: Optional[float]) -> None:
         min_valid = self.cfg.SOURCE_FPS_MIN_VALID
@@ -313,17 +317,19 @@ class TrackerPipeline:
         self._video_elapsed_sec += 1.0 / fallback
 
     def _adapt_auto_scene(self, frame: np.ndarray) -> None:
-        """Auto scene detection: Day / Night / IR (TASK-020 + TASK-026).
+        """Auto scene detection v2 (TASK-103c): Day / Night / IR.
 
         Runs every AUTO_SCENE_SAMPLE_INTERVAL frames.  Requires
         AUTO_SCENE_CONFIRM_FRAMES / SAMPLE_INTERVAL consecutive samples before switch.
 
-        Scene classification (priority order):
-          1. mean Y < NIGHT_BRIGHTNESS_MAX  → 'night'   (dark scene)
-          2. mean HSV-S < IR_SAT_MAX        → 'ir'      (desaturated/thermal, any brightness)
-          3. else                           → 'day'
-
-        On switch: applies config overrides; on revert to 'day': restores originals.
+        v2 improvements over TASK-020 + TASK-026:
+          - 5 features per ROI: mean_Y, mean_S, hot_pixel_frac, edge_density,
+            motion_density (motion_density logged but not yet in decision tree).
+          - 5-ROI multi-sampling (center + 4 quadrants) then majority vote.
+            Handles RGBT split-screen where one half is IR, one half is visible.
+          - EO-overcast guard: desaturated-but-high-edge regions are NOT tagged
+            as IR (fixes F1 EO→IR confusion).
+          - Sliding-window stability history replaces streak-only confidence.
         """
         if not getattr(self.cfg, 'AUTO_SCENE_DETECT', False):
             return
@@ -332,33 +338,83 @@ class TrackerPipeline:
         if self._auto_scene_frame_tick % interval != 0:
             return
 
-        # Sample frame center crop (avoid border vignetting effects)
         h, w = frame.shape[:2]
-        y0, y1 = h // 4, 3 * h // 4
-        x0, x1 = w // 4, 3 * w // 4
-        crop = frame[y0:y1, x0:x1]
+        gray_full = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if frame.ndim == 3 else frame.copy()
 
-        if crop.ndim == 3:
-            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-            hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
-            mean_sat = float(np.mean(hsv[:, :, 1]))
+        # Motion density (full-frame, vs previous sample).
+        _prev = getattr(self, '_prev_sample_gray', None)
+        if _prev is not None and _prev.shape == gray_full.shape:
+            motion_density = float(np.mean(cv2.absdiff(gray_full, _prev) > 10))
         else:
-            gray = crop
-            mean_sat = 0.0  # grayscale input — treat as potentially IR
-
-        mean_brightness = float(np.mean(gray))
+            motion_density = 0.0
+        self._prev_sample_gray = gray_full
 
         night_thresh = int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_BRIGHTNESS_MAX', 50))
         ir_sat_max = int(getattr(self.cfg, 'AUTO_SCENE_IR_SAT_MAX', 25))
+        ir_hot_thresh = float(getattr(self.cfg, 'AUTO_SCENE_IR_HOT_FRAC', 0.005))
+        ir_edge_max = float(getattr(self.cfg, 'AUTO_SCENE_IR_EDGE_MAX', 0.12))
         confirm = max(1, int(getattr(self.cfg, 'AUTO_SCENE_CONFIRM_FRAMES', 30)))
 
-        # Priority: dark → night; desaturated (any brightness) → ir; else → day
-        if mean_brightness < night_thresh:
-            candidate = 'night'
-        elif mean_sat < ir_sat_max:
+        # 5-ROI sampling: center + 4 quadrants.
+        rois = [
+            (h // 4, 3 * h // 4, w // 4, 3 * w // 4),  # center
+            (0, h // 2, 0, w // 2),                      # top-left
+            (0, h // 2, w // 2, w),                      # top-right
+            (h // 2, h, 0, w // 2),                      # bottom-left
+            (h // 2, h, w // 2, w),                      # bottom-right
+        ]
+        votes: dict[str, int] = {'day': 0, 'night': 0, 'ir': 0}
+        for y0, y1, x0, x1 in rois:
+            roi_gray = gray_full[y0:y1, x0:x1]
+            if roi_gray.size == 0:
+                continue
+            mean_y = float(np.mean(roi_gray))
+            if frame.ndim == 3:
+                roi_bgr = frame[y0:y1, x0:x1]
+                hsv = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
+                mean_s = float(np.mean(hsv[:, :, 1]))
+            else:
+                mean_s = 0.0
+            hot_pixel_frac = float(np.mean(roi_gray > 240))
+            sx = cv2.Sobel(roi_gray, cv2.CV_32F, 1, 0, ksize=3)
+            sy = cv2.Sobel(roi_gray, cv2.CV_32F, 0, 1, ksize=3)
+            edge_density = float(np.mean(sx ** 2 + sy ** 2 > 500.0))
+
+            if mean_y < night_thresh:
+                votes['night'] += 1
+            elif mean_s < ir_sat_max:
+                # EO-overcast guard (F1 fix): high-edge + no hot spots → gray EO, not IR.
+                # Guard only applies when saturation is borderline (>50% of threshold).
+                # Very low saturation (<50%) → definitely thermal IR, skip guard.
+                very_low_sat = mean_s < ir_sat_max * 0.5
+                eo_overcast = (
+                    not very_low_sat
+                    and edge_density > ir_edge_max
+                    and hot_pixel_frac < ir_hot_thresh
+                )
+                votes['ir' if not eo_overcast else 'day'] += 1
+            else:
+                votes['day'] += 1
+
+        # RGBT split-screen: visible half always has ≥2 day votes even in IR clips.
+        # Lower IR threshold to ≥2 ROIs (any 2 of 5 detecting IR → IR scene).
+        # Night keeps strict majority (>half) to avoid false night on dark corners.
+        if votes['ir'] >= 2:
             candidate = 'ir'
+        elif votes['night'] > len(rois) // 2:
+            candidate = 'night'
         else:
-            candidate = 'day'
+            candidate = max(votes, key=votes.get)
+
+        # Sliding-window history for scene_confidence_runtime (TASK-103c).
+        _window = max(10, int(getattr(self.cfg, 'AUTO_SCENE_STABILITY_WINDOW', 30)))
+        _hist = getattr(self, '_auto_scene_history', None)
+        if _hist is None:
+            self._auto_scene_history: deque = deque()
+            _hist = self._auto_scene_history
+        _hist.append(candidate)
+        while len(_hist) > _window:
+            _hist.popleft()
 
         if candidate == self._auto_scene_state:
             self._auto_scene_streak = 0
@@ -1001,11 +1057,15 @@ class TrackerPipeline:
         # TASK-103a Diagnostic Pack v1 — read-only telemetry.
         timings_ms['total'] = (time.perf_counter() - t_frame_start) * 1000.0
         scene_label_runtime = str(getattr(self, '_auto_scene_state', '') or '')
-        _confirm_raw = int(getattr(self.cfg, 'AUTO_SCENE_CONFIRM_FRAMES', 30))
-        _interval = max(1, int(getattr(self.cfg, 'AUTO_SCENE_SAMPLE_INTERVAL', 10)))
-        _confirm_eff = max(1, _confirm_raw // _interval)
-        _streak = int(getattr(self, '_auto_scene_streak', 0))
-        scene_confidence_runtime = 1.0 if _streak == 0 else max(0.0, 1.0 - _streak / _confirm_eff)
+        # TASK-103c: sliding-window scene stability ratio replaces streak counter.
+        # Fraction of recent samples that agree with the current active scene state.
+        _hist = getattr(self, '_auto_scene_history', None)
+        if _hist and len(_hist) > 0:
+            scene_confidence_runtime = sum(
+                1 for s in _hist if s == scene_label_runtime
+            ) / len(_hist)
+        else:
+            scene_confidence_runtime = 1.0
         _operator_seen = 1 if str(operator_override_status) in {'applied', 'verifying', 'confirmed'} else 0
         proposal_count_by_source = {
             'yolo': len(global_ids),
