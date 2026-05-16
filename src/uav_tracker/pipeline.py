@@ -21,6 +21,7 @@ from uav_tracker.runtime import create_detector_backend
 from uav_tracker.detection_source import DetectionSource
 from uav_tracker.runtime.base import Detection
 from uav_tracker.runtime_config import RuntimeConfigView
+from uav_tracker.tracking.bbox_stability import BboxStabilizer
 from uav_tracker.tracking.action_policy import (
     BEHAVIOR_FORCE_DROP,
     BEHAVIOR_TELEMETRY_ONLY,
@@ -30,6 +31,7 @@ from uav_tracker.tracking.action_policy import (
 )
 from uav_tracker.tracking.evidence import SOURCE_RELIABILITY, TargetBelief, normalize_source
 from uav_tracker.tracking.lock_tracker import TemplateLockTracker
+from uav_tracker.tracking.operator_workflow import OperatorWorkflowMachine
 from uav_tracker.tracking.operator_override import OperatorTargetOverride
 from uav_tracker.tracking.operator_seed import refine_operator_seed_bbox
 from uav_tracker.tracking.target_manager import TargetManager
@@ -40,6 +42,32 @@ from utils.geometry import iou
 logger = logging.getLogger(__name__)
 
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff'}
+
+
+def _bbox_center_in_zone(
+    bbox: tuple[int, int, int, int],
+    zone: dict,
+    frame_shape: tuple[int, ...],
+    source: str,
+) -> bool:
+    source_name = str(getattr(source, 'value', source))
+    applies_to = zone.get('applies_to')
+    if applies_to and source_name not in set(str(item) for item in applies_to):
+        return False
+
+    h, w = int(frame_shape[0]), int(frame_shape[1])
+    x1 = float(zone.get('x1', 0.0))
+    y1 = float(zone.get('y1', 0.0))
+    x2 = float(zone.get('x2', 0.0))
+    y2 = float(zone.get('y2', 0.0))
+    if max(abs(x1), abs(y1), abs(x2), abs(y2)) <= 1.0:
+        x1, x2 = x1 * w, x2 * w
+        y1, y2 = y1 * h, y2 * h
+
+    bx1, by1, bx2, by2 = bbox
+    cx = (float(bx1) + float(bx2)) / 2.0
+    cy = (float(by1) + float(by2)) / 2.0
+    return min(x1, x2) <= cx <= max(x1, x2) and min(y1, y2) <= cy <= max(y1, y2)
 
 
 from uav_tracker.display.frame_result import FrameOutput
@@ -249,7 +277,10 @@ class TrackerPipeline:
         self.budget = BudgetController(cfg, initial_roi_candidates=max(1, int(cfg.ROI_MAX_CANDIDATES)))
         self.continuity = ContinuityTracker()
         self.tracking_sm = TrackingStateMachine(cfg)
+        self.operator_workflow = OperatorWorkflowMachine(cfg)
         self.display_state = DisplayStateTracker(cfg)
+        # TASK-103b: EMA bbox size smoother — rate-limited, conf-gated.
+        self._bbox_stabilizer = BboxStabilizer()
         # ALG-001 v1: detection-first decision layer (telemetry only by default).
         # ALG-001 v1.1: guarded behavior wiring controlled by
         # cfg.ACTION_POLICY_BEHAVIOR_ENABLED.  See select_behavior_intent.
@@ -331,6 +362,12 @@ class TrackerPipeline:
 
         if candidate == self._auto_scene_state:
             self._auto_scene_streak = 0
+            if candidate == 'day' and not self._runtime_cfg.active_overrides():
+                self._runtime_cfg = RuntimeConfigView(self.cfg).with_overrides(
+                    NIGHT_ENABLED=bool(getattr(self.cfg, 'AUTO_SCENE_DAY_NIGHT_ENABLED', False)),
+                    NIGHT_PEAK_ENABLED=False,
+                    NIGHT_CONTOUR_ENABLED=bool(getattr(self.cfg, 'NIGHT_CONTOUR_ENABLED', True)),
+                )
             return
 
         self._auto_scene_streak += 1
@@ -342,35 +379,76 @@ class TrackerPipeline:
         self._auto_scene_streak = 0
         if candidate == 'night':
             self._runtime_cfg = self._runtime_cfg.with_overrides(
+                NIGHT_ENABLED=bool(getattr(self.cfg, 'AUTO_SCENE_NIGHT_NIGHT_ENABLED', True)),
                 CONF_THRESH=float(getattr(self.cfg, 'AUTO_SCENE_NIGHT_CONF', 0.12)),
                 NIGHT_MOT_THRESH=int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_MOT_THRESH', 12)),
                 NIGHT_DIFF_THRESH=int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_DIFF_THRESH', 8)),
                 LOCK_CONFIRM_FRAMES=int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_LOCK_CONFIRM', 8)),
                 DRONE_LOCK_SCORE_MIN=float(getattr(self.cfg, 'AUTO_SCENE_NIGHT_DRONE_LOCK_SCORE', 0.75)),
+                NIGHT_PEAK_ENABLED=False,
+                NIGHT_CONTOUR_ENABLED=True,
             )
         elif candidate == 'ir':
             self._runtime_cfg = self._runtime_cfg.with_overrides(
+                NIGHT_ENABLED=bool(getattr(self.cfg, 'AUTO_SCENE_IR_NIGHT_ENABLED', True)),
                 CONF_THRESH=float(getattr(self.cfg, 'AUTO_SCENE_IR_CONF', 0.10)),
                 NIGHT_MOT_THRESH=int(getattr(self.cfg, 'AUTO_SCENE_IR_MOT_THRESH', 8)),
                 NIGHT_DIFF_THRESH=int(getattr(self.cfg, 'AUTO_SCENE_IR_DIFF_THRESH', 6)),
                 LOCK_CONFIRM_FRAMES=int(getattr(self.cfg, 'AUTO_SCENE_NIGHT_LOCK_CONFIRM', 8)),
                 DRONE_LOCK_SCORE_MIN=float(getattr(self.cfg, 'AUTO_SCENE_NIGHT_DRONE_LOCK_SCORE', 0.75)),
+                NIGHT_PEAK_ENABLED=bool(getattr(self.cfg, 'AUTO_SCENE_IR_PEAK_ENABLED', True)),
+                NIGHT_CONTOUR_ENABLED=bool(getattr(self.cfg, 'AUTO_SCENE_IR_CONTOUR_ENABLED', False)),
+                NIGHT_PEAK_THRESH=int(getattr(self.cfg, 'AUTO_SCENE_IR_PEAK_THRESH', 24)),
+                NIGHT_PEAK_BOX=int(getattr(self.cfg, 'AUTO_SCENE_IR_PEAK_BOX', 28)),
+                NIGHT_PEAK_NMS_DIST=int(getattr(self.cfg, 'AUTO_SCENE_IR_PEAK_NMS_DIST', 14)),
+                NIGHT_PEAK_TOP_K=int(getattr(self.cfg, 'AUTO_SCENE_IR_PEAK_TOP_K', 80)),
+                NIGHT_PEAK_REQUIRE_MOTION=bool(getattr(self.cfg, 'AUTO_SCENE_IR_PEAK_REQUIRE_MOTION', True)),
+                NIGHT_PEAK_MIN_MOTION_PIXELS=int(getattr(self.cfg, 'AUTO_SCENE_IR_PEAK_MIN_MOTION_PIXELS', 1)),
             )
-        else:  # day — clear overrides (restore base cfg values)
-            self._runtime_cfg = RuntimeConfigView(self.cfg)
+        else:
+            self._runtime_cfg = RuntimeConfigView(self.cfg).with_overrides(
+                NIGHT_ENABLED=bool(getattr(self.cfg, 'AUTO_SCENE_DAY_NIGHT_ENABLED', False)),
+                NIGHT_PEAK_ENABLED=False,
+                NIGHT_CONTOUR_ENABLED=bool(getattr(self.cfg, 'NIGHT_CONTOUR_ENABLED', True)),
+            )
+
+    def _sync_runtime_detectors(self) -> None:
+        """Make auxiliary detectors read the current live runtime view.
+
+        Global YOLO already receives ``self._runtime_cfg`` directly.  The
+        night/peak detector is stateful, so keep the instance but point its cfg
+        at the current RuntimeConfigView.  This is the missing live bridge that
+        turns auto-scene from telemetry into actual detector behavior.
+        """
+        self.night.cfg = self._runtime_cfg
+
+    def _should_run_night_detector(self) -> bool:
+        cfg = self._runtime_cfg
+        if not bool(getattr(cfg, 'NIGHT_ENABLED', False)):
+            return False
+        if bool(getattr(cfg, 'DISABLE_NIGHT_ON_LOCK', True)) and self.manager.is_focus_mode():
+            return False
+        if not bool(getattr(cfg, 'NIGHT_RUN_WHEN_PRIMARY_SEEN', False)):
+            cooldown = max(0, int(getattr(cfg, 'NIGHT_PRIMARY_COOLDOWN', 0)))
+            if self.manager._frames_since_primary < cooldown:
+                return False
+        return True
 
     def _should_run_global_scan(self) -> tuple[bool, str]:
         active = self.manager.get_active_target()
         if not self.cfg.ADAPTIVE_SCAN_ENABLED:
             return True, 'GLOBAL-SCAN'
-        if not self.manager.is_focus_mode() or active is None:
-            return True, 'GLOBAL-SCAN'
         if (
-            normalize_source(active.source) == 'operator'
+            active is not None
+            and normalize_source(active.source) == 'operator'
             and self.cfg.LOCK_TRACKER_ENABLED
             and active.lost_frames <= int(getattr(self.cfg, 'OPERATOR_HOLD_GRACE_FRAMES', 20))
         ):
-            return False, 'OPERATOR-LOCK'
+            if self.manager.is_focus_mode():
+                return False, 'OPERATOR-LOCK'
+            return False, 'OPERATOR-VERIFY'
+        if not self.manager.is_focus_mode() or active is None:
+            return True, 'GLOBAL-SCAN'
         if active.lost_frames > self.cfg.LOCK_LOST_GRACE:
             return True, 'GLOBAL-RECOVERY'
         interval = self.budget.effective_global_scan_interval(self.frame_counter)
@@ -425,6 +503,71 @@ class TrackerPipeline:
                 best_score = score
                 best_det = det
         return best_det
+
+    def _is_ignored_bbox(
+        self,
+        bbox: tuple[int, int, int, int],
+        frame_shape: tuple[int, ...],
+        source: str,
+    ) -> bool:
+        zones = getattr(self.cfg, 'IGNORE_ZONES', None) or []
+        return any(_bbox_center_in_zone(bbox, zone, frame_shape, source) for zone in zones)
+
+    def _passes_detection_shape_filter(
+        self,
+        bbox: tuple[int, int, int, int],
+        frame_shape: tuple[int, ...],
+    ) -> bool:
+        x1, y1, x2, y2 = bbox
+        bw = max(0, int(x2) - int(x1))
+        bh = max(0, int(y2) - int(y1))
+        if bw <= 0 or bh <= 0:
+            return False
+
+        frame_h = max(1, int(frame_shape[0]))
+        frame_w = max(1, int(frame_shape[1]))
+        max_area_ratio = float(getattr(self.cfg, 'DETECTION_MAX_AREA_RATIO', 0.0) or 0.0)
+        max_width_ratio = float(getattr(self.cfg, 'DETECTION_MAX_WIDTH_RATIO', 0.0) or 0.0)
+        max_height_ratio = float(getattr(self.cfg, 'DETECTION_MAX_HEIGHT_RATIO', 0.0) or 0.0)
+
+        if max_area_ratio > 0.0 and (bw * bh) / float(frame_w * frame_h) > max_area_ratio:
+            return False
+        if max_width_ratio > 0.0 and bw / float(frame_w) > max_width_ratio:
+            return False
+        if max_height_ratio > 0.0 and bh / float(frame_h) > max_height_ratio:
+            return False
+        return True
+
+    def _filter_ignored_detections(
+        self,
+        detections: list[Detection],
+        frame_shape: tuple[int, ...],
+        source: str,
+    ) -> list[Detection]:
+        if not detections:
+            return detections
+        return [
+            det for det in detections
+            if (
+                not self._is_ignored_bbox(det.bbox, frame_shape, source)
+                and self._passes_detection_shape_filter(det.bbox, frame_shape)
+            )
+        ]
+
+    def _filter_ignored_night_detections(
+        self,
+        detections: list[dict],
+        frame_shape: tuple[int, ...],
+    ) -> list[dict]:
+        if not detections:
+            return detections
+        return [
+            det for det in detections
+            if (
+                not self._is_ignored_bbox(det['bbox'], frame_shape, DetectionSource.NIGHT)
+                and self._passes_detection_shape_filter(det['bbox'], frame_shape)
+            )
+        ]
 
     def _local_validation_params(self, frame: np.ndarray, lock_score: float) -> tuple[int, float]:
         imgsz = int(self.cfg.LOCAL_TRACK_IMG_SIZE)
@@ -581,7 +724,10 @@ class TrackerPipeline:
     def request_operator_confirm(self) -> bool:
         if not bool(getattr(self.cfg, 'OPERATOR_OVERRIDE_ENABLED', False)):
             return False
-        return self.manager.confirm_active_as_operator()
+        result = self.manager.confirm_active_as_operator()
+        if result:
+            getattr(self, '_bbox_stabilizer', None) and self._bbox_stabilizer.reset()  # TASK-103b
+        return result
 
     def request_operator_release(self) -> bool:
         if not bool(getattr(self.cfg, 'OPERATOR_OVERRIDE_ENABLED', False)):
@@ -619,6 +765,7 @@ class TrackerPipeline:
         if result.applied:
             self.lock_tracker.sync_from_bbox(frame, result.bbox)
             self._operator_override_count += 1
+            getattr(self, '_bbox_stabilizer', None) and self._bbox_stabilizer.reset()  # TASK-103b
         return result.status
 
     def process_frame(
@@ -647,12 +794,15 @@ class TrackerPipeline:
             (optionally annotated) frame.
         """
         self.frame_counter += 1
+        t_frame_start = time.perf_counter()
         self.manager.frame_tick()
         self._update_video_time(source_fps)
-        timings_ms = {'global': 0.0, 'lock': 0.0, 'local': 0.0, 'roi': 0.0, 'night': 0.0, 'draw': 0.0}
+        timings_ms = {'global': 0.0, 'lock': 0.0, 'local': 0.0, 'roi': 0.0, 'night': 0.0, 'draw': 0.0, 'manager': 0.0, 'total': 0.0}
         focus_roi = None
         lock_search_roi = None
         lock_score = 0.0
+        self._adapt_auto_scene(frame)
+        self._sync_runtime_detectors()
 
         run_global_scan, scan_strategy = self._should_run_global_scan()
         global_ids: set[int] = set()
@@ -664,6 +814,7 @@ class TrackerPipeline:
         if run_global_scan:
             t0 = time.perf_counter()
             global_dets = self.backend.track_frame(frame, self._runtime_cfg)
+            global_dets = self._filter_ignored_detections(global_dets, frame.shape, DetectionSource.YOLO)
             timings_ms['global'] = (time.perf_counter() - t0) * 1000.0
             global_ids = self.manager.update_from_yolo(global_dets)
         else:
@@ -684,7 +835,11 @@ class TrackerPipeline:
                         source=DetectionSource.LOCK,
                         track_id=self.manager.active_id,
                     )
-                    lock_ids = self.manager.update_from_focus_detection(lock_det, DetectionSource.LOCK)
+                    if (
+                        not self._is_ignored_bbox(lock_det.bbox, frame.shape, DetectionSource.LOCK)
+                        and self._passes_detection_shape_filter(lock_det.bbox, frame.shape)
+                    ):
+                        lock_ids = self.manager.update_from_focus_detection(lock_det, DetectionSource.LOCK)
                     scan_strategy = 'LOCK-TRACK'
 
             need_local_validate = (
@@ -704,6 +859,13 @@ class TrackerPipeline:
                     local_imgsz=local_imgsz,
                     local_conf=local_conf,
                 )
+                if local_det is not None:
+                    local_is_invalid = (
+                        self._is_ignored_bbox(local_det.bbox, frame.shape, DetectionSource.LOCAL)
+                        or not self._passes_detection_shape_filter(local_det.bbox, frame.shape)
+                    )
+                    if local_is_invalid:
+                        local_det = None
                 timings_ms['local'] = (time.perf_counter() - t0) * 1000.0
                 local_ids = self.manager.update_from_focus_detection(local_det, 'local')
                 scan_strategy = 'LOCK-TRACK+LOCAL' if lock_ids else 'LOCAL-VALIDATE'
@@ -726,6 +888,7 @@ class TrackerPipeline:
                 imgsz=self.cfg.ROI_IMG_SIZE,
                 source=DetectionSource.ROI,
             )
+            roi_dets = self._filter_ignored_detections(roi_dets, frame.shape, DetectionSource.ROI)
             timings_ms['roi'] = (time.perf_counter() - t0) * 1000.0
             roi_ids = self.manager.update_from_roi_yolo(roi_dets, global_ids | lock_ids | local_ids)
         else:
@@ -735,18 +898,21 @@ class TrackerPipeline:
         self.manager.note_primary_seen(bool(primary_seen_ids))
 
         night_budget_gate = self.budget.should_run_night(self.frame_counter)
-        if self.manager.should_run_night_detector() and night_budget_gate:
+        if self._should_run_night_detector() and night_budget_gate:
             t0 = time.perf_counter()
             night_dets = self.night.detect(frame)
+            night_dets = self._filter_ignored_night_detections(night_dets, frame.shape)
             timings_ms['night'] = (time.perf_counter() - t0) * 1000.0
             night_ids = self.manager.update_from_night(night_dets, primary_seen_ids)
 
         all_seen = primary_seen_ids | night_ids
+        t_manager = time.perf_counter()
         self.manager.age_targets(all_seen)
         self.manager.select_active()
         self.manager.update_focus_mode()
         lock_events = self.lock_telemetry.update(self.manager.is_focus_mode(), self.manager.active_id)
         operator_override_status = self._apply_operator_override_if_pending(frame)
+        timings_ms['manager'] = (time.perf_counter() - t_manager) * 1000.0
 
         # ALG-001 v1: build belief + decide action.  Telemetry-only by default;
         # the guarded behavior path runs only when cfg.ACTION_POLICY_BEHAVIOR_ENABLED
@@ -773,6 +939,9 @@ class TrackerPipeline:
         active = self.manager.get_active_target()
         self.continuity.update(self.manager.active_id)
         active_bbox = active.raw_bbox if active is not None else None
+        # TASK-103b: stabilize bbox size via EMA (rate-limited, conf-gated).
+        _active_conf = float(active.conf) if active is not None else 0.0
+        active_bbox = self._bbox_stabilizer.update(active_bbox, _active_conf)
         display_confidence = self.display_state.update_confidence(
             active, lock_score, self._video_elapsed_sec, self.frame_counter)
         reticle_center = self.display_state.update_reticle(active)
@@ -783,7 +952,6 @@ class TrackerPipeline:
         lost_frames_val = active.lost_frames if active is not None else None
         tracking_mode = self.tracking_sm.update(lost_frames_val)
         display_tracking_mode = self.tracking_sm.update_display()
-        self._adapt_auto_scene(frame)
         smooth_active_bbox = self.display_state.update_smooth_bbox(active)
 
         rendered = None
@@ -819,6 +987,37 @@ class TrackerPipeline:
 
         visible = len(self.manager.display_targets())
         active_source = normalize_source(active.source) if active is not None else '-'
+        workflow = self.operator_workflow.update(
+            frame_index=int(frame_index),
+            active=active,
+            visible_count=int(visible),
+            operator_override_status=str(operator_override_status),
+            lock_score=float(lock_score),
+            display_confidence=float(display_confidence),
+            low_level_mode=str(tracking_mode),
+        )
+        # TASK-103a Diagnostic Pack v1 — read-only telemetry.
+        timings_ms['total'] = (time.perf_counter() - t_frame_start) * 1000.0
+        scene_label_runtime = str(getattr(self, '_auto_scene_state', '') or '')
+        _confirm_raw = int(getattr(self.cfg, 'AUTO_SCENE_CONFIRM_FRAMES', 30))
+        _interval = max(1, int(getattr(self.cfg, 'AUTO_SCENE_SAMPLE_INTERVAL', 10)))
+        _confirm_eff = max(1, _confirm_raw // _interval)
+        _streak = int(getattr(self, '_auto_scene_streak', 0))
+        scene_confidence_runtime = 1.0 if _streak == 0 else max(0.0, 1.0 - _streak / _confirm_eff)
+        _operator_seen = 1 if str(operator_override_status) in {'applied', 'verifying', 'confirmed'} else 0
+        proposal_count_by_source = {
+            'yolo': len(global_ids),
+            'lock': len(lock_ids),
+            'local': len(local_ids),
+            'roi': len(roi_ids),
+            'night': len(night_ids),
+            'operator': _operator_seen,
+        }
+        if active_bbox is not None:
+            _x1, _y1, _x2, _y2 = active_bbox
+            bbox_area = max(0, int(_x2 - _x1)) * max(0, int(_y2 - _y1))
+        else:
+            bbox_area = 0
         return FrameOutput(
             frame=rendered,
             fps=fps,
@@ -857,6 +1056,14 @@ class TrackerPipeline:
             operator_override_status=str(operator_override_status),
             operator_override_count=int(self._operator_override_count),
             operator_override_bbox=self._last_operator_override_bbox,
+            operator_workflow_state=str(workflow.state.value),
+            operator_workflow_events=list(workflow.events),
+            operator_click_to_lock_frames=workflow.click_to_lock_frames,
+            operator_verify_age_frames=int(workflow.verify_age_frames),
+            scene_label_runtime=scene_label_runtime,
+            scene_confidence_runtime=scene_confidence_runtime,
+            proposal_count_by_source=proposal_count_by_source,
+            bbox_area=bbox_area,
         )
 
 
