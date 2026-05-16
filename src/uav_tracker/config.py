@@ -245,6 +245,8 @@ class Config:
     AUTO_SCENE_IR_EDGE_MAX: float = 0.12        # max edge_density for IR (above = EO-overcast guard)
     AUTO_SCENE_IR_HOT_FRAC: float = 0.005       # min hot_pixel_frac to confirm IR (hot spots)
     AUTO_SCENE_STABILITY_WINDOW: int = 30       # sliding-window size for scene stability ratio
+    # TASK-103d: Unified Proposal Layer trust-based target selection.
+    TRUST_SWITCH_MARGIN: float = 0.25           # best must beat active by 25% to switch
 
     # ── Bbox Smoothing (display-side EMA to reduce visual jitter) ────────────
     SMOOTH_BBOX_ALPHA: float = 0.35             # EMA alpha for position (higher = more responsive)

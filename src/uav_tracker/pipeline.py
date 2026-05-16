@@ -965,6 +965,9 @@ class TrackerPipeline:
         t_manager = time.perf_counter()
         self.manager.age_targets(all_seen)
         self.manager.select_active()
+        # TASK-103d: refine selection with scene-conditional trust×geometry score.
+        _scene_now = str(getattr(self, '_auto_scene_state', 'day'))
+        self.manager.pick_active_by_trust(scene=_scene_now)
         self.manager.update_focus_mode()
         lock_events = self.lock_telemetry.update(self.manager.is_focus_mode(), self.manager.active_id)
         operator_override_status = self._apply_operator_override_if_pending(frame)

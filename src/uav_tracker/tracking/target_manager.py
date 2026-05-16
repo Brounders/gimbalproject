@@ -6,7 +6,9 @@ from uav_tracker.detection_source import DetectionSource
 from uav_tracker.runtime.base import Detection
 from uav_tracker.tracking.focus_mode_controller import FocusModeController
 from uav_tracker.tracking.operator_override import OperatorOverrideResult, OperatorTargetOverride
+from uav_tracker.tracking.proposal_trust import build_proposals
 from uav_tracker.tracking.tracked_target import TrackedTarget
+from uav_tracker.tracking.evidence import normalize_source
 from utils.geometry import iou
 
 
@@ -19,6 +21,7 @@ class TargetManager:
         self._frames_since_primary = 9999
         self._focus_ctrl = FocusModeController(cfg)
         self._active_switch_cooldown = 0
+        self._night_key_to_tid: dict[tuple, int] = {}
 
     def _smooth_bbox(self, old_bbox, new_bbox, alpha):
         if old_bbox is None:
@@ -166,11 +169,19 @@ class TargetManager:
         target.cls_id = int(self.cfg.PREFER_CLASS_ID)
         target.drone_score = 1.0
         target.lost_frames = 0
-        target.hit_streak = max(int(target.hit_streak), int(self.cfg.LOCK_CONFIRM_FRAMES))
+        instant_lock = bool(getattr(self.cfg, 'OPERATOR_OVERRIDE_INSTANT_LOCK', True))
+        if instant_lock:
+            target.hit_streak = max(int(target.hit_streak), int(self.cfg.LOCK_CONFIRM_FRAMES))
+        else:
+            target.hit_streak = max(1, min(int(target.hit_streak), int(self.cfg.LOCK_CONFIRM_FRAMES) - 1))
         target.source = DetectionSource.OPERATOR
         self._set_active_id(int(tid), force=True)
-        self._focus_ctrl.force_active()
-        return OperatorOverrideResult(True, 'applied', active_id=int(tid), bbox=bbox)
+        if instant_lock:
+            self._focus_ctrl.force_active()
+            status = 'applied'
+        else:
+            status = 'verifying'
+        return OperatorOverrideResult(True, status, active_id=int(tid), bbox=bbox)
 
     def confirm_active_as_operator(self) -> bool:
         active = self.get_active_target()
@@ -424,14 +435,61 @@ class TargetManager:
             return set()
 
         primary_bboxes = [self.targets[tid].raw_bbox for tid in primary_ids if tid in self.targets]
+        usable_dets = [
+            det for det in night_dets
+            if not self._overlaps_any(det['bbox'], primary_bboxes, iou_thresh=0.3)
+        ]
         seen_night_ids = set()
-        for det in night_dets:
-            if self._overlaps_any(det['bbox'], primary_bboxes, iou_thresh=0.3):
+        active = self.get_active_target()
+        used_det_index = None
+        if active is not None and active.source == DetectionSource.NIGHT and usable_dets:
+            px, py = self._predict_center(active)
+            hold_radius = float(getattr(self.cfg, 'NIGHT_ACTIVE_HOLD_RADIUS', 0) or 0)
+            max_dist = hold_radius if hold_radius > 0 else max(
+                float(self.cfg.NIGHT_TRACK_DIST),
+                float(getattr(self.cfg, 'NIGHT_STICKY_RADIUS', self.cfg.NIGHT_TRACK_DIST)),
+            )
+            best_index = None
+            best_dist = max_dist
+            for index, det in enumerate(usable_dets):
+                dist = self._dist(float(det['cx']), float(det['cy']), px, py)
+                if dist < best_dist:
+                    best_index = index
+                    best_dist = dist
+            if best_index is not None:
+                det = usable_dets[best_index]
+                key = det.get('_key')
+                key = tuple(key) if key is not None else None
+                if key is not None:
+                    self._night_key_to_tid[key] = int(active.track_id)
+                self._update_or_create_target(
+                    active.track_id,
+                    det['bbox'],
+                    det['cx'],
+                    det['cy'],
+                    det.get('conf', 0.0),
+                    det.get('cls_id', -1),
+                    DetectionSource.NIGHT,
+                )
+                seen_night_ids.add(active.track_id)
+                used_det_index = best_index
+
+        for index, det in enumerate(usable_dets):
+            if index == used_det_index:
                 continue
-            tid = self._find_nearby_track(det['cx'], det['cy'], max_dist=self.cfg.NIGHT_TRACK_DIST, sources={DetectionSource.NIGHT})
+            key = det.get('_key')
+            key = tuple(key) if key is not None else None
+            tid = self._night_key_to_tid.get(key) if key is not None else None
+            if tid is not None and tid not in self.targets:
+                self._night_key_to_tid.pop(key, None)
+                tid = None
+            if tid is None:
+                tid = self._find_nearby_track(det['cx'], det['cy'], max_dist=self.cfg.NIGHT_TRACK_DIST, sources={DetectionSource.NIGHT})
             if tid is None:
                 tid = self._next_aux_id
                 self._next_aux_id += 1
+            if key is not None:
+                self._night_key_to_tid[key] = int(tid)
             self._update_or_create_target(tid, det['bbox'], det['cx'], det['cy'], det.get('conf', 0.0), det.get('cls_id', -1), DetectionSource.NIGHT)
             seen_night_ids.add(tid)
         return seen_night_ids
@@ -466,6 +524,9 @@ class TargetManager:
                     dead.append(tid)
         for tid in dead:
             del self.targets[tid]
+            for key, mapped_tid in list(self._night_key_to_tid.items()):
+                if mapped_tid == tid:
+                    del self._night_key_to_tid[key]
             if self.active_id == tid:
                 self._set_active_id(None)
 
@@ -491,6 +552,52 @@ class TargetManager:
         best = max(self.targets.values(), key=score)
         if best.speed > self.cfg.SELECT_ACTIVE_MIN_SPEED or self._is_drone_like_target(best, self.cfg.DRONE_REACQUIRE_SCORE_MIN):
             self._set_active_id(best.track_id)
+
+    def pick_active_by_trust(self, scene: str = 'day') -> None:
+        """TASK-103d — Scene-conditional target selection via trust×geometry score.
+
+        Called AFTER select_active().  When no active target exists, promotes
+        the top-trust proposal.  When an active target exists, switches only if
+        a competing candidate scores >TRUST_SWITCH_MARGIN better — prevents
+        oscillation between equally matched targets.
+
+        Focus-mode and strict-lock guards are respected.
+        """
+        if not self.targets:
+            return
+        if self.cfg.ACTIVE_STRICT_LOCK_SWITCH and self.is_focus_mode():
+            return
+
+        proposals = build_proposals(self.targets, scene, normalize_source)
+        if not proposals:
+            return
+
+        best = proposals[0]
+        current = self.get_active_target()
+
+        if current is None:
+            # No active target: promote best if it looks like a real drone.
+            target = self.targets.get(best.target_id)
+            if target is not None and (
+                target.speed > self.cfg.SELECT_ACTIVE_MIN_SPEED
+                or self._is_drone_like_target(target, self.cfg.DRONE_REACQUIRE_SCORE_MIN)
+            ):
+                self._set_active_id(best.target_id)
+            return
+
+        if best.target_id == current.track_id:
+            return  # Best is already active — nothing to do.
+
+        # Build current proposal for comparison.
+        curr_proposals = [p for p in proposals if p.target_id == current.track_id]
+        if not curr_proposals:
+            return
+        curr = curr_proposals[0]
+
+        margin = float(getattr(self.cfg, 'TRUST_SWITCH_MARGIN', 0.25))
+        if best.total_score > curr.total_score * (1.0 + margin):
+            if self._can_switch_active(best.target_id):
+                self._set_active_id(best.target_id)
 
     def switch_target(self):
         ids = list(self.targets.keys())
