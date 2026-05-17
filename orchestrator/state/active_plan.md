@@ -41,6 +41,24 @@ The immediate goal is not physical folder movement.  The immediate goal is to
 turn the audit into a controlled backlog: inventory, ownership, runbooks, script
 registry, archive-candidate proof, and commit-boundary review.
 
+Structure stabilization has 6 stages:
+
+0. Audit authority replacement — DONE in controller state once the full Claude
+   audit files replace the temporary intake stubs.
+1. TASK-20260517-109 — stabilization intake: convert the audit into a concrete
+   Now/Next/Later backlog and keep physical moves blocked.
+2. TASK-20260517-110 — ownership documentation: script registry, UI primary
+   runbook, `ui_web/` decision note, `automation/state/` status note.
+3. TASK-20260517-111 — proof-based cleanup plan: archive-candidate proof table,
+   generated/local artifact ignore policy, no deletes without owner decision.
+4. TASK-20260517-112 — safety hardening plan: NightSmallTargetDetector unit-test
+   scope, offscreen PySide6 CI sanity, pipeline smoke-test proposal.
+5. TASK-20260517-113 — physical restructure proposal: only after stages 1-4,
+   decide whether to move `python_scripts/`, split configs, or archive files.
+
+Return to `TASK-20260517-108` only after stages 1-3 are complete and pack/data
+ownership is explicit.
+
 ## Completed Foundation
 
 | ID | Задача | Статус | Результат |
