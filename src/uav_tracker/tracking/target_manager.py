@@ -22,7 +22,9 @@ class TargetManager:
         self._focus_ctrl = FocusModeController(cfg)
         self._active_switch_cooldown = 0
         self._night_key_to_tid: dict[tuple, int] = {}
-        self._low_trust_streak: int = 0  # TASK-103e: frames active source trust < threshold
+        self._low_trust_streak: int = 0       # TASK-103e: frames active source trust < threshold
+        self._health_released_tid: int | None = None  # TASK-103f: tid suppressed after health release
+        self._health_suppress_frames: int = 0         # TASK-103f: frames remaining in suppression window
 
     def _smooth_bbox(self, old_bbox, new_bbox, alpha):
         if old_bbox is None:
@@ -89,7 +91,9 @@ class TargetManager:
             return False
         self.active_id = tid
         self._active_switch_cooldown = max(0, int(self.cfg.ACTIVE_ID_SWITCH_COOLDOWN_FRAMES))
-        self._low_trust_streak = 0  # TASK-103e: reset on every active switch
+        self._low_trust_streak = 0        # TASK-103e: reset on every active switch
+        self._health_released_tid = None  # TASK-103f: clear suppression on successful switch
+        self._health_suppress_frames = 0  # TASK-103f
         return True
 
     def release_active(self) -> bool:
@@ -103,6 +107,8 @@ class TargetManager:
         Used by guarded ActionPolicy behavior wiring (ALG-001 v1.1) so it
         does not have to call the private `_set_active_id` shim.
         """
+        self._health_released_tid = None   # TASK-103f: operator release clears suppression
+        self._health_suppress_frames = 0   # TASK-103f
         if self.active_id is None:
             return False
         self._set_active_id(None)
@@ -579,12 +585,19 @@ class TargetManager:
         current = self.get_active_target()
 
         if current is None:
+            # TASK-103f: count down suppression window each frame while no active target.
+            if self._health_suppress_frames > 0:
+                self._health_suppress_frames -= 1
             # No active target: promote best if it looks like a real drone.
             target = self.targets.get(best.target_id)
-            if target is not None and (
-                target.speed > self.cfg.SELECT_ACTIVE_MIN_SPEED
-                or self._is_drone_like_target(target, self.cfg.DRONE_REACQUIRE_SCORE_MIN)
-            ):
+            if target is None:
+                return
+            # Skip suppressed tid to prevent immediate re-lock after health release.
+            if (best.target_id == self._health_released_tid
+                    and self._health_suppress_frames > 0):
+                return
+            if (target.speed > self.cfg.SELECT_ACTIVE_MIN_SPEED
+                    or self._is_drone_like_target(target, self.cfg.DRONE_REACQUIRE_SCORE_MIN)):
                 self._set_active_id(best.target_id)
             return
 
@@ -605,6 +618,9 @@ class TargetManager:
                 self._low_trust_streak += 1
                 _streak = int(getattr(self.cfg, 'LOCK_HEALTH_RELEASE_STREAK', 80))
                 if self._low_trust_streak >= _streak:
+                    # TASK-103f: suppress re-lock on the same tid for one streak window
+                    self._health_released_tid = _ha.track_id
+                    self._health_suppress_frames = _streak
                     self._set_active_id(None)
             else:
                 self._low_trust_streak = 0

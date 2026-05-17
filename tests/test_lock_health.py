@@ -136,6 +136,75 @@ def test_streak_resets_when_trusted_source_promoted():
     assert mgr._low_trust_streak == 0, "Streak resets after switching to trusted night/ir"
 
 
+# ---------------------------------------------------------------------------
+# TASK-103f: Re-acquisition suppression after health release
+# ---------------------------------------------------------------------------
+
+def test_suppression_prevents_immediate_relock():
+    """After health release, same tid is suppressed for one streak window."""
+    cfg = _cfg(LOCK_HEALTH_RELEASE_STREAK=3, TRUST_SWITCH_MARGIN=10.0)
+    mgr = TargetManager(cfg)
+    mgr.targets = {1: _target(1, "lock")}
+    mgr.active_id = 1
+
+    # Health gate fires at frame 3
+    for _ in range(3):
+        mgr.pick_active_by_trust(scene="ir")
+    assert mgr.active_id is None, "Health gate should release"
+    assert mgr._health_released_tid == 1
+    assert mgr._health_suppress_frames == 3
+
+    # tid=1 (lock) still the only target — must stay suppressed
+    for _ in range(2):
+        mgr.pick_active_by_trust(scene="ir")
+        assert mgr.active_id is None, "Suppressed tid must not be re-locked"
+
+    # After suppression window expires, re-lock is allowed
+    mgr.pick_active_by_trust(scene="ir")
+    assert mgr.active_id == 1, "After suppression expires, re-lock is allowed"
+
+
+def test_suppression_cleared_by_trusted_switch():
+    """If a trusted primary-source target appears during suppression it is selected and clears suppression."""
+    # Use day scene: yolo/day trust=0.85 > 0.50, yolo IS primary source → can be promoted when active=None.
+    # Lock/day trust=0.50 → exactly at threshold, but use lock/ir so trust=0.38 < 0.50 to build streak.
+    # Switch to day scene after health fires so yolo target can be promoted.
+    cfg = _cfg(LOCK_HEALTH_RELEASE_STREAK=3, TRUST_SWITCH_MARGIN=10.0,
+               ACTIVE_ID_SWITCH_COOLDOWN_FRAMES=0)
+    mgr = TargetManager(cfg)
+    mgr.targets = {1: _target(1, "lock")}
+    mgr.active_id = 1
+
+    # Health gate fires in IR scene (lock/ir trust=0.38 < 0.50)
+    for _ in range(3):
+        mgr.pick_active_by_trust(scene="ir")
+    assert mgr.active_id is None
+    assert mgr._health_released_tid == 1
+
+    # Yolo target appears (different tid, primary source) — day scene, trust=0.85
+    mgr.targets[2] = _target(2, "yolo", drone_score=0.6, hit_streak=10)
+    mgr.pick_active_by_trust(scene="day")
+    assert mgr.active_id == 2, "Trusted yolo target should be promoted"
+    assert mgr._health_released_tid is None, "Suppression cleared by trusted switch"
+    assert mgr._health_suppress_frames == 0
+
+
+def test_suppression_cleared_by_operator_release():
+    """release_active() clears the suppression window."""
+    cfg = _cfg(LOCK_HEALTH_RELEASE_STREAK=10, TRUST_SWITCH_MARGIN=10.0)
+    mgr = TargetManager(cfg)
+    mgr.targets = {1: _target(1, "lock")}
+    mgr.active_id = 1
+
+    for _ in range(10):
+        mgr.pick_active_by_trust(scene="ir")
+    assert mgr._health_released_tid == 1
+
+    mgr.release_active()  # operator releases
+    assert mgr._health_released_tid is None
+    assert mgr._health_suppress_frames == 0
+
+
 def test_streak_preserved_when_switch_blocked_by_cooldown():
     """When cooldown blocks switch, streak accumulates each frame."""
     cfg = _cfg(TRUST_SWITCH_MARGIN=0.10, LOCK_HEALTH_RELEASE_STREAK=80,
