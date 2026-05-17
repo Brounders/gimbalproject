@@ -7,7 +7,7 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260517-116
+- TASK-20260517-118
 
 ## Active RTX Tasks (execution allowed now)
 - none
@@ -109,6 +109,7 @@ ownership is explicit.
 - `orchestrator/reports/REPORT-TASK-114-SYNC-BOUNDARY-DECISION-20260517.md`
 - `orchestrator/reports/REPORT-TASK-115-SYNC-BRANCH-VALIDATION-20260517.md`
 - `orchestrator/reports/REPORT-TASK-116-RTX-SYNC-INTAKE-PROMPT-20260517.md`
+- `orchestrator/reports/REPORT-TASK-117-NIGHT-DETECTOR-UNIT-COVERAGE-20260517.md`
 
 ## Current Execution Queue
 
@@ -135,7 +136,9 @@ ownership is explicit.
 | TASK-20260514-093 | Commit boundary review | DONE | Local main is clean but 170 commits ahead with mixed project/agent history; wholesale push blocked pending sync-boundary decision |
 | TASK-20260517-114 | Sync boundary decision | DONE | Selected isolated branch strategy: `codex/sync-boundary-20260517`; do not push/pull `main` for RTX |
 | TASK-20260517-115 | Sync branch validation | DONE | Created and validated `codex/sync-boundary-20260517` as local sync snapshot |
-| TASK-20260517-116 | RTX sync intake | ACTIVE | Publish/fetch sync branch on RTX, verify exact HEAD and CUDA/tooling, then resume detector strategy |
+| TASK-20260517-116 | RTX sync intake | DEFERRED | Human deferred RTX/training; branch remains available but is not the active blocker |
+| TASK-20260517-117 | Night detector unit coverage | DONE | Added synthetic NightSmallTargetDetector tests; 7 targeted tests pass locally |
+| TASK-20260517-118 | No-training detector strategy gate | ACTIVE | Identify next bounded local detector/runtime/tooling step without RTX training |
 
 ## Deferred From Previous Plan
 
@@ -147,7 +150,7 @@ ownership is explicit.
 
 ## Current Decision Gate
 
-TASK-20260517-116 активна. Structure stabilization intake is complete, and sync branch `codex/sync-boundary-20260517` is published as the RTX handoff path. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled until RTX verifies the branch snapshot.
+TASK-20260517-118 активна. RTX/training is deferred by Human; sync branch `codex/sync-boundary-20260517` remains available but is not the active blocker. Selector/reacquire work remains closed; next work must be a bounded no-training detector/runtime strategy gate.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -173,9 +176,8 @@ Detector evidence pack result:
 - `antiuav_rgbt_train_20190925_205804_1_2_infrared`: best `yolo@0.05`, Hit@0.1 `0.9543`; YOLO signal exists but operating threshold/ranking needs training/gate treatment.
 
 Next bounded step:
-1. Do not push `main`.
-2. Publish or otherwise transfer `codex/sync-boundary-20260517` for RTX.
-3. On RTX, verify exact HEAD, Python/CUDA/Torch/Ultralytics, orchestrator state,
-   and compileall.
-4. After RTX branch verification, return to detector strategy
-   (`TASK-20260517-108` / `TASK-20260516-100`).
+1. Do not start RTX training.
+2. Do not push `main`.
+3. Run a no-training detector strategy gate: decide whether weak clips can improve
+   through local runtime/config/tooling before dataset/training work.
+4. Keep TRAIN-20260517-002 draft until Human explicitly reopens RTX training.
