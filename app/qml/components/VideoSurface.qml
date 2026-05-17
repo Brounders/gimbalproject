@@ -96,7 +96,7 @@ Rectangle {
         source: visible ? ("image://frames/current?" + videoRoot.frameId) : ""
         fillMode: Image.PreserveAspectCrop
         cache: false
-        asynchronous: false
+        asynchronous: true
     }
 
     Canvas {

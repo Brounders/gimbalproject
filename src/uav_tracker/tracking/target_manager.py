@@ -581,7 +581,7 @@ class TargetManager:
         if self.cfg.ACTIVE_STRICT_LOCK_SWITCH and self.is_focus_mode():
             return
 
-        proposals = build_proposals(self.targets, scene, normalize_source)
+        proposals = build_proposals(self.targets, scene, normalize_source, cfg=self.cfg)
         if not proposals:
             return
 

@@ -18,4 +18,6 @@ class TrackedTarget:
     lost_frames: int = 0
     hit_streak: int = 0
     source: str = 'yolo'
+    motion_score: float = 0.0
+    static_streak: int = 0
     trail: deque = field(default_factory=lambda: deque(maxlen=30))

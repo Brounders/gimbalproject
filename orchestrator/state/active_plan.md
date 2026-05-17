@@ -7,7 +7,7 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260517-125
+- TASK-20260517-126
 
 ## Active RTX Tasks (execution allowed now)
 - none
@@ -117,6 +117,8 @@ ownership is explicit.
 - `orchestrator/reports/REPORT-TASK-122-WEAK4-VISUAL-OFFTARGET-SAMPLE-AUDIT-20260517.md`
 - `orchestrator/reports/REPORT-TASK-123-THERMAL-OSD-IGNORE-GATE-20260517.md`
 - `orchestrator/reports/REPORT-TASK-125-STATIC-TEXT-VS-MOTION-STRATEGY-20260517.md`
+- `orchestrator/reports/REPORT-TASK-125-STATIC-GATE-V1-AB-20260517.md`
+- `orchestrator/reports/REPORT-TASK-126-PLAYBACK-PERFORMANCE-ROOT-CAUSE-20260517.md`
 
 ## Current Execution Queue
 
@@ -152,7 +154,8 @@ ownership is explicit.
 | TASK-20260517-122 | Weak4 visual off-target sample audit | DONE | Visual samples show RGBT 20190925 locks top-left OSD; next no-training lever is thermal OSD ignore-zone A/B |
 | TASK-20260517-123 | Thermal OSD ignore-zone A/B gate | DONE | Accepted OSD-wide ignore zone for `antiuav_thermal_peak`; RGBT weak recall improved without new IR gate failure |
 | TASK-20260517-124 | Tracking-live-auto OSD propagation gate | DEFERRED | Human correction: OSD zones are acceptable for test clips, but not the live-tracking strategy |
-| TASK-20260517-125 | Static-text rejection / motion-aware target validity gate | ACTIVE | Explain and gate why static high-contrast text can outrank moving active targets; no RTX/training |
+| TASK-20260517-125 | Static-text rejection / motion-aware target validity gate | DONE | Default-off static evidence layer added; v1 candidate rejected for promotion because weak4 movement was negligible |
+| TASK-20260517-126 | Playback performance operator smoke | ACTIVE | Verify QML playback after worker-thread QImage conversion; if stutter remains, tune backend scheduling |
 
 ## Deferred From Previous Plan
 
@@ -164,7 +167,7 @@ ownership is explicit.
 
 ## Current Decision Gate
 
-TASK-20260517-125 активна. RTX/training is deferred by Human; sync branch `codex/sync-boundary-20260517` remains available but is not the active blocker.
+TASK-20260517-126 активна. RTX/training is deferred by Human; sync branch `codex/sync-boundary-20260517` remains available but is not the active blocker.
 
 Human corrected the strategy: OSD-wide ignore zones may remain useful for historical test clips with embedded telemetry, but they are not the live-tracking solution.  The real live-tracking ceiling is target validity: the selector must stop treating static high-contrast text/overlays as better evidence than a moving, active, contrast target.
 
@@ -173,6 +176,18 @@ Current code finding:
 - `build_proposals()` uses source trust plus `conf`, `drone_score`, `hit_streak`, and `lost_frames`;
 - `TargetEvidence` already defines `motion_score`, `appearance_score`, `trajectory_score`, and `scale_score`, but these components are not the active selector path;
 - therefore a static text patch can win if it is bright/stable/repeatedly detected.
+
+TASK-125 result:
+- default-off static target evidence layer added;
+- candidate preset `antiuav_thermal_peak_static_gate` tested on weak4;
+- candidate not promoted: recall/false-lock movement was negligible except a tiny `0.309 -> 0.313` recall improvement on `antiuav_rgbt_20190925`;
+- next tracker logic must use richer evidence: local background motion, trajectory plausibility, bbox scale/shape plausibility, and primary-detector support versus lock/local self-confirmation.
+
+Playback performance finding:
+- weak4 p99 frame latency is already high enough to stutter (`~52-84 ms`);
+- backend spikes mostly come from YOLO/global and sometimes local validation;
+- QML path also had a GUI-thread bottleneck: NumPy BGR -> RGB/QImage conversion happened in `TrackerBridge._on_frame_ready()`;
+- first UI fix moved QImage conversion into `TrackerWorker` and made QML image loading asynchronous.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -200,6 +215,6 @@ Detector evidence pack result:
 Next bounded step:
 1. Do not start RTX training.
 2. Do not push `main`.
-3. Run TASK-20260517-125: design and A/B a default-off static-target rejection / motion-aware validity gate.
-4. Promote only if weak4 off-target drops without day/IR/noise regression and with acceptable FPS impact.
+3. Run TASK-20260517-126: QML operator smoke for playback smoothness after worker-thread QImage conversion.
+4. If stutter remains, profile backend scheduling and tune live preset latency (`imgsz`, `GLOBAL_SCAN_INTERVAL`, local validation cadence, and frame presentation throttling).
 5. Keep TRAIN-20260517-002 deferred until Human explicitly reopens RTX training.

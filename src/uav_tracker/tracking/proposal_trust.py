@@ -41,6 +41,9 @@ class Proposal:
     lost_frames: int
     trust: float        # scene-conditional trust weight
     geo_score: float    # geometry component (conf + drone_score + streak − lost)
+    motion_score: float # bbox-local motion ratio [0, 1]
+    static_streak: int  # consecutive low-motion frames
+    static_penalty: float # selector multiplier for static weak-source candidates
     total_score: float  # trust × geo_score
 
 
@@ -120,9 +123,14 @@ def build_proposals(
     targets: dict,          # dict[int, TrackedTarget]
     scene: str,
     normalize_fn,           # normalize_source callable
+    cfg=None,
 ) -> list[Proposal]:
     """Convert all TrackedTarget objects to Proposal list with trust scores."""
     proposals = []
+    static_gate_enabled = bool(getattr(cfg, "STATIC_TARGET_REJECTION_ENABLED", False))
+    static_sources = set(getattr(cfg, "STATIC_TARGET_SOURCES", ("night", "roi", "lock")))
+    static_streak_min = int(getattr(cfg, "STATIC_TARGET_STREAK_MIN", 6) or 6)
+    static_penalty_value = float(getattr(cfg, "STATIC_TARGET_PENALTY", 0.35) or 0.35)
     for target in targets.values():
         src = normalize_fn(target.source)
         trust = source_trust(src, scene)
@@ -132,6 +140,15 @@ def build_proposals(
             int(target.hit_streak),
             int(target.lost_frames),
         )
+        motion_score = float(getattr(target, "motion_score", 0.0) or 0.0)
+        static_streak = int(getattr(target, "static_streak", 0) or 0)
+        static_penalty = 1.0
+        if (
+            static_gate_enabled
+            and src in static_sources
+            and static_streak >= static_streak_min
+        ):
+            static_penalty = max(0.0, min(1.0, static_penalty_value))
         proposals.append(
             Proposal(
                 target_id=int(target.track_id),
@@ -143,7 +160,10 @@ def build_proposals(
                 lost_frames=int(target.lost_frames),
                 trust=trust,
                 geo_score=geo,
-                total_score=trust * max(0.0, geo),
+                motion_score=motion_score,
+                static_streak=static_streak,
+                static_penalty=static_penalty,
+                total_score=trust * max(0.0, geo) * static_penalty,
             )
         )
     return sorted(proposals, key=lambda p: p.total_score, reverse=True)

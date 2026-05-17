@@ -18,6 +18,10 @@ class FrameProvider(QQuickImageProvider):
         self._image.fill(0x050810)
 
     def update_frame(self, frame: np.ndarray) -> None:
+        if isinstance(frame, QImage):
+            with self._lock:
+                self._image = frame
+            return
         if frame is None or frame.size == 0:
             return
         if frame.ndim != 3 or frame.shape[2] < 3:

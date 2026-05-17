@@ -253,6 +253,14 @@ class Config:
     LOCK_HEALTH_MIN_TRUST: float = 0.50         # trust below this = "untrusted for current scene"
     LOCK_HEALTH_RELEASE_STREAK: int = 80        # last-resort release after N untrusted frames (> cooldown=30)
 
+    # ── Static target rejection (TASK-125, default-off candidate gate) ──────
+    STATIC_TARGET_REJECTION_ENABLED: bool = False
+    STATIC_TARGET_SOURCES: tuple[str, ...] = ("night", "roi", "lock", "local")
+    STATIC_TARGET_MOTION_THRESH: int = 10       # per-pixel frame-diff threshold inside target bbox
+    STATIC_TARGET_MIN_MOTION_RATIO: float = 0.006  # below this target is counted as static
+    STATIC_TARGET_STREAK_MIN: int = 6           # static frames before weak-source selector penalty
+    STATIC_TARGET_PENALTY: float = 0.35         # multiplier for static weak-source proposal score
+
     # ── Bbox Smoothing (display-side EMA to reduce visual jitter) ────────────
     SMOOTH_BBOX_ALPHA: float = 0.35             # EMA alpha for position (higher = more responsive)
     SMOOTH_BBOX_SIZE_ALPHA: float = 0.20        # EMA alpha for width/height (softer)

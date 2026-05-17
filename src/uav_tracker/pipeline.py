@@ -306,6 +306,8 @@ class TrackerPipeline:
         self._auto_scene_history: deque = deque()
         # TASK-103c: previous sample frame (grayscale) for motion density feature.
         self._prev_sample_gray: np.ndarray | None = None
+        # TASK-125: previous full-rate gray frame for bbox-local static target evidence.
+        self._prev_motion_gray: np.ndarray | None = None
 
     def _update_video_time(self, source_fps: Optional[float]) -> None:
         min_valid = self.cfg.SOURCE_FPS_MIN_VALID
@@ -315,6 +317,40 @@ class TrackerPipeline:
         fallback = self.fps_buf[-1] if self.fps_buf else self._fallback_fps
         fallback = max(min_valid, float(fallback))
         self._video_elapsed_sec += 1.0 / fallback
+
+    def _update_static_target_evidence(self, frame: np.ndarray) -> None:
+        """Update bbox-local motion ratio and static streak for each target.
+
+        This is telemetry unless STATIC_TARGET_REJECTION_ENABLED is set.  The
+        selector reads these fields only through the default-off TASK-125 gate.
+        """
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if frame.ndim == 3 else frame.copy()
+        prev = self._prev_motion_gray
+        self._prev_motion_gray = gray
+        if prev is None or prev.shape != gray.shape:
+            return
+
+        diff = cv2.absdiff(gray, prev)
+        thresh = int(getattr(self.cfg, "STATIC_TARGET_MOTION_THRESH", 10) or 10)
+        min_ratio = float(getattr(self.cfg, "STATIC_TARGET_MIN_MOTION_RATIO", 0.006) or 0.006)
+        h, w = gray.shape[:2]
+        for target in self.manager.targets.values():
+            x1, y1, x2, y2 = map(int, target.raw_bbox)
+            x1 = max(0, min(w - 1, x1))
+            x2 = max(0, min(w, x2))
+            y1 = max(0, min(h - 1, y1))
+            y2 = max(0, min(h, y2))
+            if x2 <= x1 or y2 <= y1:
+                target.motion_score = 0.0
+                target.static_streak += 1
+                continue
+            patch = diff[y1:y2, x1:x2]
+            motion_ratio = float(np.mean(patch > thresh)) if patch.size else 0.0
+            target.motion_score = max(0.0, min(1.0, motion_ratio / max(min_ratio, 1e-6)))
+            if motion_ratio < min_ratio:
+                target.static_streak += 1
+            else:
+                target.static_streak = 0
 
     def _adapt_auto_scene(self, frame: np.ndarray) -> None:
         """Auto scene detection v2 (TASK-103c): Day / Night / IR.
@@ -963,6 +999,7 @@ class TrackerPipeline:
 
         all_seen = primary_seen_ids | night_ids
         t_manager = time.perf_counter()
+        self._update_static_target_evidence(frame)
         self.manager.age_targets(all_seen)
         self.manager.select_active()
         # TASK-103d: refine selection with scene-conditional trust×geometry score.

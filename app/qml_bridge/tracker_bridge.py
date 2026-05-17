@@ -411,7 +411,12 @@ class TrackerBridge(QObject):
         self._set("active_bbox_json", self._bbox_json(stats.get("active_bbox")), self.activeBboxJsonChanged)
         self._set("display_targets_json", self._targets_json(stats.get("display_targets")), self.displayTargetsJsonChanged)
         timings = stats.get("timings_ms") or {}
-        latency = sum(float(v) for v in timings.values()) if isinstance(timings, dict) else 0.0
+        if isinstance(timings, dict) and "total" in timings:
+            latency = float(timings.get("total") or 0.0)
+        elif isinstance(timings, dict):
+            latency = sum(float(v) for v in timings.values())
+        else:
+            latency = 0.0
         self._set("latency_ms", int(round(latency)), self.latencyMsChanged)
         gt_iou = float(stats.get("gt_iou", 0.0) or 0.0)
         self._set("false_lock_risk", max(0.0, min(1.0, 1.0 - gt_iou)) if stats.get("gt_visible") else 0.0, self.falseLockRiskChanged)

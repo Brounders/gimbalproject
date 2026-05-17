@@ -7,6 +7,7 @@ import threading
 from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
+from PySide6.QtGui import QImage
 
 from uav_tracker.config import Config
 from uav_tracker.domain import (
@@ -18,6 +19,16 @@ from uav_tracker.evaluation import evaluate_source
 from uav_tracker.exceptions import InferenceDeviceError, ModelNotFoundError, SourceOpenError
 from uav_tracker.pipeline import TrackerPipeline, VideoSession
 from uav_tracker.tracking.operator_override import OperatorTargetOverride
+
+
+def _qimage_from_bgr_frame(frame) -> QImage | None:
+    if frame is None or getattr(frame, "size", 0) == 0:
+        return None
+    if getattr(frame, "ndim", 0) != 3 or frame.shape[2] < 3:
+        return None
+    height, width = frame.shape[:2]
+    rgb = frame[:, :, :3][:, :, ::-1].copy()
+    return QImage(rgb.data, width, height, rgb.strides[0], QImage.Format_RGB888).copy()
 
 
 def _display_targets_payload(pipeline: TrackerPipeline, limit: int = 3) -> list[dict]:
@@ -194,7 +205,9 @@ class TrackerWorker(QThread):
                 frame_height = int(display_frame.shape[0]) if display_frame is not None else 0
                 if display_frame is not None:
                     session.write(display_frame)
-                    self.frame_ready.emit(display_frame)
+                    qimage = _qimage_from_bgr_frame(display_frame)
+                    if qimage is not None:
+                        self.frame_ready.emit(qimage)
 
                 display_targets = _display_targets_payload(pipeline, limit=3)
                 if telemetry_writer is not None:
