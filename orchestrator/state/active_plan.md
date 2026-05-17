@@ -7,7 +7,7 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260517-120
+- TASK-20260517-121
 
 ## Active RTX Tasks (execution allowed now)
 - none
@@ -112,6 +112,7 @@ ownership is explicit.
 - `orchestrator/reports/REPORT-TASK-117-NIGHT-DETECTOR-UNIT-COVERAGE-20260517.md`
 - `orchestrator/reports/REPORT-TASK-118-NO-TRAINING-DETECTOR-STRATEGY-20260517.md`
 - `orchestrator/reports/REPORT-TASK-119-NIGHT-SOURCE-AUTHORITY-AB-GATE-20260517.md`
+- `orchestrator/reports/REPORT-TASK-120-NIGHT-PRIMARY-CANDIDATE-GATE-20260517.md`
 
 ## Current Execution Queue
 
@@ -142,7 +143,8 @@ ownership is explicit.
 | TASK-20260517-117 | Night detector unit coverage | DONE | Added synthetic NightSmallTargetDetector tests; 7 targeted tests pass locally |
 | TASK-20260517-118 | No-training detector strategy gate | DONE | Training not required now; selected local night-source authority A/B gate as next bounded step |
 | TASK-20260517-119 | Night-source authority A/B gate | DONE | Added default-off night primary source switch and tests; current presets unchanged |
-| TASK-20260517-120 | Night-primary candidate A/B gate | ACTIVE | Evaluate candidate config enabling night primary source for IR/night only; no RTX/training |
+| TASK-20260517-120 | Night-primary candidate A/B gate | DONE | Candidate rejected: no weak4 improvement and 9_dji false-lock worsened; production presets unchanged |
+| TASK-20260517-121 | Weak4 off-target geometry audit | ACTIVE | Analyze baseline active bbox vs GT center/scale to find next no-training geometry/proposal lever |
 
 ## Deferred From Previous Plan
 
@@ -154,7 +156,7 @@ ownership is explicit.
 
 ## Current Decision Gate
 
-TASK-20260517-120 активна. RTX/training is deferred by Human; sync branch `codex/sync-boundary-20260517` remains available but is not the active blocker. A default-off night-primary source switch exists, but it is not enabled in current presets; next work is candidate A/B evaluation.
+TASK-20260517-121 активна. RTX/training is deferred by Human; sync branch `codex/sync-boundary-20260517` remains available but is not the active blocker. Night-primary candidate was rejected; next work is weak4 off-target geometry/proposal audit without training.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -182,8 +184,7 @@ Detector evidence pack result:
 Next bounded step:
 1. Do not start RTX training.
 2. Do not push `main`.
-3. Run TASK-20260517-120 as candidate A/B gate with night primary source enabled
-   only in candidate config.
-4. Only consider preset promotion if protected clips and airplane/noise/bird
-   gates remain safe.
+3. Run TASK-20260517-121: inspect baseline active bbox vs GT geometry on weak4.
+4. Only consider a new runtime candidate if the geometry audit points to a
+   bounded filter/scoring/sizing lever.
 5. Keep TRAIN-20260517-002 deferred until Human explicitly reopens RTX training.
