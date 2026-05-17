@@ -118,3 +118,5 @@ TASK-20260517-105 | Codex Mac | Accepted | 2026-05-17 | Mac-local smoke triage a
 TASK-20260517-106 | Codex Mac | Accepted | 2026-05-17 | Weak4 V2/V3 protected gate complete; report orchestrator/reports/REPORT-TASK-106-WEAK4-V2-V3-GATE-20260517.md; V2/V3 rejected, next step is visual label/pack audit before more training
 
 TASK-20260517-107 | Codex Mac | Accepted | 2026-05-17 | Weak4 label/pack audit complete; report orchestrator/reports/REPORT-TASK-107-WEAK4-LABEL-AUDIT-20260517.md; contact sheets rendered, source/scale conflict found, next pack must quarantine wide strip and protected large-silhouette labels
+
+TASK-20260517-109 | Codex Mac | Accepted | 2026-05-17 | Project structure stabilization intake complete; report orchestrator/reports/REPORT-TASK-109-STRUCTURE-STABILIZATION-INTAKE-20260517.md; full audit converted into 6-stage backlog, TASK-108 remains paused

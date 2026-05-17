@@ -7,7 +7,7 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260517-109
+- TASK-20260517-110
 
 ## Active RTX Tasks (execution allowed now)
 - none
@@ -100,6 +100,7 @@ ownership is explicit.
 - `orchestrator/reports/REPORT-FULL-PROJECT-AUDIT-20260517.md`
 - `orchestrator/reports/REPORT-FULL-PROJECT-AUDIT-FILE-INVENTORY-20260517.md`
 - `orchestrator/reports/REPORT-FULL-PROJECT-AUDIT-RESTRUCTURE-PLAN-20260517.md`
+- `orchestrator/reports/REPORT-TASK-109-STRUCTURE-STABILIZATION-INTAKE-20260517.md`
 
 ## Current Execution Queue
 
@@ -118,7 +119,8 @@ ownership is explicit.
 | TASK-20260517-106 | Weak4 v2 protected training gate | DONE | V2/V3 candidates rejected; lower-risk variants did not preserve Micro3 improvement and protected gate |
 | TASK-20260517-107 | Weak4 label/pack audit | DONE | Contact sheets rendered; source/scale label conflict found; blind fine-tune variants stopped |
 | TASK-20260517-108 | Scale/source-aware weak4 pack | PAUSED | Paused by full-project audit intake; resume after structure stabilization and pack ownership decisions |
-| TASK-20260517-109 | Project structure stabilization intake | ACTIVE | Convert full-project audit into migration backlog without physical folder moves or runtime changes |
+| TASK-20260517-109 | Project structure stabilization intake | DONE | Full audit converted into 6-stage stabilization backlog; no folder moves or runtime changes |
+| TASK-20260517-110 | Ownership documentation | ACTIVE | Create script registry, primary UI runbook, ui_web decision note, and automation/state status note; no file moves |
 
 ## Deferred From Previous Plan
 
@@ -131,7 +133,7 @@ ownership is explicit.
 
 ## Current Decision Gate
 
-TASK-20260517-109 активна. Structure stabilization has priority over more detector training. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled.
+TASK-20260517-110 активна. Structure stabilization has priority over more detector training. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -158,5 +160,5 @@ Detector evidence pack result:
 
 Next bounded step:
 1. Do not move folders or delete files yet.
-2. Convert the audit into a concrete migration backlog: Now, Next, Later.
-3. Keep `TASK-20260517-108` paused until script ownership, UI ownership, archive candidates, and commit boundary are clear.
+2. Create ownership documentation: script registry, primary UI runbook, `ui_web/` decision note, and `automation/state` status note.
+3. Keep `TASK-20260517-108` paused until stages 1-3 are complete.
