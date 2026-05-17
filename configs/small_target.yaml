@@ -8,7 +8,7 @@ small_target_mode: true
 adaptive_scan_enabled: true
 global_scan_interval: 5
 lock_tracker_enabled: true
-night_enabled: true
+night_enabled: false
 roi_assist_enabled: true
 class_ema_alpha: 0.22
 drone_lock_score_min: 0.58

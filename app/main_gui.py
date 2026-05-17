@@ -51,6 +51,7 @@ from app.source_controller import on_source_type_changed as _on_source_type_chan
 from app.stats_renderer import update_stats as _update_stats_impl
 from app.ui.expert_dialog import build_expert_dialog as _build_expert_dialog
 from app.ui.layout_builders import (
+    build_bottom_info_bar as _build_bottom_info_bar,
     build_dock as _build_dock,
     build_header as _build_header,
     build_inspector_drawer as _build_inspector_drawer,
@@ -136,6 +137,10 @@ class MainWindow(QMainWindow):
         dock_row.addStretch(1)
         root.addLayout(dock_row)
 
+        # ── Bottom info bar (GPS / status / FPS) ────────────────────────────
+        info_bar = self.build_bottom_info_bar()
+        root.addWidget(info_bar)
+
         self.log_view = QPlainTextEdit()
         self.log_view.setReadOnly(True)
         self.log_view.document().setMaximumBlockCount(500)
@@ -170,6 +175,9 @@ class MainWindow(QMainWindow):
 
     def build_dock(self) -> QFrame:
         return _build_dock(self)
+
+    def build_bottom_info_bar(self) -> QFrame:
+        return _build_bottom_info_bar(self)
 
     def build_bottom_console(self) -> QFrame:
         return self.build_dock()
@@ -394,7 +402,7 @@ class MainWindow(QMainWindow):
         if self._training_desk_dialog is None:
             self._training_desk_dialog = TrainingDeskDialog(ROOT, self)
         self._training_desk_dialog.reload()
-        self._training_desk_dialog.show()
+        self._training_desk_dialog.showMaximized()
         self._training_desk_dialog.raise_()
         self._training_desk_dialog.activateWindow()
 

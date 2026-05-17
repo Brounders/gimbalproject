@@ -1,0 +1,21 @@
+# source,scene
+# Field night/low-light visible regression pack.
+# Slower than configs/regression_pack_night.csv; use for broader field checks.
+# Run:
+#   PYTHONPATH=src ./tracker_env/bin/python python_scripts/run_quality_gate.py \
+#     --pack-file configs/regression_pack_field_night.csv --preset night \
+#     --max-false-lock-rate 0.55 --max-night-id-changes-per-min 18.0
+test_videos/night_ground_large_drones.mp4,night
+test_videos/night_ground_indicator_lights.mp4,noise
+test_videos/visible.mp4,night
+test_videos/antiuav_rgbt_20190925_193610_1_1_visible.mp4,night
+test_videos/antiuav_rgbt_20190925_200805_1_2_visible.mp4,night
+test_videos/antiuav_rgbt_train_20190925_205804_1_1_visible.mp4,night
+test_videos/antiuav_rgbt_train_20190925_205804_1_2_visible.mp4,night
+test_videos/antiuav_rgbt_train_20190925_210802_1_2_visible.mp4,night
+test_videos/antiuav_rgbt_train_20190925_210802_1_4_visible.mp4,night
+test_videos/antiuav_rgbt_train_20190925_210802_1_5_visible.mp4,night
+test_videos/antiuav_rgbt_train_20190925_222534_1_2_visible.mp4,night
+test_videos/antiuav_rgbt_val_20190925_213001_1_1_visible.mp4,night
+test_videos/drone_detection_V_BIRD_001.mp4,noise
+test_videos/drone_detection_V_AIRPLANE_001.mp4,noise

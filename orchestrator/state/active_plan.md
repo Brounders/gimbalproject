@@ -7,7 +7,7 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260516-103
+- TASK-20260516-100
 
 ## Active RTX Tasks (execution allowed now)
 - none
@@ -52,6 +52,7 @@ and FPS impact.
 | TRACK-IMPROVE-002 | Act3 IR missed detection | DONE | Source-aware IR routing keeps OSD/airplane clips safe and uses `antiuav_thermal_peak` for drone IR clips |
 | TRACK-GATE-002 | Act3 A/B gate | DONE | Act3 accepted: IR recall 0.103->0.556, missed 0.517->0.113, risk count 25->21 |
 | TRACK-FOUNDATION-001 | Act4 live-auto foundation | DONE | Removed source-name preset routing; Target Lab uses `tracking_live_auto`; pipeline applies auto-scene overrides to actual night/peak detector |
+| TRACK-ACT5-001 | Act5 universal selector/reacquire | DONE | 103a-103f complete: bbox stability, auto-scene v2, unified proposal trust table, lock-health release, re-acquisition suppression; 103g N/A |
 
 ## Accepted Reports
 
@@ -62,6 +63,8 @@ and FPS impact.
 - `orchestrator/reports/REPORT-TARGET-LAB-ACT2-GATE-20260516.md`
 - `orchestrator/reports/REPORT-TARGET-LAB-ACT3-GATE-20260516.md`
 - `orchestrator/reports/REPORT-TARGET-LAB-ACT4-LIVE-AUTO-20260516.md`
+- `orchestrator/reports/REPORT-TASK-103-ACT5-FINAL-20260516.md`
+- `orchestrator/reports/REPORT-TASK-103f-REACQ-SUPPRESSION-20260517.md`
 
 ## Current Execution Queue
 
@@ -73,8 +76,8 @@ and FPS impact.
 | TASK-20260516-099 | A/B tracking gate | DONE | Act2 source-conflict fix accepted; keep for next baseline |
 | TASK-20260516-101 | Act3 IR missed detection | DONE | Source-aware IR preset routing accepted; risk count 25->21; IR recall 0.103->0.556 |
 | TASK-20260516-102 | Act4 live-auto foundation | DONE | Removed folder/source-name routing; Target Lab uses one live preset and runtime frame-content auto-scene |
-| TASK-20260516-103 | Act5 universal selector and reacquire | DONE | 103a-103e реализованы и приняты; A/B gate pass; 103f conditional — решение по scope за Human/Codex |
-| TASK-20260516-100 | Candidate-training return gate | WAITING_TRACKER_DIAG | Only after diagnostics are understandable: decide whether to collect more DTS data, train candidate, or compare YOLO26 |
+| TASK-20260516-103 | Act5 universal selector and reacquire | DONE | 103a-103f реализованы и приняты; 103g N/A; 103h не selector-fix и переносится в detector/training gate |
+| TASK-20260516-100 | Detector/training decision gate | ACTIVE | Decide bounded detector strategy: targeted data/training plan, short YOLO26 smoke-run policy, and whether to open 103h |
 
 ## Deferred From Previous Plan
 
@@ -85,9 +88,28 @@ and FPS impact.
 | TRAIN-20260514-001 | Candidate training waits for useful accepted DTS/GT material and a clear tracker baseline. |
 | TASK-20260514-095 | Full production promotion gate remains required before any production model replacement. |
 
-## Current Next Step
+## Current Decision Gate
 
-TASK-20260516-103 закрыта. Следующие варианты (решение за Human/Codex):
-1. 103f — lock_tracker multi-scale: даст эффект на off-target IR клипы; требует scope
-2. TASK-20260516-100 — candidate-training return gate: диагностика достаточно понятна для решения о DTS/обучении
-3. 103h — targeted training: улучшение детектора для missed-detection клипов
+TASK-20260516-100 активна. Selector/reacquire work закрыт: дальнейшие слабые клипы считаются detector/data problem unless new diagnostics prove otherwise.
+
+Closed in Act5:
+- universal proposal selection and scene trust table;
+- bbox stability layer;
+- auto-scene-detect v2;
+- lock-health release valve;
+- health-release re-acquisition suppression;
+- decision not to add lock_tracker multi-scale now because expected benefit is low and latency risk is real.
+
+Not closed in Act5:
+- detector recall on weak clips: `antiuav_rgbt_20190925=0.000`, `1_minie3_range_close=0.000`, `9_dji2_range_medium=0.276`, `antiuav_rgbt_train=0.412`;
+- dataset composition for the next training cycle;
+- any production model replacement or baseline promotion;
+- 103h targeted training scope.
+
+Invalid training evidence:
+- YOLO26 smoke-train attempt on 2026-05-17 was manually stopped and produced only `args.yaml`; no `results.csv`, `weights/best.pt`, or `weights/last.pt`. Do not count it as a result.
+
+Next bounded step proposal:
+1. Create a detector evidence pack for the four weak clips: representative frames, GT overlap, detector source/proposal counts, and false/off-target classification.
+2. Run a short YOLO26 smoke only as artifact-generation proof, not quality evidence: tiny verified subset, `epochs=1`, `workers=0`, `save_period=1`, tee log to `runs/detect/runs/smoke_train/<name>/train.log`, external timeout 45-60 minutes, and checkpoint check for `results.csv` plus `weights/last.pt`.
+3. If smoke artifacts appear, open 103h as targeted detector-training task with explicit dataset composition and gate metrics; otherwise diagnose environment/training startup before any longer run.

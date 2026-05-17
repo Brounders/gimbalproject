@@ -16,10 +16,14 @@ ui_web/node_modules/
 ui_web/dist/
 *.pyc
 
-# Memory tool internals (index.md is loaded via SessionStart hook)
+# Memory tool internals (read only when Codex/Human explicitly asks)
+memory/
 memory/claude-memory-compiler/daily/
 memory/claude-memory-compiler/.venv/
 memory/claude-memory-compiler/scripts/session-flush-*.md
+
+# Long-term project memory is read only when Codex/Human explicitly asks
+../wiki/
 
 # Claude worktrees (not project code)
 .claude/worktrees/

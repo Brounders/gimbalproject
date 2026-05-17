@@ -38,6 +38,13 @@ class ContextSpec:
     thresholds: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class ModelSpec:
+    raw: str
+    label: str
+    path_spec: str
+
+
 CONTEXTS_FULL: dict[str, ContextSpec] = {
     "day": ContextSpec(
         name="day",
@@ -99,6 +106,19 @@ def _safe_name(value: str) -> str:
     value = Path(value).stem if value != "baseline" else value
     value = re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("._")
     return value or "model"
+
+
+def _parse_model_spec(raw: str) -> ModelSpec:
+    value = raw.strip()
+    if "=" not in value:
+        return ModelSpec(raw=value, label=_safe_name(value), path_spec=value)
+
+    label_raw, path_raw = value.split("=", 1)
+    label = _safe_name(label_raw.strip())
+    path_spec = path_raw.strip()
+    if not label or not path_spec:
+        raise ValueError(f"Invalid model spec: {raw!r}. Use label=/path/to/model.pt")
+    return ModelSpec(raw=value, label=label, path_spec=path_spec)
 
 
 def _load_pack(path: Path) -> list[dict[str, str]]:
@@ -328,6 +348,10 @@ def _write_summary(
         "continuity_score",
         "active_id_changes_per_min",
         "false_lock_rate",
+        "operator_hint_count",
+        "operator_lock_confirmed_count",
+        "operator_target_lost_count",
+        "avg_operator_click_to_lock_frames",
         "failures",
     ]
     with summary_csv.open("w", encoding="utf-8", newline="") as f:
@@ -348,13 +372,15 @@ def _write_summary(
         "",
         "## Summary",
         "",
-        "| Model | Context | Pass | FPS | Presence | Continuity | ID chg/min | False lock |",
-        "|---|---|---:|---:|---:|---:|---:|---:|",
+        "| Model | Context | Pass | FPS | Presence | Continuity | ID chg/min | False lock | Op hints | Op locks | Op lost | Click→lock |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for record in records:
         lines.append(
             "| {model} | {context} | {passed} | {avg_fps:.2f} | {active_presence_rate:.3f} | "
-            "{continuity_score:.3f} | {active_id_changes_per_min:.2f} | {false_lock_rate:.3f} |".format(
+            "{continuity_score:.3f} | {active_id_changes_per_min:.2f} | {false_lock_rate:.3f} | "
+            "{operator_hint_count} | {operator_lock_confirmed_count} | {operator_target_lost_count} | "
+            "{avg_operator_click_to_lock_frames:.2f} |".format(
                 **record
             )
         )
@@ -384,7 +410,7 @@ def _write_why_failed(out_dir: Path, failure_rows: list[dict[str, Any]]) -> None
 
 def main() -> int:
     args = parse_args()
-    requested_models = [m.strip() for m in args.models.split(",") if m.strip()]
+    requested_models = [_parse_model_spec(m) for m in args.models.split(",") if m.strip()]
     requested_contexts = [c.strip() for c in args.contexts.split(",") if c.strip()]
     context_pool = CONTEXTS_SMOKE if args.scope == "smoke" else CONTEXTS_FULL
     contexts = [context_pool[name] for name in requested_contexts]
@@ -394,30 +420,28 @@ def main() -> int:
     out_dir = (ROOT / args.out_dir / run_name).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    model_paths: dict[str, str] = {}
-    model_labels: dict[str, str] = {}
+    model_paths: dict[ModelSpec, str] = {}
     for model in requested_models:
-        label = _safe_name(model)
-        model_labels[model] = label
+        label = model.label
         try:
-            model_paths[model] = _ensure_model_available(model)
+            model_paths[model] = _ensure_model_available(model.path_spec)
         except Exception as exc:
             model_paths[model] = ""
             (out_dir / f"{label}.model_error.txt").write_text(str(exc), encoding="utf-8")
-            print(f"[battle] model unavailable: {model}: {exc}")
+            print(f"[battle] model unavailable: {model.raw}: {exc}")
 
     summary_records: list[dict[str, Any]] = []
     failure_rows: list[dict[str, Any]] = []
     baseline_by_context: dict[str, dict[str, dict[str, Any]]] = {}
 
-    _valid_models = [m for m in requested_models if m == "baseline" or model_paths.get(m)]
+    _valid_models = [m for m in requested_models if m.path_spec == "baseline" or model_paths.get(m)]
     _total_steps = len(_valid_models) * len(contexts)
     _step = 0
 
     for model in requested_models:
-        label = model_labels[model]
+        label = model.label
         model_path = model_paths[model]
-        if model != "baseline" and not model_path:
+        if model.path_spec != "baseline" and not model_path:
             continue
         for context in contexts:
             _step += 1
@@ -445,6 +469,10 @@ def main() -> int:
                 "continuity_score": float(mean.get("continuity_score", 0.0)),
                 "active_id_changes_per_min": float(mean.get("active_id_changes_per_min", 0.0)),
                 "false_lock_rate": float(mean.get("false_lock_rate", 0.0)),
+                "operator_hint_count": int(mean.get("operator_hint_count", 0)),
+                "operator_lock_confirmed_count": int(mean.get("operator_lock_confirmed_count", 0)),
+                "operator_target_lost_count": int(mean.get("operator_target_lost_count", 0)),
+                "avg_operator_click_to_lock_frames": float(mean.get("avg_operator_click_to_lock_frames", 0.0)),
                 "failures": "; ".join(data.get("failures", [])),
                 "gate_exit_code": gate_code,
             })
@@ -480,7 +508,7 @@ def main() -> int:
         "scope": args.scope,
         "max_frames": int(args.max_frames),
         "preview_frames": int(args.preview_frames),
-        "models": [model_labels[m] for m in requested_models],
+        "models": [m.label for m in requested_models],
         "contexts": [c.name for c in contexts],
     }
     (out_dir / "run_meta.json").write_text(json.dumps(run_meta, indent=2, ensure_ascii=False), encoding="utf-8")

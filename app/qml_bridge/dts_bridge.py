@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import csv
 import shlex
@@ -10,6 +11,32 @@ import time
 from pathlib import Path
 from typing import Any
 
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _battle_models_arg(baseline_path: Path, candidate_path: Path) -> str:
+    return f"baseline={baseline_path},candidate={candidate_path}"
+
+
+def _regression_pack_paths(scope: str) -> dict[str, Path]:
+    if scope == "smoke":
+        return {
+            "day": ROOT / "configs" / "regression_pack_day.csv",
+            "night": ROOT / "configs" / "regression_pack_problem_night.csv",
+            "ir": ROOT / "configs" / "regression_pack_problem_ir.csv",
+        }
+    return {
+        "day": ROOT / "configs" / "regression_pack_day.csv",
+        "night": ROOT / "configs" / "regression_pack_night.csv",
+        "ir": ROOT / "configs" / "regression_pack_ir.csv",
+    }
+
 from PySide6.QtCore import (
     QAbstractListModel,
     QModelIndex,
@@ -17,6 +44,7 @@ from PySide6.QtCore import (
     Property,
     QByteArray,
     QProcess,
+    QProcessEnvironment,
     QSize,
     Qt,
     Signal,
@@ -25,8 +53,16 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QImage
 from PySide6.QtQuick import QQuickImageProvider
 
+from app.dts_candidate_gate import (
+    CandidateGateError,
+    accept_candidate_model,
+    write_gate_decision,
+)
+from app.dts_diagnostics import build_compare_diagnostics_md
+from app.dts_training_loop import TrainingLoopSnapshot, training_loop_state
 from app.training_desk_data import (
     STATUS_ACCEPTED,
+    STATUS_HARD_NEGATIVE,
     STATUS_NEW,
     STATUS_REJECTED,
     STATUS_STAGED,
@@ -35,6 +71,7 @@ from app.training_desk_data import (
     save_review_state,
     set_record_status,
     status_counts,
+    training_candidate_records,
 )
 from app.training_desk_quality import (
     DuplicateLink,
@@ -47,6 +84,40 @@ from app.training_desk_quality import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _write_compare_diagnostics(result_dir: Path) -> None:
+    """Write diagnostics.md next to the compare results. Silent on any error."""
+    try:
+        gate_decision: dict = {}
+        decision_file = result_dir / "candidate_gate_decision.json"
+        if decision_file.exists():
+            try:
+                gate_decision = json.loads(decision_file.read_text(encoding="utf-8"))
+            except Exception:
+                gate_decision = {}
+
+        telemetry: dict | None = None
+        telemetry_file = result_dir / "telemetry_report.json"
+        if telemetry_file.exists():
+            try:
+                telemetry = json.loads(telemetry_file.read_text(encoding="utf-8"))
+            except Exception:
+                telemetry = None
+
+        summary_rows: list[dict] | None = None
+        summary_csv = result_dir / "summary.csv"
+        if summary_csv.exists():
+            try:
+                with summary_csv.open("r", encoding="utf-8", newline="") as f:
+                    summary_rows = list(csv.DictReader(f))
+            except Exception:
+                summary_rows = None
+
+        md = build_compare_diagnostics_md(gate_decision, telemetry, summary_rows)
+        (result_dir / "diagnostics.md").write_text(md, encoding="utf-8")
+    except Exception:
+        pass
 
 
 class DtsFrameProvider(QQuickImageProvider):
@@ -197,10 +268,21 @@ class DtsBridge(QObject):
         self._search = ""
         self._selected_index = -1
         self._last_message = "DTS готов"
+        self._operation_status_title = "Готов к работе"
+        self._operation_status_body = "Примите кадры, соберите pack и создайте candidate job."
+        self._operation_status_tone = "idle"
         self._last_pack_dir = ""
         self._last_pack_ok = 0
         self._last_candidate_name = ""
         self._last_candidate_job_dir = ""
+        self._last_accepted_candidate_dir = ""
+        self._training_process: QProcess | None = None
+        self._training_running = False
+        self._training_expected_best = ""
+        self._training_log_tail = ""
+        self._training_log_lines: list[str] = []
+        self._training_exit_code: int = -999
+        self._training_cancelled: bool = False
         self._compare_process: QProcess | None = None
         self._compare_running = False
         self._compare_result_dir = ""
@@ -216,7 +298,15 @@ class DtsBridge(QObject):
         self._compare_step = 0
         self._compare_total = 0
         self._compare_context_label = ""
+        # human-readable compare result (Task 097)
+        self._compare_human_title = "Сравнение не запускалось"
+        self._compare_human_summary = ""
+        self._compare_reject_reason = ""
+        self._compare_decision_ready = False
+        self._compare_decision_missing = False
         self._preview_revision = 0
+        self._last_reload_time = 0.0
+        self._restore_candidate_context()
         self._load_latest_compare_summary()
         self.reload()
 
@@ -227,6 +317,46 @@ class DtsBridge(QObject):
     @Property(str, notify=lastMessageChanged)
     def lastMessage(self) -> str:
         return self._last_message
+
+    @Property(str, notify=changed)
+    def operationStatusTitle(self) -> str:
+        return self._operation_status_title
+
+    @Property(str, notify=changed)
+    def operationStatusBody(self) -> str:
+        return self._operation_status_body
+
+    @Property(str, notify=changed)
+    def operationStatusTone(self) -> str:
+        return self._operation_status_tone
+
+    @Property(bool, notify=changed)
+    def candidateModelReady(self) -> bool:
+        return self._candidate_model_path() is not None
+
+    @Property(bool, notify=changed)
+    def trainingRunning(self) -> bool:
+        return bool(self._training_running)
+
+    @Property(str, notify=changed)
+    def activeRunName(self) -> str:
+        return self._last_candidate_name
+
+    @Property(str, notify=changed)
+    def trainingExpectedBest(self) -> str:
+        return self._training_expected_best
+
+    @Property(str, notify=changed)
+    def trainingLogTail(self) -> str:
+        return self._training_log_tail
+
+    @Property(int, notify=changed)
+    def trainingExitCode(self) -> int:
+        return self._training_exit_code
+
+    @Property(bool, notify=changed)
+    def trainingCanCancel(self) -> bool:
+        return bool(self._training_running and self._training_process is not None)
 
     @Property(int, notify=changed)
     def totalCount(self) -> int:
@@ -345,14 +475,14 @@ class DtsBridge(QObject):
     def candidateSummary(self) -> str:
         items = self._selected_for_training()
         if not items:
-            return "accepted 0 · pack не готов"
+            return "ready 0 · pack не готов"
         quality = [self._quality(record) for record in items]
         warns = sum(report.warnings for report in quality)
         fails = sum(report.fails for report in quality)
         sources = len({record.source for record in items})
         duplicates = sum(1 for record in items if self._duplicate_links.get(record.record_id))
         state = "готов" if fails == 0 else "нужна чистка"
-        return f"accepted {len(items)} · sources {sources} · warn {warns} · fail {fails} · dup {duplicates} · {state}"
+        return f"ready {len(items)} · sources {sources} · warn {warns} · fail {fails} · dup {duplicates} · {state}"
 
     @Property(str, notify=changed)
     def candidatePackDir(self) -> str:
@@ -361,6 +491,14 @@ class DtsBridge(QObject):
     @Property(int, notify=changed)
     def candidatePackOkCount(self) -> int:
         return int(self._last_pack_ok)
+
+    @Property(str, notify=changed)
+    def trainingLoopStage(self) -> str:
+        return self._training_loop().stage
+
+    @Property(str, notify=changed)
+    def trainingLoopNextAction(self) -> str:
+        return self._training_loop().next_action
 
     @Property(bool, notify=changed)
     def compareRunning(self) -> bool:
@@ -414,6 +552,52 @@ class DtsBridge(QObject):
     def compareContextLabel(self) -> str:
         return self._compare_context_label
 
+    # -- human-readable compare result (Task 097) --
+
+    @Property(str, notify=changed)
+    def compareHumanTitle(self) -> str:
+        return self._compare_human_title
+
+    @Property(str, notify=changed)
+    def compareHumanSummary(self) -> str:
+        return self._compare_human_summary
+
+    @Property(str, notify=changed)
+    def compareRejectReason(self) -> str:
+        return self._compare_reject_reason
+
+    @Property(bool, notify=changed)
+    def compareDecisionReady(self) -> bool:
+        return self._compare_decision_ready
+
+    @Property(bool, notify=changed)
+    def compareDecisionMissing(self) -> bool:
+        return self._compare_decision_missing
+
+    @Property(str, notify=changed)
+    def candidateStatusLabel(self) -> str:
+        if self._training_running:
+            return "обучение идёт"
+        if self._compare_running:
+            return "сравнение идёт"
+        if self._last_accepted_candidate_dir:
+            return "candidate принят"
+        if self._compare_decision_ready:
+            if self._compare_status == "PASS":
+                return "compare PASS"
+            if self._compare_status == "RETUNE":
+                return "compare RETUNE"
+            return "compare FAIL"
+        if self._compare_result_dir:
+            return "compare не пройден"
+        if self._candidate_model_path() is not None:
+            return "best.pt готов"
+        if self._last_pack_dir:
+            return "pack собран"
+        if self._selected_for_training():
+            return "данные готовы"
+        return "нет данных"
+
     @Property(str, notify=previewChanged)
     def previewSource(self) -> str:
         record = self._selected_record()
@@ -423,12 +607,22 @@ class DtsBridge(QObject):
 
     @Slot()
     def reload(self) -> None:
+        now = time.monotonic()
+        if now - self._last_reload_time < 0.35:
+            return
+        self._last_reload_time = now
         self._records = load_annotation_records(self.log_dir, state_path=self.state_path)
         self._duplicate_links = find_duplicates(self._records)
         self._quality_cache.clear()
         self._frame_provider.set_records(self._records)
         self._apply_filter(keep_selected=True)
         self._set_message(f"DTS перезагружен: {len(self._records)} записей")
+        if not self._selected_for_training():
+            self._set_operation_status(
+                "Ждем кадры",
+                "Кликните цель на видео и примите записи в DTS.",
+                "idle",
+            )
         self.changed.emit()
 
     @Slot(str)
@@ -458,7 +652,7 @@ class DtsBridge(QObject):
     def setSelectedStatus(self, status: str) -> None:
         record = self._selected_record()
         normalized = status.strip().lower()
-        if record is None or normalized not in {STATUS_ACCEPTED, STATUS_NEW, STATUS_REJECTED, STATUS_STAGED}:
+        if record is None or normalized not in {STATUS_ACCEPTED, STATUS_HARD_NEGATIVE, STATUS_NEW, STATUS_REJECTED, STATUS_STAGED}:
             return
         previous_index = self._selected_index
         if set_record_status(self._records, record.record_id, normalized):
@@ -532,6 +726,11 @@ class DtsBridge(QObject):
     def buildPack(self) -> str:
         items = self._selected_for_training()
         if not items:
+            self._set_operation_status(
+                "Pack не собран",
+                "Нет принятых кадров. Сначала примите записи в DTS.",
+                "warn",
+            )
             return self._set_message("Нет accepted/staged записей для сборки pack")
         failed = [
             (record, self._quality(record))
@@ -539,6 +738,11 @@ class DtsBridge(QObject):
             if self._quality(record).fails > 0
         ]
         if failed:
+            self._set_operation_status(
+                "Pack заблокирован",
+                f"Есть accepted-записи с ошибками качества: {len(failed)}. Исправьте или отклоните их.",
+                "error",
+            )
             return self._set_message(
                 f"Pack заблокирован: {len(failed)} accepted записей с FAIL. Отклоните или исправьте их перед сборкой"
             )
@@ -558,6 +762,7 @@ class DtsBridge(QObject):
             result = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True, timeout=300)
             output = (result.stdout + "\n" + result.stderr).strip()
         except Exception as exc:
+            self._set_operation_status("Ошибка сборки", str(exc), "error")
             return self._set_message(f"Ошибка сборки pack: {exc}")
         manifest_path = pack_dir / "manifest.json"
         ok_count = 0
@@ -572,11 +777,18 @@ class DtsBridge(QObject):
             skipped_source = int(counts.get("skipped_source", 0) or 0)
             skipped_invalid = int(counts.get("skipped_invalid", 0) or 0)
         except Exception as exc:
+            self._set_operation_status("Pack требует проверки", "Manifest создан, но не читается.", "warn")
             return self._set_message(f"Pack создан, но manifest не прочитан: {exc}")
         if result.returncode == 0 and ok_count <= 0:
+            self._set_operation_status("Pack пустой", "Manifest создан, но пригодных кадров нет.", "warn")
             return self._set_message("Pack заблокирован: manifest создан, но ok=0")
         self._last_pack_dir = str(pack_dir.relative_to(ROOT))
         self._last_pack_ok = ok_count
+        self._set_operation_status(
+            "Pack собран",
+            f"Готово кадров: {ok_count}. Теперь создайте candidate job кнопкой ОБУЧИТЬ.",
+            "success" if result.returncode == 0 else "warn",
+        )
         self.changed.emit()
         state = "готов" if result.returncode == 0 else f"код {result.returncode}"
         short_output = output[:700].replace("\n", " | ") if output else "без вывода"
@@ -591,11 +803,28 @@ class DtsBridge(QObject):
 
     @Slot(result=str)
     def trainCandidate(self) -> str:
+        if self._training_running:
+            self._set_operation_status(
+                "Обучение идет",
+                "Дождитесь завершения. После появления best.pt станет доступно сравнение.",
+                "progress",
+            )
+            return self._set_message("Обучение уже идет")
         pack_dir = self._current_pack_dir()
         if pack_dir is None:
+            self._set_operation_status(
+                "Обучение недоступно",
+                "Сначала соберите pack с пригодными кадрами.",
+                "warn",
+            )
             return self._set_message("Сначала соберите pack: кнопка СОБРАТЬ должна дать ok > 0")
         data_yaml = pack_dir / "data.yaml"
         if not data_yaml.exists():
+            self._set_operation_status(
+                "Обучение заблокировано",
+                "В pack нет data.yaml. Соберите pack заново.",
+                "error",
+            )
             return self._set_message(f"Обучение заблокировано: нет data.yaml в {pack_dir.relative_to(ROOT)}")
 
         ts = time.strftime("%Y%m%d_%H%M%S")
@@ -625,6 +854,14 @@ class DtsBridge(QObject):
         script_path = job_dir / "train_candidate.sh"
         script_path.write_text("#!/usr/bin/env bash\nset -euo pipefail\n" + shell_text, encoding="utf-8")
         script_path.chmod(script_path.stat().st_mode | 0o111)
+        manifest_json = pack_dir / "manifest.json"
+        if not manifest_json.exists():
+            self._set_operation_status(
+                "Обучение заблокировано",
+                "В pack нет manifest.json — audit chain нарушен. Соберите pack заново.",
+                "error",
+            )
+            return self._set_message(f"Обучение заблокировано: нет manifest.json в {pack_dir.relative_to(ROOT)}")
         job = {
             "type": "dts_candidate_training",
             "created_at": ts,
@@ -635,30 +872,100 @@ class DtsBridge(QObject):
             "run_name": run_name,
             "expected_best": str(project_dir / run_name / "weights" / "best.pt"),
             "command": cmd,
+            "base_model_sha256": _file_sha256(base_model) if base_model.exists() else "",
+            "pack_manifest_sha256": _file_sha256(manifest_json),
+            "data_yaml_sha256": _file_sha256(data_yaml),
         }
         (job_dir / "job.json").write_text(json.dumps(job, indent=2, ensure_ascii=False), encoding="utf-8")
         self._last_candidate_name = run_name
         self._last_candidate_job_dir = str(job_dir.relative_to(ROOT))
-        self.changed.emit()
-        return self._set_message(
-            f"Training job готов: {script_path.relative_to(ROOT)} · запустите его на Mac/RTX. "
-            f"Ожидаемый best.pt: {Path(job['expected_best']).relative_to(ROOT)}"
+        self._training_expected_best = str((project_dir / run_name / "weights" / "best.pt").relative_to(ROOT))
+        self._set_operation_status(
+            "Обучение запускается",
+            "Создан training job. Запускаю обучение candidate в фоне.",
+            "progress",
         )
+        self.changed.emit()
+
+        process = QProcess(self)
+        process.setWorkingDirectory(str(ROOT))
+        process.setProgram(cmd[0])
+        process.setArguments(cmd[1:])
+        env = QProcessEnvironment.systemEnvironment()
+        existing_pythonpath = env.value("PYTHONPATH", "")
+        env.insert("PYTHONPATH", "src" if not existing_pythonpath else f"src:{existing_pythonpath}")
+        process.setProcessEnvironment(env)
+        process.readyReadStandardOutput.connect(lambda: self._on_training_output(process, stderr=False))
+        process.readyReadStandardError.connect(lambda: self._on_training_output(process, stderr=True))
+        process.finished.connect(
+            lambda exit_code, exit_status: self._on_training_finished(
+                exit_code,
+                exit_status,
+                Path(job["expected_best"]),
+            )
+        )
+        process.errorOccurred.connect(lambda error: self._on_training_error(error))
+
+        self._training_process = process
+        self._training_running = True
+        self._training_log_tail = ""
+        self._training_log_lines = []
+        self._training_exit_code = -999
+        self._training_cancelled = False
+        self.changed.emit()
+        process.start()
+        if not process.waitForStarted(3000):
+            self._training_running = False
+            self._training_process = None
+            self._set_operation_status("Обучение не стартовало", "Процесс training не запустился.", "error")
+            self.changed.emit()
+            return self._set_message("Ошибка запуска обучения candidate")
+        return self._set_message(
+            f"Обучение запущено: {run_name}. Ожидаемый best.pt: {Path(job['expected_best']).relative_to(ROOT)}"
+        )
+
+    @Slot(result=str)
+    def cancelTraining(self) -> str:
+        if not self._training_running or self._training_process is None:
+            return "Обучение не запущено — нечего останавливать"
+        self._training_cancelled = True
+        process = self._training_process
+        process.terminate()
+        if not process.waitForFinished(3000):
+            process.kill()
+        self._set_operation_status(
+            "Обучение остановлено",
+            "Запуск можно повторить после проверки pack.",
+            "warn",
+        )
+        return self._set_message("Обучение остановлено оператором")
 
     @Slot(result=str)
     def compareCandidate(self) -> str:
         if self._compare_running:
+            self._set_operation_status(
+                "Сравнение идет",
+                self._compare_context_label or "Дождитесь завершения текущего прохода.",
+                "progress",
+            )
             return self._set_message("Сравнение уже идет: дождитесь завершения текущего прохода")
         model_path = self._candidate_model_path()
         if model_path is None:
+            self._set_operation_status(
+                "Сравнение недоступно",
+                "Candidate best.pt не найден. Обучение еще не завершено или не запускалось.",
+                "warn",
+            )
             return self._set_message("Сравнение заблокировано: candidate best.pt не найден. Сначала запустите training job и дождитесь весов")
         ts = time.strftime("%Y%m%d_%H%M%S")
         out_dir = ROOT / "runs" / "dts_candidate_comparisons"
         tag = f"dts_{ts}"
+        baseline_path = self._base_model_path()
+        scope = "smoke"
         args = [
             str(ROOT / "python_scripts" / "run_model_battle.py"),
-            "--models", f"baseline,{model_path}",
-            "--scope", "smoke",
+            "--models", _battle_models_arg(baseline_path, model_path),
+            "--scope", scope,
             "--contexts", "day,night,ir",
             "--max-frames", "180",
             "--preview-frames", "0",
@@ -673,7 +980,7 @@ class DtsBridge(QObject):
         process.setArguments(args)
         process.finished.connect(
             lambda exit_code, exit_status: self._on_compare_finished(
-                exit_code, exit_status, out_dir, tag, model_path
+                exit_code, exit_status, out_dir, tag, model_path, baseline_path, scope
             )
         )
         process.errorOccurred.connect(lambda error: self._on_compare_error(error))
@@ -690,20 +997,67 @@ class DtsBridge(QObject):
         self._compare_step = 0
         self._compare_total = 0
         self._compare_context_label = ""
+        self._compare_human_title = "Сравнение идет"
+        self._compare_human_summary = "Baseline и candidate проверяются."
+        self._compare_reject_reason = ""
+        self._compare_decision_ready = False
+        self._compare_decision_missing = False
         self.changed.emit()
+        self._set_operation_status(
+            "Сравнение идет",
+            "Baseline и candidate проверяются на day/night/ir.",
+            "progress",
+        )
         self._set_message("Сравнение запущено в фоне: интерфейс можно продолжать использовать")
         process.start()
         if not process.waitForStarted(3000):
             self._compare_running = False
             self._compare_summary = "Сравнение не стартовало: QProcess не запустился"
             self._compare_process = None
+            self._set_operation_status("Сравнение не стартовало", "Процесс сравнения не запустился.", "error")
             self.changed.emit()
             return self._set_message("Ошибка сравнения candidate: процесс не стартовал")
         return self._last_message
 
     @Slot(result=str)
     def acceptCandidate(self) -> str:
-        return self._set_message("Принятие кандидата заблокировано: модель можно принимать только после current vs candidate quality gate")
+        model_path = self._candidate_model_path()
+        if model_path is None:
+            self._set_operation_status(
+                "Принятие недоступно",
+                "Candidate best.pt не найден.",
+                "warn",
+            )
+            return self._set_message("Принятие заблокировано: candidate best.pt не найден")
+        if not self._compare_result_dir:
+            self._set_operation_status(
+                "Принятие заблокировано",
+                "Сначала выполните СРАВНИТЬ и получите PASS.",
+                "warn",
+            )
+            return self._set_message("Принятие заблокировано: сначала выполните СРАВНИТЬ и получите PASS")
+        compare_dir = ROOT / self._compare_result_dir
+        try:
+            manifest_path = accept_candidate_model(
+                model_path,
+                compare_dir,
+                output_root=ROOT / "models" / "candidates" / "accepted",
+                training_job_dir=ROOT / self._last_candidate_job_dir if self._last_candidate_job_dir else None,
+                pack_dir=ROOT / self._last_pack_dir if self._last_pack_dir else None,
+            )
+        except CandidateGateError as exc:
+            self._set_operation_status("Принятие заблокировано", str(exc), "error")
+            return self._set_message(f"Принятие заблокировано: {exc}")
+        self._last_accepted_candidate_dir = str(manifest_path.parent.relative_to(ROOT))
+        self._set_operation_status(
+            "Candidate принят",
+            "Модель сохранена безопасно. Production-модель не заменялась.",
+            "success",
+        )
+        self.changed.emit()
+        return self._set_message(
+            f"Candidate принят безопасно: {self._last_accepted_candidate_dir} · текущая модель не заменялась"
+        )
 
     @Slot(str, result=int)
     def countStatus(self, status: str) -> int:
@@ -724,13 +1078,110 @@ class DtsBridge(QObject):
         self.lastMessageChanged.emit()
         return message
 
+    def _set_operation_status(self, title: str, body: str, tone: str = "idle") -> None:
+        self._operation_status_title = title
+        self._operation_status_body = body
+        self._operation_status_tone = tone
+        self.changed.emit()
+
     def _on_compare_error(self, error: QProcess.ProcessError) -> None:
         self._compare_running = False
         self._compare_status = "FAIL"
         self._compare_summary = f"Сравнение остановлено: ошибка процесса {int(error)}"
         self._compare_process = None
+        self._compare_human_title = "Сравнение не завершилось"
+        self._compare_human_summary = f"Ошибка процесса {int(error)}."
+        self._compare_reject_reason = f"process error {int(error)}"
+        self._compare_decision_ready = False
+        self._compare_decision_missing = False
+        self._set_operation_status("Сравнение остановлено", f"Ошибка процесса {int(error)}.", "error")
         self.changed.emit()
         self._set_message(self._compare_summary)
+
+    def _on_training_output(self, process: QProcess, *, stderr: bool) -> None:
+        raw = process.readAllStandardError() if stderr else process.readAllStandardOutput()
+        text = bytes(raw).decode("utf-8", "replace")
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        if not lines:
+            return
+        self._training_log_lines.extend(lines)
+        if len(self._training_log_lines) > 8:
+            self._training_log_lines = self._training_log_lines[-8:]
+        self._training_log_tail = "\n".join(self._training_log_lines)
+        last = lines[-1]
+        if "Epoch" in last or "epoch" in last:
+            body = last[-160:]
+        elif self._training_expected_best:
+            body = f"Ждем {self._training_expected_best}"
+        else:
+            body = "Ждем best.pt"
+        self._set_operation_status("Обучение идет", body, "progress")
+        self.changed.emit()
+
+    def _on_training_error(self, error: QProcess.ProcessError) -> None:
+        self._training_running = False
+        self._training_process = None
+        self._set_operation_status("Обучение остановлено", f"Ошибка процесса {int(error)}.", "error")
+        self.changed.emit()
+        self._set_message(f"Обучение остановлено: ошибка процесса {int(error)}")
+
+    def _on_training_finished(
+        self,
+        exit_code: int,
+        _exit_status: QProcess.ExitStatus,
+        expected_best: Path,
+    ) -> None:
+        process = self._training_process
+        if process is not None:
+            tail = (
+                bytes(process.readAllStandardOutput()).decode("utf-8", "replace")
+                + "\n"
+                + bytes(process.readAllStandardError()).decode("utf-8", "replace")
+            ).strip()
+            if tail:
+                new_lines = [ln.strip() for ln in tail.splitlines() if ln.strip()]
+                self._training_log_lines.extend(new_lines)
+                if len(self._training_log_lines) > 8:
+                    self._training_log_lines = self._training_log_lines[-8:]
+                self._training_log_tail = "\n".join(self._training_log_lines)
+
+        self._training_exit_code = exit_code
+        cancelled = self._training_cancelled
+        self._training_running = False
+        self._training_process = None
+        self._training_cancelled = False
+
+        if cancelled:
+            self._set_operation_status(
+                "Обучение остановлено",
+                "Запуск можно повторить после проверки pack.",
+                "warn",
+            )
+            self.changed.emit()
+            self._set_message("Обучение остановлено оператором")
+            return
+
+        if expected_best.exists():
+            self._set_operation_status(
+                "best.pt готов",
+                "Обучение завершено. Теперь можно нажать СРАВНИТЬ.",
+                "success",
+            )
+            self.changed.emit()
+            self._set_message(f"Обучение завершено: {expected_best.relative_to(ROOT)}")
+            return
+
+        if exit_code == 0:
+            self._set_operation_status(
+                "best.pt не найден",
+                "Обучение завершилось, но weights/best.pt не появился.",
+                "warn",
+            )
+        else:
+            tail_line = self._training_log_tail.splitlines()[-1][-160:] if self._training_log_tail else f"Процесс завершился с кодом {exit_code}."
+            self._set_operation_status("Обучение упало", tail_line, "error")
+        self.changed.emit()
+        self._set_message(f"Обучение завершилось без best.pt: код {exit_code}")
 
     def _on_compare_stdout(self, process: QProcess) -> None:
         data = bytes(process.readAllStandardOutput()).decode("utf-8", "replace")
@@ -757,6 +1208,8 @@ class DtsBridge(QObject):
         out_dir: Path,
         tag: str,
         model_path: Path,
+        baseline_path: Path | None = None,
+        scope: str = "smoke",
     ) -> None:
         process = self._compare_process
         stdout = ""
@@ -769,13 +1222,33 @@ class DtsBridge(QObject):
         if result_dir is not None:
             self._compare_result_dir = str(result_dir.relative_to(ROOT))
             self._compare_summary = self._summarize_compare_dir(result_dir)
-            self._apply_compare_structured(result_dir)
+            data = self._apply_compare_structured(result_dir)
+            decision_ready = False
+            decision_missing = False
+            regression_packs = _regression_pack_paths(scope)
+            try:
+                write_gate_decision(
+                    result_dir,
+                    model_path,
+                    data,
+                    baseline_model_path=baseline_path,
+                    regression_pack_paths=regression_packs,
+                )
+                decision_ready = True
+                _write_compare_diagnostics(result_dir)
+            except CandidateGateError as exc:
+                decision_missing = True
+                self._compare_status = "FAIL"
+                self._compare_summary = f"{self._compare_summary} · gate decision не сохранен: {exc}"
+            self._build_human_compare_fields(data, decision_ready=decision_ready, decision_missing=decision_missing)
         else:
             output = (stdout + "\n" + stderr).strip().replace("\n", " | ")
             short_output = output[:420] if output else "summary.csv не найден"
             self._compare_result_dir = ""
             self._compare_summary = f"Сравнение завершилось без summary.csv · код {exit_code} · {short_output}"
             self._compare_status = "FAIL"
+            empty: dict = {"status": "FAIL", "candidate_pass": 0, "candidate_total": 0, "contexts": []}
+            self._build_human_compare_fields(empty, decision_ready=False, decision_missing=True)
 
         self._compare_running = False
         self._compare_process = None
@@ -786,6 +1259,12 @@ class DtsBridge(QObject):
 
         state = "готово" if exit_code == 0 else f"код {exit_code}"
         model_label = model_path.relative_to(ROOT) if model_path.is_relative_to(ROOT) else model_path
+        if self._compare_status == "PASS":
+            self._set_operation_status("Сравнение PASS", "Candidate прошел smoke gate. Можно нажать ПРИНЯТЬ.", "success")
+        elif self._compare_status == "RETUNE":
+            self._set_operation_status("Нужна доработка", "Candidate прошел не все контексты. Лучше собрать больше данных.", "warn")
+        else:
+            self._set_operation_status("Сравнение FAIL", "Candidate нельзя принимать. Смотрите результат сравнения.", "error")
         self._set_message(f"Сравнение {state}: {self._compare_result_dir or out_dir.relative_to(ROOT)} · model {model_label}")
 
     def _load_latest_compare_summary(self) -> None:
@@ -800,7 +1279,59 @@ class DtsBridge(QObject):
         latest = max(candidates, key=lambda path: path.stat().st_mtime)
         self._compare_result_dir = str(latest.relative_to(ROOT))
         self._compare_summary = self._summarize_compare_dir(latest)
-        self._apply_compare_structured(latest)
+        data = self._apply_compare_structured(latest)
+        decision_ready = (latest / "candidate_gate_decision.json").exists()
+        if decision_ready:
+            try:
+                gd = json.loads((latest / "candidate_gate_decision.json").read_text(encoding="utf-8"))
+                if not gd.get("accept_allowed", False):
+                    decision_ready = False
+                elif gd.get("candidate_model_sha256"):
+                    current_best = self._candidate_model_path()
+                    if current_best is None or _file_sha256(current_best) != gd["candidate_model_sha256"]:
+                        decision_ready = False
+            except Exception:
+                decision_ready = False
+        decision_missing = not decision_ready
+        self._build_human_compare_fields(data, decision_ready=decision_ready, decision_missing=decision_missing)
+
+    def _build_human_compare_fields(self, data: dict, *, decision_ready: bool, decision_missing: bool) -> None:
+        status = data.get("status", "FAIL")
+        candidate_pass = int(data.get("candidate_pass", 0) or 0)
+        candidate_total = int(data.get("candidate_total", 0) or 0)
+        contexts = data.get("contexts", [])
+        if not isinstance(contexts, list):
+            contexts = []
+
+        self._compare_decision_ready = decision_ready
+        self._compare_decision_missing = decision_missing
+
+        if decision_missing:
+            self._compare_human_title = "Результат неполный"
+            self._compare_human_summary = "Решение gate не сохранено. Повторите сравнение."
+            self._compare_reject_reason = "gate decision не сохранен"
+            return
+
+        if candidate_total == 0:
+            self._compare_human_title = "Результат неполный"
+            self._compare_human_summary = "Candidate строки не найдены в summary.csv."
+            self._compare_reject_reason = "candidate строки не найдены"
+            return
+
+        failed = [str(ctx.get("name", "?")) for ctx in contexts if not ctx.get("passed", False)]
+        summary = f"Прошел {candidate_pass}/{candidate_total} контекстов."
+        if status == "PASS":
+            self._compare_human_title = "Candidate PASS"
+            self._compare_human_summary = summary
+            self._compare_reject_reason = ""
+        elif status == "RETUNE":
+            self._compare_human_title = "Нужна доработка"
+            self._compare_human_summary = summary
+            self._compare_reject_reason = (", ".join(failed) + " FAIL") if failed else f"candidate {candidate_pass}/{candidate_total}"
+        else:
+            self._compare_human_title = "Candidate отклонен"
+            self._compare_human_summary = summary
+            self._compare_reject_reason = (", ".join(failed) + " FAIL") if failed else f"candidate {candidate_pass}/{candidate_total}"
 
     def _find_compare_result_dir(self, out_dir: Path, tag: str) -> Path | None:
         candidates = [path for path in out_dir.glob(f"{tag}_*") if (path / "summary.csv").exists()]
@@ -913,7 +1444,7 @@ class DtsBridge(QObject):
             "contexts": contexts,
         }
 
-    def _apply_compare_structured(self, result_dir: Path) -> None:
+    def _apply_compare_structured(self, result_dir: Path) -> dict:
         data = self._parse_compare_structured(result_dir)
         self._compare_status = data["status"]
         self._compare_baseline_pass = data["baseline_pass"]
@@ -921,9 +1452,57 @@ class DtsBridge(QObject):
         self._compare_candidate_pass = data["candidate_pass"]
         self._compare_candidate_total = data["candidate_total"]
         self._compare_contexts_json = json.dumps(data["contexts"], ensure_ascii=False)
+        return data
 
     def _selected_record(self) -> AnnotationRecord | None:
         return self.model.filtered_record(self._selected_index)
+
+    def _restore_candidate_context(self) -> None:
+        """Restore _last_candidate_* fields from the newest valid job.json on startup."""
+        jobs_root = ROOT / "runs" / "dts_candidate_jobs"
+        if not jobs_root.exists():
+            return
+        candidates: list[tuple[str, Path]] = []
+        for job_file in jobs_root.glob("*/job.json"):
+            try:
+                data = json.loads(job_file.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            created_at = str(data.get("created_at", ""))
+            expected_best = str(data.get("expected_best", ""))
+            pack_dir_str = str(data.get("pack_dir", ""))
+            run_name = str(data.get("run_name", ""))
+            if not (expected_best and pack_dir_str and run_name):
+                continue
+            best_path = Path(expected_best)
+            if not best_path.exists():
+                continue
+            pack_path = Path(pack_dir_str)
+            if not pack_path.exists() or not (pack_path / "manifest.json").exists():
+                continue
+            candidates.append((created_at, job_file))
+        if not candidates:
+            return
+        _ts, best_job = sorted(candidates)[-1]
+        try:
+            data = json.loads(best_job.read_text(encoding="utf-8"))
+        except Exception:
+            return
+        job_dir = best_job.parent
+        best_path = Path(str(data["expected_best"]))
+        pack_path = Path(str(data["pack_dir"]))
+        run_name = str(data["run_name"])
+        try:
+            self._last_candidate_job_dir = str(job_dir.relative_to(ROOT))
+            self._last_pack_dir = str(pack_path.relative_to(ROOT))
+        except ValueError:
+            self._last_candidate_job_dir = str(job_dir)
+            self._last_pack_dir = str(pack_path)
+        self._last_candidate_name = run_name
+        try:
+            self._training_expected_best = str(best_path.relative_to(ROOT))
+        except ValueError:
+            self._training_expected_best = str(best_path)
 
     def _base_model_path(self) -> Path:
         for path in (
@@ -969,10 +1548,9 @@ class DtsBridge(QObject):
             )
         names = list(dict.fromkeys(names))
         for name in reversed(names):
-            for filename in ("best.pt", "last.pt"):
-                path = ROOT / "runs" / "dts_candidate_training" / name / "weights" / filename
-                if path.exists():
-                    return path
+            path = ROOT / "runs" / "dts_candidate_training" / name / "weights" / "best.pt"
+            if path.exists():
+                return path
         return None
 
     def _quality(self, record: AnnotationRecord) -> QualityReport:
@@ -1047,14 +1625,22 @@ class DtsBridge(QObject):
         )
 
     def _selected_for_training(self) -> list[AnnotationRecord]:
-        return [
-            record
-            for record in self._records
-            if record.status == STATUS_ACCEPTED
-            and record.event == "operator_bbox"
-            and record.bbox_xyxy is not None
-            and record.source
-        ]
+        return training_candidate_records(self._records)
+
+    def _training_loop(self):
+        candidate_model = self._candidate_model_path()
+        return training_loop_state(
+            TrainingLoopSnapshot(
+                ready_frames=len(self._selected_for_training()),
+                pack_ok=int(self._last_pack_ok),
+                pack_dir=str(self._last_pack_dir),
+                training_job_dir=str(self._last_candidate_job_dir),
+                candidate_model_path=str(candidate_model) if candidate_model is not None else "",
+                compare_status=str(self._compare_status),
+                compare_result_dir=str(self._compare_result_dir),
+                accepted_candidate_dir=str(self._last_accepted_candidate_dir),
+            )
+        )
 
     @Property(str, notify=changed)
     def duplicateSummary(self) -> str:

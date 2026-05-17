@@ -1,0 +1,64 @@
+name: antiuav_thermal_field_small
+runtime_mode: research
+model_path: models/baseline.pt
+device: mps
+imgsz: 960
+conf_thresh: 0.08
+ignore_zones:
+  - name: top_left_osd
+    x1: 0.0
+    y1: 0.0
+    x2: 0.22
+    y2: 0.07
+    applies_to: [yolo, local, roi, night, lock]
+detection_max_area_ratio: 0.08
+detection_max_width_ratio: 0.45
+detection_max_height_ratio: 0.45
+small_target_mode: true
+adaptive_scan_enabled: true
+global_scan_interval: 5
+local_validate_interval: 3
+lock_tracker_enabled: true
+lock_tracker_min_score: 0.38
+lock_tracker_search_scale: 3.4
+class_ema_alpha: 0.24
+drone_lock_score_min: 0.60
+drone_reacquire_score_min: 0.48
+lock_confirm_frames: 7
+lock_lost_grace: 1
+lock_mode_release_frames: 4
+lock_reacquire_dist: 90
+velocity_alpha: 0.72
+lock_reacquire_predict_gain: 1.15
+lock_reacquire_predict_horizon_max: 5
+local_small_box_area: 1700
+local_small_box_ratio: 0.0038
+local_small_img_size: 960
+local_small_conf: 0.06
+local_boost_lock_score_thresh: 0.62
+night_run_when_primary_seen: false
+night_primary_cooldown: 2
+display_min_hit_streak_night: 4
+display_max_lost_frames: 1
+budget_enabled: true
+budget_target_fps: 20.0
+budget_high_load: 1.12
+budget_low_load: 0.78
+budget_level_max: 2
+budget_roi_min_candidates: 1
+budget_night_skip_level1: 2
+budget_night_skip_level2: 3
+budget_roi_skip_level2: 2
+active_id_switch_cooldown_frames: 60
+track_state_acquire_frames: 4
+lock_mode_acquire_frames: 3
+active_id_switch_allow_if_lost_frames: 12
+show_gt_overlay: true
+show_debug_timings: true
+show_trails: true
+night_enabled: true
+roi_assist_enabled: true
+roi_conf_thresh: 0.10
+night_mot_thresh: 14
+night_diff_thresh: 10
+night_confirm: 7

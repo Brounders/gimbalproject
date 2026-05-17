@@ -62,6 +62,11 @@ class TestConfigDefaultValues(unittest.TestCase):
     def test_lock_score_validate_min(self):
         self.assertEqual(self.cfg.LOCK_SCORE_VALIDATE_MIN, 0.55)
 
+    # Backend truth telemetry
+    def test_frame_telemetry_is_disabled_by_default_with_canonical_path(self):
+        self.assertFalse(self.cfg.FRAME_TELEMETRY_LOG_ENABLED)
+        self.assertEqual(self.cfg.FRAME_TELEMETRY_LOG_PATH, 'runs/telemetry/frame_results.jsonl')
+
 
 if __name__ == '__main__':
     unittest.main()

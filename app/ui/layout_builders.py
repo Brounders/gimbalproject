@@ -301,6 +301,39 @@ def build_left_rail(window) -> QWidget:
     return rail
 
 
+def _build_tele_cell(key: str, value_attr_name: str, window) -> tuple[QFrame, QLabel]:
+    """Single telemetry grid cell: KEY label + value line + thin progress bar."""
+    cell = QFrame()
+    cell.setObjectName('TeleCell')
+    inner = QVBoxLayout(cell)
+    inner.setContentsMargins(10, 8, 10, 8)
+    inner.setSpacing(4)
+
+    key_lbl = QLabel(key)
+    key_lbl.setObjectName('TeleKey')
+    inner.addWidget(key_lbl)
+
+    val_lbl = QLabel('—')
+    val_lbl.setObjectName('TeleVal')
+    inner.addWidget(val_lbl)
+
+    bar_track = QFrame()
+    bar_track.setObjectName('TeleBar')
+    bar_inner = QHBoxLayout(bar_track)
+    bar_inner.setContentsMargins(0, 0, 0, 0)
+    bar_inner.setSpacing(0)
+    fill = QFrame()
+    fill.setObjectName('TeleBarFill')
+    fill.setFixedWidth(0)
+    bar_inner.addWidget(fill)
+    bar_inner.addStretch(1)
+    inner.addWidget(bar_track)
+
+    setattr(window, value_attr_name, val_lbl)
+    setattr(window, value_attr_name + '_bar', fill)
+    return cell, val_lbl
+
+
 def build_right_panel(window) -> QWidget:
     from PySide6.QtWidgets import QGridLayout, QScrollArea
     from PySide6.QtCore import Qt
@@ -313,110 +346,160 @@ def build_right_panel(window) -> QWidget:
     layout.setContentsMargins(0, 0, 0, 0)
     layout.setSpacing(10)
 
-    card = QFrame()
-    card.setObjectName('ActiveTargetCard')
-    card_layout = QVBoxLayout(card)
-    card_layout.setContentsMargins(18, 18, 18, 18)
-    card_layout.setSpacing(12)
+    # ── Target card (reference layout: title row → meta grid → confidence bar)
+    target_card = QFrame()
+    target_card.setObjectName('RefTargetCard')
+    tc_layout = QVBoxLayout(target_card)
+    tc_layout.setContentsMargins(16, 14, 16, 14)
+    tc_layout.setSpacing(10)
 
-    hdr = QHBoxLayout()
-    hdr.setContentsMargins(0, 0, 0, 0)
+    # Title row: ЦЕЛЬ … <CLASS>
+    title_row = QHBoxLayout()
+    title_row.setContentsMargins(0, 0, 0, 0)
+    title_row.setSpacing(8)
+    title = QLabel('ЦЕЛЬ')
+    title.setObjectName('RefCardTitle')
+    title_row.addWidget(title)
+    title_row.addStretch(1)
+    window._rp_class_label = QLabel('—')
+    window._rp_class_label.setObjectName('RefCardClass')
+    title_row.addWidget(window._rp_class_label)
+    tc_layout.addLayout(title_row)
+
+    # Backwards-compat aliases (existing stats_renderer code expects these names).
+    window._rp_id_label = QLabel('—')
+    window._rp_id_label.setObjectName('RefRowVal')
+    window._rp_id_label.setVisible(False)
     window._rp_live_badge = QLabel('● LOCK')
     window._rp_live_badge.setObjectName('LiveBadge')
-    window._rp_id_label = QLabel('—')
-    window._rp_id_label.setObjectName('ActiveTargetId')
-    hdr.addWidget(window._rp_live_badge)
-    hdr.addWidget(window._rp_id_label)
-    hdr.addStretch(1)
+    window._rp_live_badge.setVisible(False)
+    window._rp_name_label = QLabel('—')
+    window._rp_name_label.setObjectName('RefRowVal')
+    window._rp_name_label.setVisible(False)
+    window._rp_sub_label = QLabel('—')
+    window._rp_sub_label.setObjectName('RefRowVal')
+    window._rp_sub_label.setVisible(False)
+
+    # Visible state chip (shown right of title to mirror reference's class slot).
     window._rp_state_chip = QLabel('IDLE')
     window._rp_state_chip.setObjectName('ChipWarn')
-    hdr.addWidget(window._rp_state_chip)
-    card_layout.addLayout(hdr)
 
-    window._rp_name_label = QLabel('Нет цели')
-    window._rp_name_label.setObjectName('ActiveTargetName')
-    window._rp_sub_label = QLabel('ожидание...')
-    window._rp_sub_label.setObjectName('ActiveTargetSub')
-    card_layout.addWidget(window._rp_name_label)
-    card_layout.addWidget(window._rp_sub_label)
+    def _meta_row(key_text: str) -> QLabel:
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(8)
+        k = QLabel(key_text)
+        k.setObjectName('RefRowKey')
+        v = QLabel('—')
+        v.setObjectName('RefRowVal')
+        row.addWidget(k)
+        row.addStretch(1)
+        row.addWidget(v)
+        tc_layout.addLayout(row)
+        return v
 
-    metrics = QHBoxLayout()
-    metrics.setContentsMargins(0, 0, 0, 0)
-    metrics.setSpacing(0)
-    window._rp_conf_key = QLabel('УВЕРЕН')
+    window._rp_id_val = _meta_row('ID')
+    window._rp_state_val = _meta_row('СОСТОЯНИЕ')
+    window._rp_time_val = _meta_row('ВРЕМЯ ТРЕКА')
+    window._rp_camera_val = _meta_row('КАМЕРА')
+
+    # Confidence bar block.
+    conf_block = QVBoxLayout()
+    conf_block.setContentsMargins(0, 4, 0, 0)
+    conf_block.setSpacing(6)
+    conf_top = QHBoxLayout()
+    conf_top.setContentsMargins(0, 0, 0, 0)
+    conf_top.setSpacing(8)
+    conf_lbl = QLabel('УВЕРЕННОСТЬ')
+    conf_lbl.setObjectName('RefRowKey')
+    conf_top.addWidget(conf_lbl)
+    conf_top.addStretch(1)
+    window._rp_conf_pct = QLabel('—')
+    window._rp_conf_pct.setObjectName('RefConfPct')
+    conf_top.addWidget(window._rp_conf_pct)
+    conf_block.addLayout(conf_top)
+
+    bar_track = QFrame()
+    bar_track.setObjectName('RefConfTrack')
+    bar_inner = QHBoxLayout(bar_track)
+    bar_inner.setContentsMargins(0, 0, 0, 0)
+    bar_inner.setSpacing(0)
+    window._rp_conf_bar = QFrame()
+    window._rp_conf_bar.setObjectName('RefConfFill')
+    window._rp_conf_bar.setFixedWidth(0)
+    bar_inner.addWidget(window._rp_conf_bar)
+    bar_inner.addStretch(1)
+    conf_block.addWidget(bar_track)
+    tc_layout.addLayout(conf_block)
+
+    # Secondary metrics row (CONF/FPS/MODE) kept compact for stats_renderer.
+    sec_row = QHBoxLayout()
+    sec_row.setContentsMargins(0, 4, 0, 0)
+    sec_row.setSpacing(12)
+    window._rp_conf_key = QLabel('CONF')
     window._rp_conf_val = QLabel('—')
     window._rp_fps_key = QLabel('FPS')
     window._rp_fps_val = QLabel('—')
     window._rp_src_key = QLabel('РЕЖИМ')
     window._rp_src_val = QLabel('—')
-    for key, val in ((window._rp_conf_key, window._rp_conf_val),
-                     (window._rp_fps_key, window._rp_fps_val),
-                     (window._rp_src_key, window._rp_src_val)):
-        key.setObjectName('MetricKey')
-        val.setObjectName('MetricVal')
+    for k, v in ((window._rp_conf_key, window._rp_conf_val),
+                 (window._rp_fps_key, window._rp_fps_val),
+                 (window._rp_src_key, window._rp_src_val)):
+        k.setObjectName('RefRowKey')
+        v.setObjectName('RefRowVal')
         cell = QVBoxLayout()
         cell.setContentsMargins(0, 0, 0, 0)
-        cell.setSpacing(4)
-        cell.addWidget(key)
-        cell.addWidget(val)
-        metrics.addLayout(cell)
-        metrics.addStretch(1)
-    card_layout.addLayout(metrics)
+        cell.setSpacing(2)
+        cell.addWidget(k)
+        cell.addWidget(v)
+        sec_row.addLayout(cell)
+        sec_row.addStretch(1)
+    tc_layout.addLayout(sec_row)
 
-    bar_row = QHBoxLayout()
-    bar_row.setContentsMargins(0, 0, 0, 0)
-    bar_row.setSpacing(10)
-    conf_lbl = QLabel('CONF')
-    conf_lbl.setObjectName('MetricKey')
-    bar_track = QFrame()
-    bar_track.setObjectName('ConfBarTrack')
-    bar_track.setMinimumWidth(60)
-    bar_inner = QHBoxLayout(bar_track)
-    bar_inner.setContentsMargins(0, 0, 0, 0)
-    bar_inner.setSpacing(0)
-    window._rp_conf_bar = QFrame()
-    window._rp_conf_bar.setObjectName('ConfBarFill')
-    window._rp_conf_bar.setFixedWidth(0)
-    bar_inner.addWidget(window._rp_conf_bar)
-    bar_inner.addStretch(1)
-    window._rp_conf_pct = QLabel('—')
-    window._rp_conf_pct.setObjectName('MetricVal')
-    window._rp_conf_pct.setFixedWidth(42)
-    bar_row.addWidget(conf_lbl)
-    bar_row.addWidget(bar_track, 1)
-    bar_row.addWidget(window._rp_conf_pct)
-    card_layout.addLayout(bar_row)
+    layout.addWidget(target_card)
 
-    layout.addWidget(card)
+    # ── Telemetry grid card (reference: 6-cell grid) ─────────────────────────
+    tele_card = QFrame()
+    tele_card.setObjectName('RefTargetCard')
+    tele_layout = QVBoxLayout(tele_card)
+    tele_layout.setContentsMargins(14, 12, 14, 14)
+    tele_layout.setSpacing(10)
 
-    rt = QFrame()
-    rt.setObjectName('RuntimeCard')
-    rt_layout = QGridLayout(rt)
-    rt_layout.setContentsMargins(16, 14, 16, 14)
-    rt_layout.setHorizontalSpacing(20)
-    rt_layout.setVerticalSpacing(6)
+    tele_title_row = QHBoxLayout()
+    tele_title = QLabel('ТЕЛЕМЕТРИЯ')
+    tele_title.setObjectName('RefCardTitle')
+    tele_title_row.addWidget(tele_title)
+    tele_title_row.addStretch(1)
+    tele_layout.addLayout(tele_title_row)
 
-    rt_title = QLabel('ТЕЛЕМЕТРИЯ ТРЕКЕРА')
-    rt_title.setObjectName('RuntimeTitle')
-    rt_layout.addWidget(rt_title, 0, 0, 1, 3)
+    grid = QGridLayout()
+    grid.setContentsMargins(0, 0, 0, 0)
+    grid.setHorizontalSpacing(8)
+    grid.setVerticalSpacing(8)
 
+    # 6 cells, 3 rows × 2 cols. Names match stats_renderer expectations
+    # for fps/budget/targets and add new operator-tele slots (range/heading/etc.).
+    cells = [
+        ('FPS', '_rp_rt_fps_v'),
+        ('БЮДЖЕТ', '_rp_rt_bdg_v'),
+        ('ВЫСОТА', '_rp_alt_v'),
+        ('СКОРОСТЬ', '_rp_speed_v'),
+        ('ЦЕЛЕЙ', '_rp_rt_tgt_v'),
+        ('ID-СВ.', '_rp_idchg_v'),
+    ]
+    for i, (key, attr) in enumerate(cells):
+        cell, _ = _build_tele_cell(key, attr, window)
+        grid.addWidget(cell, i // 2, i % 2)
+    tele_layout.addLayout(grid)
+
+    # Aliases preserved for stats_renderer (legacy field names).
     window._rp_rt_fps_k = QLabel('FPS')
-    window._rp_rt_fps_v = QLabel('—')
     window._rp_rt_bdg_k = QLabel('БЮДЖЕТ')
-    window._rp_rt_bdg_v = QLabel('—')
     window._rp_rt_tgt_k = QLabel('ЦЕЛЕЙ')
-    window._rp_rt_tgt_v = QLabel('—')
 
-    for i, (k, v) in enumerate(((window._rp_rt_fps_k, window._rp_rt_fps_v),
-                                 (window._rp_rt_bdg_k, window._rp_rt_bdg_v),
-                                 (window._rp_rt_tgt_k, window._rp_rt_tgt_v))):
-        k.setObjectName('RuntimeTitle')
-        v.setObjectName('RuntimeVal')
-        rt_layout.addWidget(k, 1, i)
-        rt_layout.addWidget(v, 2, i)
+    layout.addWidget(tele_card)
 
-    layout.addWidget(rt)
-
+    # ── Diagnostics drawer (collapsible inspector retained, scrollable) ──────
     scroll = QScrollArea()
     scroll.setWidgetResizable(True)
     scroll.setFrameShape(QFrame.NoFrame)
@@ -485,6 +568,32 @@ def build_dock(window) -> QFrame:
     layout.addWidget(dock_release)
 
     return dock
+
+
+def build_bottom_info_bar(window) -> QFrame:
+    """Slim info strip at the bottom of the operator UI.
+
+    Mirrors the operator HTML reference: GPS/coordinate/status text on the left,
+    FPS readout on the right.  This widget is informational only — start/stop
+    and shortcut controls live in the dock.
+    """
+    bar = QFrame()
+    bar.setObjectName('BottomInfoBar')
+
+    layout = QHBoxLayout(bar)
+    layout.setContentsMargins(14, 0, 14, 0)
+    layout.setSpacing(8)
+
+    window.bottom_info_text = QLabel('— · — SIG —')
+    window.bottom_info_text.setObjectName('BottomInfoText')
+    window.bottom_info_text.setWordWrap(False)
+    layout.addWidget(window.bottom_info_text, 1)
+
+    window.bottom_fps_label = QLabel('FPS —')
+    window.bottom_fps_label.setObjectName('BottomFpsText')
+    layout.addWidget(window.bottom_fps_label, 0)
+
+    return bar
 
 
 def build_inspector_drawer(window) -> QWidget:

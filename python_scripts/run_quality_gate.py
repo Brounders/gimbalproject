@@ -145,6 +145,14 @@ def _csv_write(path: Path, rows: list[dict[str, Any]]) -> None:
         "lock_switches_per_min",
         "false_lock_frames",
         "false_lock_rate",
+        "operator_hint_count",
+        "operator_lock_confirmed_count",
+        "operator_target_lost_count",
+        "avg_operator_click_to_lock_frames",
+        "avg_operator_verify_age_frames",
+        "latency_p95_ms",
+        "latency_p99_ms",
+        "track_fragmentation_rate",
         "score",
         "passed",
         "fail_reasons",
@@ -269,6 +277,16 @@ def main() -> int:
             "false_lock_frames": int(report.get("false_lock_frames", 0)),
             "false_lock_rate": round(float(report.get("false_lock_rate", 0.0)), 4),
             "mode_counts": report.get("mode_counts", {}),
+            "operator_workflow_counts": report.get("operator_workflow_counts", {}),
+            "operator_workflow_event_counts": report.get("operator_workflow_event_counts", {}),
+            "operator_hint_count": int(report.get("operator_hint_count", 0)),
+            "operator_lock_confirmed_count": int(report.get("operator_lock_confirmed_count", 0)),
+            "operator_target_lost_count": int(report.get("operator_target_lost_count", 0)),
+            "avg_operator_click_to_lock_frames": round(float(report.get("avg_operator_click_to_lock_frames", 0.0)), 3),
+            "avg_operator_verify_age_frames": round(float(report.get("avg_operator_verify_age_frames", 0.0)), 3),
+            "latency_p95_ms": report.get("latency_p95_ms"),
+            "latency_p99_ms": report.get("latency_p99_ms"),
+            "track_fragmentation_rate": round(float(report.get("track_fragmentation_rate") or 0.0), 4),
         }
         row["score"] = round(_score_row(row), 3)
 
@@ -343,6 +361,28 @@ def main() -> int:
         "active_id_changes_per_min": round(sum(float(r["active_id_changes_per_min"]) for r in rows) / max(1, len(rows)), 4),
         "lock_switches_per_min": round(sum(float(r["lock_switches_per_min"]) for r in rows) / max(1, len(rows)), 4),
         "false_lock_rate": round(sum(float(r["false_lock_rate"]) for r in rows) / max(1, len(rows)), 4),
+        "operator_hint_count": sum(int(r.get("operator_hint_count", 0)) for r in rows),
+        "operator_lock_confirmed_count": sum(int(r.get("operator_lock_confirmed_count", 0)) for r in rows),
+        "operator_target_lost_count": sum(int(r.get("operator_target_lost_count", 0)) for r in rows),
+        "avg_operator_click_to_lock_frames": round(
+            sum(float(r.get("avg_operator_click_to_lock_frames", 0.0)) for r in rows) / max(1, len(rows)), 3
+        ),
+        "avg_operator_verify_age_frames": round(
+            sum(float(r.get("avg_operator_verify_age_frames", 0.0)) for r in rows) / max(1, len(rows)), 3
+        ),
+        "latency_p95_ms": (
+            round(sum(float(r["latency_p95_ms"]) for r in rows if r.get("latency_p95_ms") is not None) /
+                  max(1, sum(1 for r in rows if r.get("latency_p95_ms") is not None)), 3)
+            if any(r.get("latency_p95_ms") is not None for r in rows) else None
+        ),
+        "latency_p99_ms": (
+            round(sum(float(r["latency_p99_ms"]) for r in rows if r.get("latency_p99_ms") is not None) /
+                  max(1, sum(1 for r in rows if r.get("latency_p99_ms") is not None)), 3)
+            if any(r.get("latency_p99_ms") is not None for r in rows) else None
+        ),
+        "track_fragmentation_rate": round(
+            sum(float(r.get("track_fragmentation_rate") or 0.0) for r in rows) / max(1, len(rows)), 4
+        ),
         "score": round(sum(float(r["score"]) for r in rows) / max(1, len(rows)), 3),
     }
 

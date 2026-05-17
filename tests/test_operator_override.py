@@ -81,6 +81,28 @@ class TestTargetManagerOperatorOverride:
         assert mgr.active_id == result.active_id
         assert mgr.is_focus_mode() is True
 
+    def test_operator_override_can_enter_verifying_without_instant_lock(self):
+        cfg = Config(
+            OPERATOR_OVERRIDE_ENABLED=True,
+            OPERATOR_OVERRIDE_INSTANT_LOCK=False,
+            LOCK_CONFIRM_FRAMES=5,
+        )
+        mgr = TargetManager(cfg)
+
+        result = mgr.apply_operator_override(
+            OperatorTargetOverride.from_bbox((10, 20, 50, 70)),
+            frame_shape=(100, 120, 3),
+        )
+
+        active = mgr.get_active_target()
+        assert result.applied is True
+        assert result.status == 'verifying'
+        assert active is not None
+        assert active.source == DetectionSource.OPERATOR
+        assert active.hit_streak < cfg.LOCK_CONFIRM_FRAMES
+        assert mgr.active_id == result.active_id
+        assert mgr.is_focus_mode() is False
+
     def test_operator_override_prefers_existing_target_inside_bbox(self):
         cfg = Config(OPERATOR_OVERRIDE_ENABLED=True, LOCK_CONFIRM_FRAMES=4)
         mgr = TargetManager(cfg)
@@ -202,3 +224,14 @@ class TestPipelineOperatorOverride:
 
         assert run_global is False
         assert strategy == 'OPERATOR-LOCK'
+
+    def test_verifying_operator_target_uses_local_search_around_click(self):
+        pipe = self._pipeline(enabled=True)
+        pipe.cfg.OPERATOR_OVERRIDE_INSTANT_LOCK = False
+        pipe.request_operator_target(OperatorTargetOverride.from_click(40, 50, box_size=30))
+        pipe._apply_operator_override_if_pending(np.zeros((80, 80, 3), dtype=np.uint8))
+
+        run_global, strategy = pipe._should_run_global_scan()
+
+        assert run_global is False
+        assert strategy == 'OPERATOR-VERIFY'

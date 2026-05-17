@@ -1,0 +1,16 @@
+# source,scene
+# Field IR/thermal regression pack.
+# Slower than configs/regression_pack_ir.csv; use for broader field checks.
+# Run:
+#   PYTHONPATH=src ./tracker_env/bin/python python_scripts/run_quality_gate.py \
+#     --pack-file configs/regression_pack_field_ir.csv --preset antiuav_thermal \
+#     --max-false-lock-rate 0.70
+test_videos/Demo_IR_DRONE_146.mp4,ir
+test_videos/IR_DRONE_001.mp4,ir
+test_videos/IR_BIRD_001.mp4,noise
+test_videos/infrared.mp4,ir
+test_videos/antiuav_rgbt_20190925_200805_1_2_infrared.mp4,ir
+test_videos/antiuav_rgbt_train_20190925_205804_1_2_infrared.mp4,ir
+test_videos/antiuav_rgbt_train_20190925_210802_1_7_infrared.mp4,ir
+test_videos/dataset_mendeley_f1_1_IR_dji_mavic_2_range_close.mp4,ir
+test_videos/f2_13_IR_dji_mavic_2.mp4,ir

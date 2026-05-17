@@ -9,6 +9,8 @@ Rectangle {
 
     signal closed()
 
+    property bool embedded: false
+
     onVisibleChanged: if (visible && dtsBridge) dtsBridge.reload()
 
     Timer {
@@ -24,6 +26,33 @@ Rectangle {
         if (v === "REJECTED") return "#E26B6B"
         if (v === "STAGED") return "#E8B547"
         return "#8FA4B8"
+    }
+
+    function operationColor(tone) {
+        var v = (tone || "idle").toLowerCase()
+        if (v === "success") return "#52D273"
+        if (v === "warn") return "#E8B547"
+        if (v === "error") return "#E26B6B"
+        if (v === "progress") return "#64B5F6"
+        return "#8FA4B8"
+    }
+
+    function operationFill(tone) {
+        var v = (tone || "idle").toLowerCase()
+        if (v === "success") return Qt.rgba(0.322, 0.824, 0.451, 0.12)
+        if (v === "warn") return Qt.rgba(0.910, 0.710, 0.280, 0.14)
+        if (v === "error") return Qt.rgba(0.886, 0.420, 0.420, 0.13)
+        if (v === "progress") return Qt.rgba(0.392, 0.710, 0.965, 0.13)
+        return Qt.rgba(0.561, 0.643, 0.722, 0.08)
+    }
+
+    function compareStatusColor(status) {
+        var s = (status || "").toUpperCase()
+        if (s === "PASS") return "#52D273"
+        if (s === "RUNNING") return "#64B5F6"
+        if (s === "RETUNE") return "#E8B547"
+        if (s === "NOT_RUN") return "#8FA4B8"
+        return "#E26B6B"
     }
 
     function qualityRows() {
@@ -48,7 +77,8 @@ Rectangle {
 
         Rectangle {
             Layout.fillWidth: true
-            height: 48
+            height: root.embedded ? 0 : 48
+            visible: !root.embedded
             color: "transparent"
             Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: "#1C2A38" }
             RowLayout {
@@ -325,6 +355,7 @@ Rectangle {
                         Repeater {
                             model: [
                                 {label:"ПРИНЯТЬ",   color:"#52D273", status:"accepted"},
+                                {label:"NEGATIVE",  color:"#E8B547", status:"hard_negative"},
                                 {label:"ОТКЛОНИТЬ", color:"#E26B6B", status:"rejected"},
                             ]
                             delegate: Rectangle {
@@ -339,9 +370,10 @@ Rectangle {
                                 MouseArea {
                                     id: actionMa
                                     anchors.fill: parent
+                                    enabled: root.selected()
                                     hoverEnabled: true
                                     cursorShape: root.selected() ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                    onClicked: if (root.selected() && dtsBridge) dtsBridge.setSelectedStatus(modelData.status)
+                                    onClicked: if (dtsBridge) dtsBridge.setSelectedStatus(modelData.status)
                                 }
                                 Text {
                                     anchors.centerIn: parent
@@ -450,123 +482,118 @@ Rectangle {
                                 Item { Layout.fillWidth: true }
                             }
 
-                            Text {
+                            Rectangle {
                                 Layout.fillWidth: true
-                                text: dtsBridge ? dtsBridge.candidateSummary : "accepted 0"
-                                color: "#8FA4B8"
-                                font.pixelSize: 9
-                                font.family: "Menlo"
-                                wrapMode: Text.Wrap
-                                maximumLineCount: 2
-                                elide: Text.ElideRight
+                                implicitHeight: opStatusCol.implicitHeight + 18
+                                radius: 7
+                                color: root.operationFill(dtsBridge ? dtsBridge.operationStatusTone : "idle")
+                                border.color: root.operationColor(dtsBridge ? dtsBridge.operationStatusTone : "idle")
+                                border.width: 1
+                                Behavior on color { ColorAnimation { duration: 180 } }
+                                ColumnLayout {
+                                    id: opStatusCol
+                                    anchors.fill: parent
+                                    anchors.margins: 9
+                                    spacing: 6
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: dtsBridge ? dtsBridge.operationStatusTitle : "Готов к работе"
+                                        color: root.operationColor(dtsBridge ? dtsBridge.operationStatusTone : "idle")
+                                        font.pixelSize: 15
+                                        font.family: "Menlo"
+                                        font.bold: true
+                                        elide: Text.ElideRight
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: dtsBridge ? dtsBridge.operationStatusBody : "—"
+                                        color: "#E6ECF3"
+                                        font.pixelSize: 12
+                                        font.family: "Menlo"
+                                        wrapMode: Text.Wrap
+                                        maximumLineCount: 2
+                                        elide: Text.ElideRight
+                                    }
+                                }
                             }
 
-                            Text {
+                            RowLayout {
                                 Layout.fillWidth: true
-                                text: dtsBridge && dtsBridge.candidatePackDir !== "" ? "PACK · " + dtsBridge.candidatePackDir + " · ok " + dtsBridge.candidatePackOkCount : "PACK · не собран"
-                                color: dtsBridge && dtsBridge.candidatePackOkCount > 0 ? "#52D273" : "#4A5E6E"
-                                font.pixelSize: 8
-                                font.family: "Menlo"
-                                elide: Text.ElideRight
+                                spacing: 6
+                                Text {
+                                    text: dtsBridge && dtsBridge.candidatePackDir !== "" ? "PACK: " + dtsBridge.candidatePackOkCount + " кадров" : "PACK: не собран"
+                                    color: dtsBridge && dtsBridge.candidatePackOkCount > 0 ? "#52D273" : "#4A5E6E"
+                                    font.pixelSize: 10
+                                    font.family: "Menlo"
+                                    elide: Text.ElideRight
+                                }
+                                Item { Layout.fillWidth: true }
+                                Text {
+                                    text: dtsBridge ? dtsBridge.candidateStatusLabel : ""
+                                    color: {
+                                        var s = dtsBridge ? dtsBridge.candidateStatusLabel : ""
+                                        if (s === "compare PASS" || s === "candidate принят") return "#52D273"
+                                        if (s === "compare RETUNE" || s === "pack собран" || s === "best.pt готов") return "#E8B547"
+                                        if (s === "compare FAIL" || s === "compare не пройден") return "#E26B6B"
+                                        return "#4A5E6E"
+                                    }
+                                    font.pixelSize: 9
+                                    font.family: "Menlo"
+                                    font.letterSpacing: 0.8
+                                }
                             }
 
-                            // -- compare status block (Task 1) --
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 spacing: 5
-                                visible: (dtsBridge && dtsBridge.compareStatus !== "NOT_RUN") || (dtsBridge && dtsBridge.compareRunning)
+                                visible: (dtsBridge && dtsBridge.compareStatus !== "NOT_RUN") || (dtsBridge && dtsBridge.compareRunning) || (dtsBridge && dtsBridge.compareHumanSummary !== "")
 
-                                // status badge + N/M counts
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 6
-
-                                    Rectangle {
-                                        width: statusBadgeTxt.implicitWidth + 10
-                                        height: 16
-                                        radius: 3
-                                        color: {
-                                            var s = dtsBridge ? dtsBridge.compareStatus : ""
-                                            if (s === "PASS") return Qt.rgba(0.322,0.824,0.451,0.18)
-                                            if (s === "RUNNING") return Qt.rgba(0.910,0.710,0.280,0.18)
-                                            if (s === "RETUNE") return Qt.rgba(0.910,0.710,0.280,0.18)
-                                            return Qt.rgba(0.886,0.420,0.420,0.18)
-                                        }
-                                        Text {
-                                            id: statusBadgeTxt
-                                            anchors.centerIn: parent
-                                            text: dtsBridge ? dtsBridge.compareStatus : "—"
-                                            color: {
-                                                var s = dtsBridge ? dtsBridge.compareStatus : ""
-                                                if (s === "PASS") return "#52D273"
-                                                if (s === "RUNNING") return "#E8B547"
-                                                if (s === "RETUNE") return "#E8B547"
-                                                return "#E26B6B"
-                                            }
-                                            font.pixelSize: 9; font.family: "Menlo"; font.letterSpacing: 1.2
-                                        }
-                                    }
-
-                                    Text {
-                                        text: "base " + (dtsBridge ? dtsBridge.compareBaselinePassN : 0) + "/" + (dtsBridge ? dtsBridge.compareBaselineTotalN : 0)
-                                        color: "#4A5E6E"; font.pixelSize: 9; font.family: "Menlo"
-                                    }
-                                    Text {
-                                        text: "cand " + (dtsBridge ? dtsBridge.compareCandidatePassN : 0) + "/" + (dtsBridge ? dtsBridge.compareCandidateTotalN : 0)
-                                        color: "#8FA4B8"; font.pixelSize: 9; font.family: "Menlo"
-                                    }
-                                    Item { Layout.fillWidth: true }
-                                }
-
-                                // per-context rows
-                                Repeater {
-                                    model: {
-                                        if (!dtsBridge) return []
-                                        try { return JSON.parse(dtsBridge.compareContextsJson) }
-                                        catch(e) { return [] }
-                                    }
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 4
-                                        Text {
-                                            text: (modelData.name || "?").toUpperCase()
-                                            color: modelData.passed ? "#52D273" : "#E26B6B"
-                                            font.pixelSize: 8; font.family: "Menlo"; font.letterSpacing: 1
-                                            Layout.preferredWidth: 26
-                                        }
-                                        Text {
-                                            text: "pres " + (modelData.presence !== undefined ? modelData.presence.toFixed(2) : "—")
-                                            color: "#8FA4B8"; font.pixelSize: 8; font.family: "Menlo"
-                                        }
-                                        Text {
-                                            visible: modelData.delta_presence !== undefined
-                                            text: (modelData.delta_presence >= 0 ? "+" : "") + (modelData.delta_presence !== undefined ? modelData.delta_presence.toFixed(2) : "")
-                                            color: modelData.delta_presence >= 0 ? "#52D273" : "#E26B6B"
-                                            font.pixelSize: 8; font.family: "Menlo"
-                                        }
-                                        Text {
-                                            text: "fl " + (modelData.false_lock !== undefined ? modelData.false_lock.toFixed(2) : "—")
-                                            color: "#8FA4B8"; font.pixelSize: 8; font.family: "Menlo"
-                                        }
-                                        Text {
-                                            text: "id " + (modelData.id_changes !== undefined ? modelData.id_changes.toFixed(1) : "—")
-                                            color: "#8FA4B8"; font.pixelSize: 8; font.family: "Menlo"
-                                        }
-                                    }
-                                }
-
-                                // result dir
                                 Text {
                                     Layout.fillWidth: true
-                                    visible: dtsBridge && dtsBridge.compareResultDir !== ""
-                                    text: dtsBridge ? dtsBridge.compareResultDir : ""
-                                    color: "#2A3E50"
-                                    font.pixelSize: 7; font.family: "Menlo"
-                                    elide: Text.ElideLeft
+                                    text: dtsBridge ? dtsBridge.compareHumanTitle : "—"
+                                    color: root.compareStatusColor(dtsBridge ? dtsBridge.compareStatus : "")
+                                    font.pixelSize: 13
+                                    font.family: "Menlo"
+                                    font.bold: true
+                                    elide: Text.ElideRight
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    visible: dtsBridge && dtsBridge.compareHumanSummary !== ""
+                                    text: dtsBridge ? dtsBridge.compareHumanSummary : ""
+                                    color: "#8FA4B8"
+                                    font.pixelSize: 10
+                                    font.family: "Menlo"
+                                    wrapMode: Text.Wrap
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 4
+                                    visible: dtsBridge && dtsBridge.compareRejectReason !== ""
+                                    Text { text: "Причина:"; color: "#4A5E6E"; font.pixelSize: 9; font.family: "Menlo" }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: dtsBridge ? dtsBridge.compareRejectReason : ""
+                                        color: "#E8B547"
+                                        font.pixelSize: 9
+                                        font.family: "Menlo"
+                                        wrapMode: Text.Wrap
+                                    }
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    visible: dtsBridge && dtsBridge.compareDecisionMissing
+                                    text: "⚠ gate decision не сохранен — повторите СРАВНИТЬ"
+                                    color: "#E26B6B"
+                                    font.pixelSize: 9
+                                    font.family: "Menlo"
+                                    wrapMode: Text.Wrap
                                 }
                             }
 
-                            // -- segmented progress bar (Task 2, replaces indeterminate) --
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 spacing: 3
@@ -606,6 +633,40 @@ Rectangle {
                                 }
                             }
 
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 3
+                                visible: dtsBridge && (dtsBridge.trainingRunning || dtsBridge.trainingLogTail !== "")
+
+                                Text {
+                                    text: "ЛОГ ОБУЧЕНИЯ"
+                                    color: "#4A5E6E"
+                                    font.pixelSize: 9
+                                    font.family: "Menlo"
+                                    font.letterSpacing: 1.5
+                                }
+
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    height: 76
+                                    radius: 5
+                                    clip: true
+                                    color: Qt.rgba(0.392, 0.710, 0.965, 0.05)
+                                    border.color: Qt.rgba(0.392, 0.710, 0.965, 0.15)
+                                    border.width: 1
+                                    Text {
+                                        anchors.fill: parent
+                                        anchors.margins: 6
+                                        text: dtsBridge ? dtsBridge.trainingLogTail : ""
+                                        color: "#6F7E8E"
+                                        font.pixelSize: 9
+                                        font.family: "Menlo"
+                                        wrapMode: Text.Wrap
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                            }
+
                             GridLayout {
                                 Layout.fillWidth: true
                                 columns: 2
@@ -614,35 +675,53 @@ Rectangle {
 
                                 Rectangle {
                                     Layout.fillWidth: true; height: 34; radius: 6
-                                    color: assembleMa.containsMouse ? Qt.rgba(0.322,0.824,0.451,0.13) : Qt.rgba(0.322,0.824,0.451,0.06)
+                                    enabled: !(dtsBridge && (dtsBridge.trainingRunning || dtsBridge.compareRunning))
+                                    opacity: enabled ? 1.0 : 0.50
+                                    color: assembleMa.containsMouse && enabled ? Qt.rgba(0.322,0.824,0.451,0.13) : Qt.rgba(0.322,0.824,0.451,0.06)
                                     border.color: Qt.rgba(0.322,0.824,0.451,0.34); border.width: 1
-                                    MouseArea { id: assembleMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (dtsBridge) dtsBridge.assembleCandidate() }
+                                    MouseArea { id: assembleMa; anchors.fill: parent; hoverEnabled: true; cursorShape: parent.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: if (dtsBridge && parent.enabled) dtsBridge.assembleCandidate() }
                                     Text { anchors.centerIn: parent; text: "СОБРАТЬ"; color: "#52D273"; font.pixelSize: 10; font.family: "Menlo"; font.letterSpacing: 1.2 }
                                 }
 
                                 Rectangle {
                                     Layout.fillWidth: true; height: 34; radius: 6
-                                    color: trainMa.containsMouse ? Qt.rgba(0.561,0.643,0.722,0.12) : Qt.rgba(0.561,0.643,0.722,0.06)
+                                    enabled: appState ? appState.canTrain : !(dtsBridge && (dtsBridge.trainingRunning || dtsBridge.compareRunning))
+                                    opacity: enabled ? 1.0 : 0.65
+                                    color: trainMa.containsMouse && enabled ? Qt.rgba(0.561,0.643,0.722,0.12) : Qt.rgba(0.561,0.643,0.722,0.06)
                                     border.color: Qt.rgba(0.561,0.643,0.722,0.30); border.width: 1
-                                    MouseArea { id: trainMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (dtsBridge) dtsBridge.trainCandidate() }
-                                    Text { anchors.centerIn: parent; text: "ОБУЧИТЬ"; color: "#8FA4B8"; font.pixelSize: 10; font.family: "Menlo"; font.letterSpacing: 1.2 }
+                                    MouseArea { id: trainMa; anchors.fill: parent; hoverEnabled: true; cursorShape: parent.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: if (dtsBridge && parent.enabled) dtsBridge.trainCandidate() }
+                                    Text { anchors.centerIn: parent; text: dtsBridge && dtsBridge.trainingRunning ? "ИДЕТ..." : "ОБУЧИТЬ"; color: dtsBridge && dtsBridge.trainingRunning ? "#64B5F6" : "#8FA4B8"; font.pixelSize: 10; font.family: "Menlo"; font.letterSpacing: 1.2 }
+                                }
+
+                                Rectangle {
+                                    Layout.columnSpan: 2
+                                    Layout.fillWidth: true; height: 34; radius: 6
+                                    visible: dtsBridge && dtsBridge.trainingRunning
+                                    enabled: dtsBridge && dtsBridge.trainingCanCancel
+                                    opacity: enabled ? 1.0 : 0.40
+                                    color: cancelMa.containsMouse && enabled ? Qt.rgba(0.910,0.710,0.280,0.15) : "transparent"
+                                    border.color: Qt.rgba(0.910,0.710,0.280,0.40); border.width: 1
+                                    MouseArea { id: cancelMa; anchors.fill: parent; hoverEnabled: true; cursorShape: parent.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: if (dtsBridge && parent.enabled) dtsBridge.cancelTraining() }
+                                    Text { anchors.centerIn: parent; text: "ОСТАНОВИТЬ"; color: "#E8B547"; font.pixelSize: 10; font.family: "Menlo"; font.letterSpacing: 1.2 }
                                 }
 
                                 Rectangle {
                                     Layout.fillWidth: true; height: 34; radius: 6
-                                    enabled: !(dtsBridge && dtsBridge.compareRunning)
+                                    enabled: appState ? appState.canCompare : !(dtsBridge && (dtsBridge.compareRunning || dtsBridge.trainingRunning)) && (dtsBridge && dtsBridge.candidateModelReady)
                                     opacity: enabled ? 1.0 : 0.55
-                                    color: compareMa.containsMouse && enabled ? Qt.rgba(0.561,0.643,0.722,0.12) : Qt.rgba(0.561,0.643,0.722,0.06)
-                                    border.color: Qt.rgba(0.561,0.643,0.722,0.30); border.width: 1
+                                    color: compareMa.containsMouse && enabled ? Qt.rgba(0.392,0.710,0.965,0.14) : Qt.rgba(0.392,0.710,0.965,0.07)
+                                    border.color: Qt.rgba(0.392,0.710,0.965,0.34); border.width: 1
                                     MouseArea { id: compareMa; anchors.fill: parent; hoverEnabled: true; cursorShape: parent.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: if (dtsBridge && parent.enabled) dtsBridge.compareCandidate() }
-                                    Text { anchors.centerIn: parent; text: dtsBridge && dtsBridge.compareRunning ? "ИДЕТ..." : "СРАВНИТЬ"; color: "#8FA4B8"; font.pixelSize: 10; font.family: "Menlo"; font.letterSpacing: 1.2 }
+                                    Text { anchors.centerIn: parent; text: dtsBridge && dtsBridge.compareRunning ? "ИДЕТ..." : "СРАВНИТЬ"; color: "#64B5F6"; font.pixelSize: 10; font.family: "Menlo"; font.letterSpacing: 1.2 }
                                 }
 
                                 Rectangle {
                                     Layout.fillWidth: true; height: 34; radius: 6
-                                    color: acceptMa.containsMouse ? Qt.rgba(0.886,0.420,0.420,0.11) : Qt.rgba(0.886,0.420,0.420,0.045)
+                                    enabled: appState ? appState.canAccept : false
+                                    opacity: enabled ? 1.0 : 0.45
+                                    color: acceptMa.containsMouse && enabled ? Qt.rgba(0.886,0.420,0.420,0.11) : Qt.rgba(0.886,0.420,0.420,0.045)
                                     border.color: Qt.rgba(0.886,0.420,0.420,0.28); border.width: 1
-                                    MouseArea { id: acceptMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (dtsBridge) dtsBridge.acceptCandidate() }
+                                    MouseArea { id: acceptMa; anchors.fill: parent; hoverEnabled: true; cursorShape: parent.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: if (dtsBridge && parent.enabled) dtsBridge.acceptCandidate() }
                                     Text { anchors.centerIn: parent; text: "ПРИНЯТЬ"; color: "#E26B6B"; font.pixelSize: 10; font.family: "Menlo"; font.letterSpacing: 1.2 }
                                 }
                             }
@@ -651,16 +730,7 @@ Rectangle {
 
                     Item { Layout.fillHeight: true }
 
-                    Text {
-                        Layout.fillWidth: true
-                        text: dtsBridge ? dtsBridge.lastMessage : "—"
-                        color: "#4A5E6E"
-                        font.pixelSize: 10
-                        font.family: "Menlo"
-                        wrapMode: Text.Wrap
-                        maximumLineCount: 4
-                        elide: Text.ElideRight
-                    }
+                    Item { Layout.preferredHeight: 1 }
                 }
             }
         }

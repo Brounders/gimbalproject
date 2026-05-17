@@ -149,6 +149,12 @@ class TestApplyOverrides(unittest.TestCase):
         self.assertEqual(cfg.IMG_SIZE, default.IMG_SIZE)
         self.assertEqual(cfg.DEVICE, default.DEVICE)
 
+    def test_small_target_preset_disables_night_detector_for_eo_day(self):
+        cfg, data = load_preset('small_target', Config())
+
+        self.assertIs(data.get('night_enabled'), False)
+        self.assertFalse(cfg.NIGHT_ENABLED)
+
 
 # ---------------------------------------------------------------------------
 # B) I/O functions: save_profile and load_profile

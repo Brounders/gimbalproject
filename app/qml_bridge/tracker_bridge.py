@@ -210,8 +210,11 @@ class TrackerBridge(QObject):
         # QML is operator-first: click-to-select must always be active, and
         # accepted operator clicks are the intake path for DTS annotations.
         cfg.OPERATOR_OVERRIDE_ENABLED = True
+        cfg.OPERATOR_OVERRIDE_INSTANT_LOCK = False
         cfg.OPERATOR_ANNOTATION_LOG_ENABLED = True
         cfg.OPERATOR_ANNOTATION_LOG_PATH = str(ROOT / "runs" / "operator_annotations" / "qml_operator_annotations.jsonl")
+        cfg.FRAME_TELEMETRY_LOG_ENABLED = bool(int(self._setting("tracker_frame_telemetry_enabled", 1)))
+        cfg.FRAME_TELEMETRY_LOG_PATH = str(ROOT / "runs" / "telemetry" / "frame_results.jsonl")
         cfg.validate()
         return cfg
 
@@ -420,10 +423,13 @@ class TrackerBridge(QObject):
         lock_score = float(stats.get("lock_score", 0.0) or 0.0)
         confidence = float(stats.get("display_confidence", 0.0) or 0.0)
         operator_status = str(stats.get("operator_override_status", "none") or "none")
+        workflow_state = str(stats.get("operator_workflow_state", "") or "")
         tracking_action = str(stats.get("tracking_action", "") or "")
 
         if not self._is_running:
             return "OFFLINE"
+        if workflow_state in {"SEARCH", "CANDIDATE", "VERIFYING", "TRACKING", "WEAK_TRACK", "LOST"}:
+            return workflow_state
         if mode == "LOST":
             if active_id is not None or active_bbox is not None or tracking_action in {"hold", "reacquire", "local_validate"}:
                 return "REACQUIRE"

@@ -1,242 +1,206 @@
-# CLAUDE ROLE — Implementation Lead
+# CLAUDE.md — Bounded Worker Protocol
 
-## Efficiency (read first)
+## Role
 
-- Отвечай кратко — одно предложение на факт, без вводных слов
-- Не повторяй условие задачи и не пиши резюме после выполнения
-- Читай файлы частично (offset/limit) — не грузи целиком если не нужно
-- Grep/Glob перед Read — сначала найди, потом читай
-- Не пиши объяснений к коду если не спросили
+Claude is a bounded implementation worker for GimbalProject.
+Codex/Human owns planning, scope, acceptance, and next-step decisions.
 
-## Project Overview
+Claude must execute the current Human/Codex prompt, not autonomously continue the project.
 
-UAV tracking system: YOLO detection + night MOG2 detector + template lock tracker + gimbal control.
-Runtimes: Mac M1 (Ultralytics/MPS) and RPi5 + Hailo (stub). PySide6 GUI + CLI entry points.
+## Startup Rule
 
-## Tech Stack
+At session start, do not perform broad context loading.
 
-Python 3.11 · ultralytics (YOLOv8) · opencv-python · numpy · PySide6 · torch/MPS · dataclasses
+Read only:
 
-## Repository Structure
+1. The current Human/Codex prompt or handoff file.
+2. `git status --short --branch`.
+3. The exact files named by the prompt.
+4. Small discovery results from `rg` / `rg --files` needed to locate those files.
 
-```
-src/uav_tracker/       # core pipeline (pipeline.py, config.py, modes.py)
-  budget_controller.py / continuity_tracker.py / tracking_state_machine.py / display_state_tracker.py
-  detectors/           # night_detector.py, roi_assist.py
-  tracking/            # target_manager.py, lock_tracker.py
-  runtime/             # base.py, ultralytics_backend.py, hailo_backend.py (stub)
-app/                   # main_gui.py (PySide6), main_cli.py, ui/
-tests/                 # unittest suite (15 tests, coverage ~10%)
-orchestrator/          # state/active_plan.md, reports/, briefs/, tasks/
-.claude/playbooks/     # routing playbooks (DO NOT EDIT in agent-team mode)
-python_scripts/        # run_quality_gate.py, training helpers
-configs/               # regression_pack.csv, preset YAMLs
-```
+Do not read by default:
 
-## Development Rules (Token Efficiency)
+- `../wiki/**`
+- `memory/**`
+- all `orchestrator/reports/**`
+- all `orchestrator/tasks/**`
+- all `.claude/playbooks/**`
+- full `active_plan.md`, unless the prompt is specifically an active-plan task or has no concrete scope.
 
-**Чтение файлов:**
-- НЕ перечитывай файл, если он уже в контексте сессии
-- Файлы >200 строк читай с offset/limit (частично)
-- Предпочитай Grep/Glob перед Read для поиска
-- Не выводи полный файл без явного требования
+If no concrete prompt/scope is provided, read only:
 
-**Изменения:**
-- Всегда Edit (patch) вместо Write (полная перезапись)
-- Минимальный diff — только затронутые строки
-- Один коммит на одно логическое изменение
-
-**Context7 MCP:**
-- `resolve-library-id` → `query-docs` только по конкретной теме
-- Не загружай документацию целиком — только нужный раздел
-
-## Agent Workflow
-
-0. Проверить wiki-маршрут: `../wiki/maps/GimbalProject Map.md` → `../wiki/synthesis/source_of_truth.md` → `../wiki/synthesis/current_state.md`
-1. Проверить `orchestrator/state/active_plan.md` — найти текущую задачу
-2. Сверить active plan со свежими reports/git history, если задача зависит от текущей фазы
-3. Если источники правды расходятся — остановиться и сообщить конфликт, не реализовывать новую задачу
-4. Grep/Glob для поиска затронутых файлов (не Read)
-5. Read только нужные файлы, частично (offset/limit)
-6. Edit (patch) — минимальные изменения
-7. compileall + unittest discover — проверка
-8. Commit с префиксом `[agent-team][модуль]`
-9. Отчёт в `orchestrator/reports/`
-
-## Output Policy
-
-**Запрещено:** полный вывод файла · дублирование кода · verbose-объяснения
-**Разрешено:** snippets · короткие diff · статус одной строкой
-
-## Agent Efficiency Techniques
-
-- Структуру проекта анализируй через Glob, а не через последовательный Read
-- Grep по паттерну до открытия файла — убедись что он нужен
-- Для незнакомой библиотеки → Context7 вместо чтения исходников
-- Smoke-test: `PYTHONPATH=src python3 -m compileall -q src` + `python3 -m unittest discover -s tests -q`
-- Запуск проверок: `source tracker_env/bin/activate` перед командами
-
----
-
-## Роль
-
-Claude реализует задачи, созданные orchestrator-слоем.
-
-## Codex Control Protocol
-
-Текущий режим проекта: Codex является управляющим слоем.
-
-Claude не продолжает проект автономно и не выбирает следующую задачу.
-Claude выполняет только явно заданный task/scope из `orchestrator/state/active_plan.md`.
-
-Перед началом работы прочитать `orchestrator/state/codex_control_protocol.md`.
-Если `active_plan.md` имеет статус `Completed` или нет active Claude task — остановиться и запросить направление у Human/Codex.
-
-## Обязательные правила
-
-- Работать только по задачам из `orchestrator/state/active_plan.md`.
-- Не принимать стратегические архитектурные решения самостоятельно.
-- Выполнять минимальные точечные изменения.
-- Не выходить за границы scope задачи.
-- После выполнения писать отчет в `orchestrator/reports`.
-- Все изменения и отчеты фиксировать через GitHub workflow (ветка/коммит/PR).
-
-## Формат коммуникации
-
-- Ответы: на русском языке.
-- Код, имена сущностей, файлов и API: на английском языке.
-- Отчет должен содержать: что сделано, что проверено, риски, что осталось.
-
-## Авто-маршрутизация playbooks
-
-Claude обязан использовать project playbooks из `.claude/playbooks/`.
-
-Порядок:
-1. Сначала открыть `.claude/playbooks/router.md`.
-2. По смыслу запроса выбрать один основной playbook.
-3. При смешанной задаче дополнительно открыть еще один playbook, если он действительно нужен.
-4. Не грузить все playbooks сразу без необходимости.
-
-Базовые маршруты:
-- orchestration / review / active plan -> `.claude/playbooks/orchestrator.md`
-- RTX status / resume / epochs / fail diagnosis -> `.claude/playbooks/rtx_intake.md`
-- benchmark / quality gate / baseline vs candidate -> `.claude/playbooks/quality_gate.md`
-- training prompt / training cycle / thermal safety -> `.claude/playbooks/training_ops.md`
-- PySide6 UI / operator flow / panels -> `.claude/playbooks/pyside6_ui.md`
-
-## Wiki — Накопленные знания о домене
-
-Wiki живёт в `../wiki/` (то есть `Projects/wiki/`) — вне git, общая для всех проектов.
-Это постоянная база знаний: доменные знания GimbalProject + общие концепты AI/методологии.
-
-**Обязательный старт для GimbalProject:**
-- Сначала читать `../wiki/maps/GimbalProject Map.md`
-- Затем `../wiki/synthesis/source_of_truth.md`
-- Затем `../wiki/synthesis/current_state.md`
-- Только после этого читать `orchestrator/state/active_plan.md`
-- Если wiki, active_plan, reports и git history противоречат друг другу — остановиться и сообщить source-of-truth conflict
-
-**Когда использовать:**
-- Любая новая сессия по GimbalProject → `../wiki/maps/GimbalProject Map.md` → area map
-- Вопросы о ночном детекторе, lock policy, качественных порогах → `../wiki/maps/Runtime Tracking Map.md` → drill-down
-- Вопросы о модели, пресетах, тест-клипах → `../wiki/entities/`
-- История дефектов → `../wiki/synthesis/night_defect_history.md`
-- Открытые вопросы → `../wiki/synthesis/open_questions.md`
-
-**Когда обновлять:**
-- После принятия нового отчёта из `orchestrator/reports/` — обновить затронутые страницы + `../wiki/log.md`
-- Если найдено противоречие — пометить `> ⚠️ CONTRADICTION:` в обоих местах
-- После Lint-прохода — обновить устаревшие факты
-
-**Структура:** `../wiki/SCHEMA.md` содержит полные правила обслуживания.
-
-## Команда "Синхронизируйся"
-
-Когда получена команда "Синхронизируйся" (в любом регистре):
-
-**Шаг 1 — Cheap scan (всегда, без чтения файлов):**
-1. Прочитать `Projects/.last-sync` — если файл отсутствует, считать что синхронизации не было
-2. Найти файлы в `/Users/bround/Documents/Projects/Clippings/` новее last-sync (только mtime)
-3. Проверить изменения в `../wiki/` (mtime файлов с прошлой синхронизации)
-4. Проверить есть ли новые файлы в `memory/claude-memory-compiler/daily/` (необработанные compile.py)
-
-**Шаг 2 — Отчёт:**
-```
-Синхронизация с [дата last-sync или "никогда"]:
-📎 Новые клипинги (N): [список имён файлов]
-📝 Изменения ../wiki/: [есть / нет]
-📚 Daily logs для compile: [N необработанных]
-
-Что сделать?
+```text
+orchestrator/state/active_plan.md
+orchestrator/state/open_tasks.md
 ```
 
-**Шаг 3 — По подтверждению:**
-- Клипинги → читать по одному → страница в `../wiki/sources/` → обновить `../wiki/index.md` + `../wiki/log.md`
-- compile.py → напомнить команду: `uv run --directory memory/claude-memory-compiler python scripts/compile.py`
-- Завершить → записать текущее время в `/Users/bround/Documents/Projects/.last-sync` (ISO формат)
+Then report that no bounded task was provided and stop.
 
-**Принцип:** scan дешёвый всегда. Чтение клипингов — только после подтверждения.
+## Authority
 
-## Context7 MCP — Документация библиотек
+Use this order:
 
-Плагин `context7@claude-plugins-official` установлен глобально. **Аутентификация не нужна.**
+1. Current Human/Codex prompt.
+2. Files explicitly named in that prompt.
+3. Current working tree and git status.
+4. Existing code contracts and tests.
+5. `orchestrator/state/active_plan.md`, only when the prompt invokes active-plan execution.
+6. Wiki/memory/reports, only when explicitly requested or needed to resolve a concrete conflict.
 
-- Авторизация — не требуется.
-- Настройка — не требуется.
-- Сервер запускается автоматически через `npx`.
-- Для работы нужен доступ в интернет к `context7.com`.
+Never let old wiki, memory, or previous Claude reports override the current prompt or working tree.
 
-**Активировать** при задачах из `active_plan.md` или вопросах, содержащих:
-- RU: `как использовать`, `документация`, `пример кода`, `API`, `версия`
-- EN: `how to use`, `docs`, `latest API`, `library reference`, `sdk`
-- Scope-слова в `active_plan.md`: `library`, `dependency`, `docs`, `api`, `integration`
+## Scope Control
 
-**Правило формулировки:** если нужен Context7, использовать именно эти триггеры, а не их синонимы.
+Before editing, identify:
 
-**Паттерн**: `resolve-library-id` → `query-docs`.
-Применять при работе с: `PySide6`, `ultralytics`, `numpy`, `opencv-python`, `torch`, `hailo`.
+- task goal;
+- allowed files;
+- non-scope files;
+- required skills;
+- allowed MCP tools;
+- whether subagents are allowed;
+- validation commands;
+- expected output/report.
 
-## Frontend Design Skill
+If the prompt has an allowed-file list, do not edit outside it.
+If editing outside scope seems necessary, stop and ask Codex/Human.
 
-Плагин `frontend-design` установлен глобально и активен во всех сессиях.
+## Skills, MCP, and Subagents
 
-**Активировать автоматически** при задачах из `active_plan.md`, scope которых содержит:
-`ui`, `design`, `theme`, `stylesheet`, `overlay`, `card`, `layout`, `color`, `visual`, `hud`, `panel`, `widget`.
+Codex/Human prompts define which skills, MCP tools, and subagents are allowed.
 
-**Правило формулировки:** если нужен `frontend-design`, использовать точные trigger-слова:
-`ui`, `design`, `theme`, `stylesheet`, `overlay`, `card`, `layout`, `color`, `visual`, `hud`.
+Default:
 
-Принципы скилла (адаптированные для PySide6/Qt):
-- Typography → QFont, размеры, font-weight в stylesheet
-- Color & Theme → APP_STYLESHEET палитра, rgba() для полупрозрачности
-- Motion → QPropertyAnimation для переходов состояний (badge, card)
-- Spatial Composition → margins, spacing, stretch в QLayout
-- Backgrounds → QFrame backgrounds, border-radius, gradient в stylesheet
+- use `gimbal-bounded-task` for every task;
+- use other skills only when the prompt lists them or the task clearly matches their description;
+- use MCP tools only when the prompt lists them;
+- do not launch subagents unless the prompt explicitly says to use them.
 
-## Что запрещено
+Available project skills:
 
-- Крупные рефакторы без отдельного task.
-- Переписывание runtime-контуров по собственной инициативе.
-- Смешивание UI и бизнес-логики.
-- Изменения вне поставленной задачи без согласования с Codex Mac.
+- `gimbal-bounded-task`
+- `gimbal-qt-visual-redesign`
+- `gimbal-pyside6-implementation`
+- `gimbal-dts-data-flow`
+- `gimbal-verification`
 
+Available project subagents:
 
----
+- `visual-qa-reviewer`
+- `qt-integrator`
+- `code-auditor`
 
-## Agent Team
+Available MCP tools for this project:
 
-Правила безопасности для командных сессий: see `.claude/playbooks/agent_team_safety.md`
+- Context7: current docs for PySide6, OpenCV, Ultralytics, and other libraries.
+- Playwright: browser inspection and screenshots of HTML references.
 
----
+Figma is not used for this project.
 
-## Session Closing Protocol
+## File Reading Discipline
 
-Обязателен в конце каждой сессии перед последним коммитом:
+- Use `rg` or `rg --files` before opening files.
+- Read files partially when they are over 200 lines.
+- Do not re-read a file already loaded in the session unless it changed.
+- Do not summarize files just because you read them.
+- Do not load broad directories for orientation.
 
-1. `../wiki/synthesis/current_state.md` — обновить фазы и числа gate
-2. `memory/claude-memory-compiler/daily/YYYY-MM-DD.md` — что сделано, что изменилось
-3. `orchestrator/state/active_plan.md` — отметить выполненные задачи, указать следующую
-4. `git status` — worktree должен быть чистым или каждый файл классифицирован в worktree_review.md
-5. `git commit` — один коммит с описанием сессии
+## Implementation Discipline
 
-Нарушение протокола = источник governance drift.
+- Minimal reversible diffs.
+- Preserve existing signals/slots and public names unless the prompt requires changing them.
+- Keep UI/display logic separate from tracker/model/business logic.
+- Do not add dependencies unless Human/Codex explicitly approves.
+- Do not run destructive git commands.
+- Do not push `main`.
+
+## UI / Visual Work
+
+For PySide6 UI, design, theme, layout, HUD, DTS, or visual redesign tasks:
+
+1. Treat referenced HTML/Figma/screenshots as visual references, not architecture.
+2. Extract real tokens when possible: colors, spacing, font sizes, radius, borders.
+3. Work one zone at a time.
+4. Run the app or an offscreen/screenshot harness.
+5. Save current screenshot.
+6. Compare against reference.
+7. Iterate before claiming done.
+
+Do not claim visual match without screenshots or a written visual gap report.
+
+Qt limitations are acceptable only when documented with the chosen approximation.
+
+## DTS / Operator Annotation Work
+
+Current DTS facts:
+
+- UI: `app/ui/training_desk.py`
+- data layer: `app/training_desk_data.py`
+- input: `runs/operator_annotations/*.jsonl`
+- review state: `runs/operator_annotations/dts_review_state.json`
+- statuses: `new`, `accepted`, `rejected`, `staged`
+
+DTS must use real JSONL data.
+Do not replace DTS data with fixtures.
+Export/staging must include only `accepted` or `staged` records.
+Training must not start automatically unless Human/Codex explicitly asks.
+
+## Documentation Lookup
+
+Use Context7 only for a concrete API question.
+Do not load broad library docs.
+
+For Ultralytics/YOLO/export/training assumptions, first use the local route:
+
+```text
+../wiki/sources/ultralytics_site_map.md
+../wiki/sources/ultralytics_yolo.md
+```
+
+Only then use external docs if the behavior depends on current API details.
+
+## Validation
+
+Run validation before final answer whenever feasible.
+Prefer task-specific tests first.
+
+Common baseline:
+
+```bash
+python3 -m compileall -q python_scripts src app orchestrator tests
+```
+
+For UI sanity:
+
+```bash
+QT_QPA_PLATFORM=offscreen PYTHONPATH=src python3 - <<'PY'
+from PySide6.QtWidgets import QApplication
+from app.main_gui import MainWindow
+app = QApplication([])
+win = MainWindow()
+print(type(win).__name__, "ok")
+PY
+```
+
+Do not say tests pass unless they were actually run and passed.
+
+## Reports and Git
+
+Write an `orchestrator/reports/REPORT-*.md` only when the prompt requests it or when the task is an accepted active-plan execution.
+
+Do not update wiki/memory/session logs as a default closing ritual.
+Do not commit unless the prompt explicitly asks for a commit.
+Do not push unless Human/Codex explicitly asks for push.
+
+## Final Answer
+
+Always answer in this order:
+
+1. Plan
+2. Changes
+3. Validation
+4. Risks
+
+Be concise.
+State what was not done.
+State remaining risks or blockers.

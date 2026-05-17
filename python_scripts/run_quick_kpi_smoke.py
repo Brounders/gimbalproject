@@ -48,6 +48,10 @@ _KPI_FIELDS = [
     "false_lock_rate",
     "continuity_score",
     "active_presence_rate",
+    "operator_hint_count",
+    "operator_lock_confirmed_count",
+    "operator_target_lost_count",
+    "avg_operator_click_to_lock_frames",
 ]
 
 
@@ -143,16 +147,21 @@ def _run_one(
         "false_lock_rate": round(report.false_lock_rate, 4),
         "continuity_score": round(report.continuity_score, 4),
         "active_presence_rate": round(report.active_presence_rate, 4),
+        "operator_hint_count": int(report.operator_hint_count),
+        "operator_lock_confirmed_count": int(report.operator_lock_confirmed_count),
+        "operator_target_lost_count": int(report.operator_target_lost_count),
+        "avg_operator_click_to_lock_frames": round(report.avg_operator_click_to_lock_frames, 3),
     }
 
 
 def _aggregate(rows: list[dict[str, Any]]) -> dict[str, Any]:
     """Simple mean across all sources for numeric KPI fields."""
+    summed = {"operator_hint_count", "operator_lock_confirmed_count", "operator_target_lost_count"}
     numeric = [f for f in _KPI_FIELDS if f not in ("source", "scene", "frames")]
     agg: dict[str, Any] = {"source": "__aggregate__", "scene": "all", "frames": sum(r["frames"] for r in rows)}
     for field in numeric:
         values = [r[field] for r in rows if field in r]
-        agg[field] = round(sum(values) / len(values), 4) if values else 0.0
+        agg[field] = sum(values) if field in summed else (round(sum(values) / len(values), 4) if values else 0.0)
     return agg
 
 

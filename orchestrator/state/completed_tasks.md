@@ -93,3 +93,18 @@ TASK-20260503-OPERATOR-SEEDED-LOCK-UI | Codex Mac | Accepted | 2026-05-03 | orch
 TASK-20260503-OPERATOR-ASSISTED-TRACKING-V2 | Codex Mac | Accepted | 2026-05-03 | orchestrator/reports/REPORT-OPERATOR-ASSISTED-TRACKING-V2-20260503.md — drag bbox, seed refinement, operator hold grace, multi-template lock, operator lock-first path, confirm/release controls, and operator annotation jsonl for future training labels
 TASK-20260503-OPERATOR-ANNOTATION-EXPORT | Claude Code | Accepted | 2026-05-03 | orchestrator/reports/REPORT-OPERATOR-ANNOTATION-EXPORT-20260503.md — first operator-jsonl → YOLO label converter (`python_scripts/export_operator_annotations_to_yolo.py`); manifest json/csv; OOB rejected not clipped; dry-run; 19 unit tests; smoke run on 8 sessions OK
 TASK-20260505-DTS-TRAINING-DESK-V1 | Codex Mac | Accepted | 2026-05-05 | orchestrator/reports/REPORT-DTS-TRAINING-DESK-20260505.md — first DTS admin layer; button in UI; annotation queue, preview, status review, accepted/rejected/staged sidecar state
+TASK-20260506-OPERATOR-UI-DTS-REDESIGN | Claude Code | Accepted | 2026-05-06 | orchestrator/reports/REPORT-OPERATOR-UI-DTS-REDESIGN-20260506.md — full PySide6 UI redesign per HTML refs (operator topbar/right panel/bottom info bar + DTS maximized 3-col layout); real Laplacian/exposure/bbox quality + exact/overlap/near duplicate detection; export YOLO from accepted/staged + stage_operator_training_pack.py; 611 tests green; tracker/pipeline untouched
+TASK-20260514-FINAL-STABILIZATION | Codex Mac | Accepted | 2026-05-14 | orchestrator/reports/REPORT-FINAL-STABILIZATION-20260514.md — QML/DTS/candidate-loop source boundary documented; candidate model binaries ignored; DTS/gate/operator tests and QML smoke passed
+
+TASK-20260516-096 | Codex Mac | Accepted | 2026-05-16 | Target Lab scene-aware smoke + visual error samples; report runs/evaluations/tracking_gt_diagnostics/target_lab_act1_20260516_112807; 149 JPG samples; tests/smoke passed
+
+TASK-20260516-097 | Codex Mac | Accepted | 2026-05-16 | Weak-scene visual diagnosis from target_lab_act1; Human review identified missed detection, source-conflict, OSD capture, and bbox-size instability
+TASK-20260516-098 | Codex Mac | Accepted | 2026-05-16 | First bounded tracking fix: small_target disables night detector; scene-aware GT diagnostics use IR/night OSD-ignore presets; act2 report target_lab_act2_20260516_142723
+
+TASK-20260516-099 | Codex Mac | Accepted | 2026-05-16 | Act2 A/B gate accepted; report orchestrator/reports/REPORT-TARGET-LAB-ACT2-GATE-20260516.md; keep source-conflict fix as next baseline
+
+TASK-20260516-101 | Codex Mac | Accepted | 2026-05-16 | Act3 IR missed detection accepted; report orchestrator/reports/REPORT-TARGET-LAB-ACT3-GATE-20260516.md; source-aware IR routing improves IR recall 0.103->0.556 and risk count 25->21
+
+TASK-20260516-102 | Codex Mac | Accepted with risks | 2026-05-16 | Act4 live-auto foundation accepted; report orchestrator/reports/REPORT-TARGET-LAB-ACT4-LIVE-AUTO-20260516.md; removed source-name routing, Target Lab uses tracking_live_auto, risk count 21->20
+
+TASK-20260516-103 | Codex Mac | Accepted | 2026-05-17 | Act5 universal selector/reacquire series accepted; reports orchestrator/reports/REPORT-TASK-103-ACT5-FINAL-20260516.md and orchestrator/reports/REPORT-TASK-103f-REACQ-SUPPRESSION-20260517.md; 103a-103f complete, 103g N/A, 103h deferred to detector/training decision gate

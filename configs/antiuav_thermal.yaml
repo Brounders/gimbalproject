@@ -56,3 +56,5 @@ roi_assist_enabled: true
 roi_conf_thresh: 0.10
 night_mot_thresh: 14
 night_diff_thresh: 10
+# [IR/night detector continuity candidate — 2026-05-07]
+night_confirm: 7

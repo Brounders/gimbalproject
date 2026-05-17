@@ -1,16 +1,5 @@
 {
   "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/bround/.local/bin/uv run --directory /Users/bround/Documents/Projects/GimbalProject/memory/claude-memory-compiler python hooks/session-start.py"
-          }
-        ]
-      }
-    ],
     "SessionEnd": [
       {
         "matcher": "",

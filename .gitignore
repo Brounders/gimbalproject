@@ -5,6 +5,8 @@ tracker_env/
 datasets/
 runs/
 logs/
+app/state/*.json
+.mcp.json
 ui_web/node_modules/
 ui_web/dist/
 # Model binaries — not tracked in git
@@ -12,6 +14,9 @@ models/*.pt
 models/*.hef
 models/*.zip
 models/checkpoints/
+models/candidates/**/*.pt
+models/candidates/**/*.hef
+models/candidates/**/*.zip
 
 # Local large artifacts (not part of repo history)
 exports/

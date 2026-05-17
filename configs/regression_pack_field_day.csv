@@ -1,0 +1,16 @@
+# source,scene
+# Field day/EO regression pack.
+# Slower than configs/regression_pack_day.csv; use for broader field checks.
+# Run:
+#   PYTHONPATH=src ./tracker_env/bin/python python_scripts/run_quality_gate.py \
+#     --pack-file configs/regression_pack_field_day.csv --preset default
+test_videos/2023-11-23 15-26-17.mp4,day
+test_videos/2023-11-23 15-27-53.mp4,day
+test_videos/2023-11-23 16-33-29.mp4,day
+test_videos/dataset_mendeley_f1_1_EO_dji_mavic_2_range_close.mp4,day
+test_videos/drone_closeup_mixkit_44644_360.mp4,day
+test_videos/drone_detection_V_DRONE_001.mp4,day
+test_videos/f2_13_EO_dji_mavic_2.mp4,day
+test_videos/f2_23_EO_dji_inspire_1.mp4,day
+test_videos/drone_detection_V_BIRD_001.mp4,noise
+test_videos/drone_detection_V_AIRPLANE_001.mp4,noise

@@ -195,6 +195,42 @@ def update_stats(window, stats: dict) -> None:
     window._rp_rt_bdg_v.setText(f'L{budget_level}')
     window._rp_rt_tgt_v.setText(str(target_count))
 
+    # ── New reference-aligned fields (target meta + telemetry grid) ──────────
+    if hasattr(window, '_rp_id_val'):
+        window._rp_id_val.setText(f'T-{active_id:03d}' if active_id is not None else '—')
+    if hasattr(window, '_rp_state_val'):
+        window._rp_state_val.setText(card_state)
+    if hasattr(window, '_rp_time_val'):
+        window._rp_time_val.setText(elapsed_str)
+    if hasattr(window, '_rp_camera_val'):
+        scenario_key = ''
+        if hasattr(window, 'scenario_combo'):
+            try:
+                scenario_key = str(window.scenario_combo.currentData() or '').upper()
+            except Exception:
+                scenario_key = ''
+        cam_label_map = {
+            'NIGHT': 'NV', 'IR': 'IR', 'ANTIUAV_THERMAL': 'IR',
+            'DAY': 'EO', 'DEFAULT': 'EO', 'SMALL_TARGET': 'EO',
+        }
+        window._rp_camera_val.setText(cam_label_map.get(scenario_key, scenario_key or 'EO'))
+    if hasattr(window, '_rp_class_label'):
+        window._rp_class_label.setText('ЦЕЛЬ' if active_id is not None else '—')
+    if hasattr(window, '_rp_alt_v'):
+        window._rp_alt_v.setText('—')
+    if hasattr(window, '_rp_speed_v'):
+        window._rp_speed_v.setText('—')
+    if hasattr(window, '_rp_idchg_v'):
+        window._rp_idchg_v.setText(str(lock_switch_count))
+
+    # Bottom info bar (FPS + status). GPS placeholder updated when stats include it.
+    if hasattr(window, 'bottom_fps_label'):
+        window.bottom_fps_label.setText(f'FPS {fps:.1f}')
+    if hasattr(window, 'bottom_info_text'):
+        window.bottom_info_text.setText(
+            f'{state_value.upper()} · {operator_mode.upper()} · LOCK {lock_score:.2f}'
+        )
+
     can_switch = window._job_state == 'tracking' and target_count > 1
     window.next_target_btn.setEnabled(can_switch)
     if hasattr(window, '_dock_next_btn'):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -9,6 +10,15 @@ from typing import Callable, Optional, Union
 
 from uav_tracker.config import Config
 from uav_tracker.pipeline import VideoSession, TrackerPipeline
+
+
+def _percentile_nearest(values: list[float], p: int) -> Optional[float]:
+    if not values:
+        return None
+    sorted_vals = sorted(values)
+    n = len(sorted_vals)
+    idx = max(0, math.ceil(p / 100 * n) - 1)
+    return sorted_vals[min(idx, n - 1)]
 
 
 def _telemetry_label(value: object) -> str:
@@ -64,6 +74,16 @@ class EvaluationReport:
     false_lock_source_counts: dict[str, int]
     avg_target_reliability: float
     avg_target_p_present: float
+    operator_workflow_counts: dict[str, int]
+    operator_workflow_event_counts: dict[str, int]
+    operator_hint_count: int
+    operator_lock_confirmed_count: int
+    operator_target_lost_count: int
+    avg_operator_click_to_lock_frames: float
+    avg_operator_verify_age_frames: float
+    latency_p95_ms: Optional[float] = None
+    latency_p99_ms: Optional[float] = None
+    track_fragmentation_rate: Optional[float] = None
 
     def to_dict(self) -> dict:
         data = asdict(self)
@@ -130,6 +150,10 @@ class Evaluator:
         false_lock_source_counts: Counter[str] = Counter()
         target_reliability_values: list[float] = []
         target_p_present_values: list[float] = []
+        operator_workflow_counts: Counter[str] = Counter()
+        operator_workflow_event_counts: Counter[str] = Counter()
+        operator_click_to_lock_values: list[float] = []
+        operator_verify_age_values: list[float] = []
 
         try:
             while True:
@@ -178,6 +202,17 @@ class Evaluator:
                 target_modality_counts[target_modality] += 1
                 target_reliability_values.append(float(getattr(result, 'target_reliability', 0.0)))
                 target_p_present_values.append(float(getattr(result, 'target_p_present', 0.0)))
+                workflow_state = _telemetry_label(getattr(result, 'operator_workflow_state', '') or '')
+                if workflow_state:
+                    operator_workflow_counts[workflow_state] += 1
+                for event in getattr(result, 'operator_workflow_events', []) or []:
+                    operator_workflow_event_counts[_telemetry_label(event)] += 1
+                click_to_lock = getattr(result, 'operator_click_to_lock_frames', None)
+                if click_to_lock is not None:
+                    operator_click_to_lock_values.append(float(click_to_lock))
+                verify_age = int(getattr(result, 'operator_verify_age_frames', 0) or 0)
+                if verify_age > 0:
+                    operator_verify_age_values.append(float(verify_age))
 
                 gt_visible = bool(meta.get('gt_bbox'))
                 if gt_visible:
@@ -270,6 +305,17 @@ class Evaluator:
             false_lock_source_counts=dict(false_lock_source_counts),
             avg_target_reliability=mean(target_reliability_values) if target_reliability_values else 0.0,
             avg_target_p_present=mean(target_p_present_values) if target_p_present_values else 0.0,
+            operator_workflow_counts=dict(operator_workflow_counts),
+            operator_workflow_event_counts=dict(operator_workflow_event_counts),
+            operator_hint_count=int(operator_workflow_event_counts.get('OPERATOR_HINT', 0)),
+            operator_lock_confirmed_count=int(operator_workflow_event_counts.get('LOCK_CONFIRMED', 0)),
+            operator_target_lost_count=int(operator_workflow_event_counts.get('TARGET_LOST', 0)),
+            avg_operator_click_to_lock_frames=mean(operator_click_to_lock_values) if operator_click_to_lock_values else 0.0,
+            avg_operator_verify_age_frames=mean(operator_verify_age_values) if operator_verify_age_values else 0.0,
+            latency_p95_ms=_percentile_nearest(budget_frame_ms, 95),
+            latency_p99_ms=_percentile_nearest(budget_frame_ms, 99),
+            # v1 approximation: active_id_changes / active_frames
+            track_fragmentation_rate=float(active_id_changes) / float(max(1, active_frames)),
         )
         if report_path:
             out = Path(report_path)

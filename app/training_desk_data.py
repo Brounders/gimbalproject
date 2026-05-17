@@ -12,7 +12,10 @@ STATUS_NEW = 'new'
 STATUS_ACCEPTED = 'accepted'
 STATUS_REJECTED = 'rejected'
 STATUS_STAGED = 'staged'
-STATUS_VALUES = {STATUS_NEW, STATUS_ACCEPTED, STATUS_REJECTED, STATUS_STAGED}
+STATUS_HARD_NEGATIVE = 'hard_negative'
+STATUS_VALUES = {STATUS_NEW, STATUS_ACCEPTED, STATUS_REJECTED, STATUS_STAGED, STATUS_HARD_NEGATIVE}
+TRAINING_READY_STATUSES = {STATUS_ACCEPTED, STATUS_STAGED}
+NEGATIVE_STATUSES = frozenset({STATUS_HARD_NEGATIVE})
 
 
 @dataclass
@@ -176,3 +179,35 @@ def save_review_state(records: Iterable[AnnotationRecord], state_path: str | Pat
 def status_counts(records: Iterable[AnnotationRecord]) -> dict[str, int]:
     counts = Counter(record.status for record in records)
     return {status: int(counts.get(status, 0)) for status in sorted(STATUS_VALUES)}
+
+
+def is_training_candidate(record: AnnotationRecord, *, include_staged: bool = True) -> bool:
+    statuses = TRAINING_READY_STATUSES if include_staged else {STATUS_ACCEPTED}
+    return (
+        record.status in statuses
+        and record.event == 'operator_bbox'
+        and record.bbox_xyxy is not None
+        and bool(record.source)
+        and int(record.frame_index) >= 0
+    )
+
+
+def training_candidate_records(
+    records: Iterable[AnnotationRecord],
+    *,
+    include_staged: bool = True,
+) -> list[AnnotationRecord]:
+    return [record for record in records if is_training_candidate(record, include_staged=include_staged)]
+
+
+def is_hard_negative(record: AnnotationRecord) -> bool:
+    """Return True if the record is a confirmed hard negative eligible for staging."""
+    return (
+        record.status == STATUS_HARD_NEGATIVE
+        and bool(record.source)
+        and int(record.frame_index) >= 0
+    )
+
+
+def hard_negative_records(records: Iterable[AnnotationRecord]) -> list[AnnotationRecord]:
+    return [record for record in records if is_hard_negative(record)]

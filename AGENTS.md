@@ -24,6 +24,12 @@ Always answer in this order:
 - Run validation commands before finishing whenever possible.
 - For OpenAI, Codex, MCP, API, and SDK topics, use OpenAI Developer Docs MCP first.
 
+## Session Handoff
+
+- When the Human writes exactly `Конец сессии`, stop active work and provide a handoff for the next session.
+- The handoff must include: current goal, completed work, important files, changed files, validation run, remaining work, risks, and a ready-to-paste startup prompt for the next session.
+- Do not start new implementation after `Конец сессии` unless the Human explicitly asks for more work.
+
 ## GimbalProject Control
 
 - Codex is the default project controller.

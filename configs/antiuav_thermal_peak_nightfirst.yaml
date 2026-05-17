@@ -1,0 +1,102 @@
+name: antiuav_thermal_peak_nightfirst
+runtime_mode: research
+model_path: models/baseline.pt
+device: mps
+imgsz: 960
+conf_thresh: 0.99
+ignore_zones:
+  - name: top_left_osd
+    x1: 0.0
+    y1: 0.0
+    x2: 0.22
+    y2: 0.07
+    applies_to: [yolo, local, roi, night, lock]
+  - name: nightfirst_block_primary_sources
+    x1: 0.0
+    y1: 0.0
+    x2: 1.0
+    y2: 1.0
+    applies_to: [yolo, local, roi, lock]
+detection_max_area_ratio: 0.04
+detection_max_width_ratio: 0.30
+detection_max_height_ratio: 0.30
+small_target_mode: true
+adaptive_scan_enabled: true
+global_scan_interval: 5
+local_validate_interval: 3
+lock_tracker_enabled: true
+lock_tracker_min_score: 0.42
+lock_tracker_search_scale: 3.0
+class_ema_alpha: 0.24
+drone_lock_score_min: 0.60
+drone_reacquire_score_min: 0.48
+lock_confirm_frames: 5
+lock_lost_grace: 1
+lock_mode_release_frames: 4
+lock_reacquire_dist: 90
+velocity_alpha: 0.72
+lock_reacquire_predict_gain: 1.15
+lock_reacquire_predict_horizon_max: 5
+local_small_box_area: 1700
+local_small_box_ratio: 0.0038
+local_small_img_size: 960
+local_track_conf: 0.99
+local_small_conf: 0.99
+local_boost_lock_score_thresh: 0.62
+night_run_when_primary_seen: true
+night_primary_cooldown: 0
+display_min_hit_streak_night: 2
+display_max_lost_frames: 1
+budget_enabled: true
+budget_target_fps: 20.0
+budget_high_load: 1.12
+budget_low_load: 0.78
+budget_level_max: 2
+budget_roi_min_candidates: 1
+budget_night_skip_level1: 1
+budget_night_skip_level2: 1
+budget_roi_skip_level2: 2
+active_id_switch_cooldown_frames: 60
+track_state_acquire_frames: 2
+lock_mode_acquire_frames: 2
+active_id_switch_allow_if_lost_frames: 12
+show_gt_overlay: true
+show_debug_timings: true
+show_trails: true
+night_enabled: true
+roi_assist_enabled: false
+roi_conf_thresh: 0.99
+night_mog2_history: 20
+night_mog2_var_thresh: 8
+night_blur_kernel: 3
+night_morph_kernel: 1
+night_min_area: 1
+night_max_area: 900
+night_max_ar: 4.5
+night_grid_cell: 6
+night_track_dist: 48
+night_lost_max: 24
+night_max_detections: 1
+night_min_speed: 0.0
+night_max_speed: 55.0
+night_hotspot_enabled: false
+night_hotspot_kernel: 19
+night_hotspot_thresh: 12
+night_hotspot_top_k: 64
+night_contour_enabled: false
+night_peak_enabled: true
+night_peak_thresh: 24
+night_peak_box: 28
+night_peak_nms_dist: 14
+night_peak_top_k: 80
+night_peak_require_motion: true
+night_peak_min_motion_pixels: 1
+night_sticky_enabled: true
+night_sticky_radius: 90
+night_sticky_missing_max: 10
+night_active_hold_radius: 220
+night_hist_len: 2
+night_confirm: 3
+night_mot_thresh: 4
+night_diff_thresh: 3
+night_border: 3
