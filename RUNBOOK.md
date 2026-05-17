@@ -23,6 +23,18 @@ PYTHONPATH=src python tracker_gui.py
 
 Оба файла — тонкие проксари. Они не содержат логику.
 
+### Operator UI authority — 2026-05-17
+
+Текущий primary operator UI для Target Lab и операторского цикла — QML desktop:
+`app/main_qml.py`, `app/qml_bridge/**`, `app/qml/**`.
+
+PySide6 widgets UI (`tracker_gui.py` / `app/main_gui.py`) остается активной
+fallback/research поверхностью и не удаляется в рамках structure stabilization.
+
+`ui_web/` пока не имеет operator/runtime authority. Его статус зафиксирован в
+`ui_web/README.md` как `UNKNOWN_NEEDS_TRACE`; до отдельного owner decision он не
+считается заменой QML или PySide6.
+
 ---
 
 ## Operator: GUI

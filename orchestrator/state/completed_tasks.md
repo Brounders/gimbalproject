@@ -120,3 +120,4 @@ TASK-20260517-106 | Codex Mac | Accepted | 2026-05-17 | Weak4 V2/V3 protected ga
 TASK-20260517-107 | Codex Mac | Accepted | 2026-05-17 | Weak4 label/pack audit complete; report orchestrator/reports/REPORT-TASK-107-WEAK4-LABEL-AUDIT-20260517.md; contact sheets rendered, source/scale conflict found, next pack must quarantine wide strip and protected large-silhouette labels
 
 TASK-20260517-109 | Codex Mac | Accepted | 2026-05-17 | Project structure stabilization intake complete; report orchestrator/reports/REPORT-TASK-109-STRUCTURE-STABILIZATION-INTAKE-20260517.md; full audit converted into 6-stage backlog, TASK-108 remains paused
+TASK-20260517-110 | Codex Mac | Accepted | 2026-05-17 | Ownership documentation complete; report orchestrator/reports/REPORT-TASK-110-OWNERSHIP-DOCUMENTATION-20260517.md; script registry, UI authority, ui_web status, and automation/state status documented; no runtime/training changes

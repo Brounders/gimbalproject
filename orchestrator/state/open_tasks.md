@@ -2,8 +2,7 @@
 
 <!-- Backlog only: execution is controlled by orchestrator/state/active_plan.md -->
 
-TASK-20260517-110 | Codex Mac | Active | 2026-05-17 | Ownership documentation — create script registry, primary UI runbook, ui_web decision note, and automation/state status note. No file moves.
-TASK-20260517-111 | Codex Mac | Deferred | 2026-05-17 | Proof-based cleanup plan — create archive-candidate proof table and generated/local artifact ignore policy. No deletes without owner decision.
+TASK-20260517-111 | Codex Mac | Active | 2026-05-17 | Proof-based cleanup plan — create archive-candidate proof table and generated/local artifact ignore policy. No deletes without owner decision.
 TASK-20260517-112 | Codex Mac | Deferred | 2026-05-17 | Safety hardening plan — define NightSmallTargetDetector unit tests, offscreen PySide6 CI sanity, and pipeline smoke-test scope.
 TASK-20260517-113 | Codex Mac | Deferred | 2026-05-17 | Physical restructure proposal — decide on python_scripts/tools, config split, and archive moves only after stages 1-4 are accepted.
 

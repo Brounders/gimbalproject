@@ -7,7 +7,7 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260517-110
+- TASK-20260517-111
 
 ## Active RTX Tasks (execution allowed now)
 - none
@@ -45,12 +45,12 @@ Structure stabilization has 6 stages:
 
 0. Audit authority replacement — DONE in controller state once the full Claude
    audit files replace the temporary intake stubs.
-1. TASK-20260517-109 — stabilization intake: convert the audit into a concrete
-   Now/Next/Later backlog and keep physical moves blocked.
-2. TASK-20260517-110 — ownership documentation: script registry, UI primary
-   runbook, `ui_web/` decision note, `automation/state/` status note.
-3. TASK-20260517-111 — proof-based cleanup plan: archive-candidate proof table,
-   generated/local artifact ignore policy, no deletes without owner decision.
+1. TASK-20260517-109 — DONE: stabilization intake converted the audit into a
+   concrete Now/Next/Later backlog and kept physical moves blocked.
+2. TASK-20260517-110 — DONE: ownership documentation created script registry,
+   UI primary runbook, `ui_web/` decision note, and `automation/state/` status note.
+3. TASK-20260517-111 — ACTIVE: proof-based cleanup plan, archive-candidate proof
+   table, generated/local artifact ignore policy, no deletes without owner decision.
 4. TASK-20260517-112 — safety hardening plan: NightSmallTargetDetector unit-test
    scope, offscreen PySide6 CI sanity, pipeline smoke-test proposal.
 5. TASK-20260517-113 — physical restructure proposal: only after stages 1-4,
@@ -101,6 +101,7 @@ ownership is explicit.
 - `orchestrator/reports/REPORT-FULL-PROJECT-AUDIT-FILE-INVENTORY-20260517.md`
 - `orchestrator/reports/REPORT-FULL-PROJECT-AUDIT-RESTRUCTURE-PLAN-20260517.md`
 - `orchestrator/reports/REPORT-TASK-109-STRUCTURE-STABILIZATION-INTAKE-20260517.md`
+- `orchestrator/reports/REPORT-TASK-110-OWNERSHIP-DOCUMENTATION-20260517.md`
 
 ## Current Execution Queue
 
@@ -120,7 +121,8 @@ ownership is explicit.
 | TASK-20260517-107 | Weak4 label/pack audit | DONE | Contact sheets rendered; source/scale label conflict found; blind fine-tune variants stopped |
 | TASK-20260517-108 | Scale/source-aware weak4 pack | PAUSED | Paused by full-project audit intake; resume after structure stabilization and pack ownership decisions |
 | TASK-20260517-109 | Project structure stabilization intake | DONE | Full audit converted into 6-stage stabilization backlog; no folder moves or runtime changes |
-| TASK-20260517-110 | Ownership documentation | ACTIVE | Create script registry, primary UI runbook, ui_web decision note, and automation/state status note; no file moves |
+| TASK-20260517-110 | Ownership documentation | DONE | Script registry, primary UI authority, ui_web decision note, and automation/state status note documented; no file moves |
+| TASK-20260517-111 | Proof-based cleanup plan | ACTIVE | Create archive-candidate proof table and generated/local artifact ignore policy; no deletes without owner decision |
 
 ## Deferred From Previous Plan
 
@@ -133,7 +135,7 @@ ownership is explicit.
 
 ## Current Decision Gate
 
-TASK-20260517-110 активна. Structure stabilization has priority over more detector training. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled.
+TASK-20260517-111 активна. Structure stabilization has priority over more detector training. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -160,5 +162,6 @@ Detector evidence pack result:
 
 Next bounded step:
 1. Do not move folders or delete files yet.
-2. Create ownership documentation: script registry, primary UI runbook, `ui_web/` decision note, and `automation/state` status note.
-3. Keep `TASK-20260517-108` paused until stages 1-3 are complete.
+2. Build a proof table for archive candidates and generated/local artifacts.
+3. Define ignore/archive policy without applying physical moves.
+4. Keep `TASK-20260517-108` paused until stages 1-3 are complete.
