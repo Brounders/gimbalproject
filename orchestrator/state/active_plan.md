@@ -7,10 +7,10 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260517-104
+- none
 
 ## Active RTX Tasks (execution allowed now)
-- none
+- TRAIN-20260517-002
 
 ## Source Direction
 
@@ -67,6 +67,7 @@ and FPS impact.
 - `orchestrator/reports/REPORT-TASK-103f-REACQ-SUPPRESSION-20260517.md`
 - `orchestrator/reports/REPORT-TRACKING-TOOLS-AUDIT-20260517.md`
 - `orchestrator/reports/REPORT-DETECTOR-EVIDENCE-WEAK4-20260517.md`
+- `orchestrator/reports/REPORT-TASK-104-WEAK4-TRAINING-PREP-20260517.md`
 
 ## Current Execution Queue
 
@@ -80,7 +81,7 @@ and FPS impact.
 | TASK-20260516-102 | Act4 live-auto foundation | DONE | Removed folder/source-name routing; Target Lab uses one live preset and runtime frame-content auto-scene |
 | TASK-20260516-103 | Act5 universal selector and reacquire | DONE | 103a-103f реализованы и приняты; 103g N/A; 103h не selector-fix и переносится в detector/training gate |
 | TASK-20260516-100 | Detector/training decision gate | DONE | Weak4 detector evidence pack completed; Act5 ceiling classified as detector/data problem; 103h opened as bounded preparation task |
-| TASK-20260517-104 | 103h detector/training preparation | ACTIVE | Create targeted weak4 training manifest and corrected YOLO26 smoke-run contract; no runtime tracker changes |
+| TASK-20260517-104 | 103h detector/training preparation | DONE | Weak4 GT-to-YOLO pack created at `runs/training_packs/weak4_103h_20260517`; smoke contract opened as `TRAIN-20260517-002` |
 
 ## Deferred From Previous Plan
 
@@ -93,7 +94,7 @@ and FPS impact.
 
 ## Current Decision Gate
 
-TASK-20260517-104 активна. Selector/reacquire work закрыт: дальнейшие слабые клипы считаются detector/data problem unless new diagnostics prove otherwise.
+TRAIN-20260517-002 активна. Selector/reacquire work закрыт: дальнейшие слабые клипы считаются detector/data problem unless new diagnostics prove otherwise.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -119,6 +120,6 @@ Detector evidence pack result:
 - `antiuav_rgbt_train_20190925_205804_1_2_infrared`: best `yolo@0.05`, Hit@0.1 `0.9543`; YOLO signal exists but operating threshold/ranking needs training/gate treatment.
 
 Next bounded step:
-1. Build a targeted weak4 training manifest from Target Lab GT and hard negatives; separate YOLO-low-confidence positives from YOLO-absent thermal positives.
-2. Draft the corrected YOLO26 smoke command as artifact-generation proof, not quality evidence: tiny verified subset, `epochs=1`, `workers=0`, `save_period=1`, `tee` log, external timeout 45-60 minutes, and required `results.csv` plus `weights/last.pt`.
-3. Only after smoke artifacts appear, allow longer detector training and a quality gate against the weak4 clips.
+1. Run `TRAIN-20260517-002` on RTX as artifact-generation proof, not quality evidence.
+2. Required artifacts: `results.csv`, `weights/last.pt`, and `train.log`.
+3. If smoke artifacts appear, decide whether to launch a longer targeted detector run from the same pack; otherwise diagnose training startup before any longer run.
