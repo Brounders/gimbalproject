@@ -7,7 +7,7 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260514-093
+- TASK-20260517-114
 
 ## Active RTX Tasks (execution allowed now)
 - none
@@ -105,6 +105,7 @@ ownership is explicit.
 - `orchestrator/reports/REPORT-TASK-111-PROOF-CLEANUP-PLAN-20260517.md`
 - `orchestrator/reports/REPORT-TASK-112-SAFETY-HARDENING-PLAN-20260517.md`
 - `orchestrator/reports/REPORT-TASK-113-PHYSICAL-RESTRUCTURE-PROPOSAL-20260517.md`
+- `orchestrator/reports/REPORT-TASK-093-COMMIT-BOUNDARY-REVIEW-20260517.md`
 
 ## Current Execution Queue
 
@@ -128,20 +129,20 @@ ownership is explicit.
 | TASK-20260517-111 | Proof-based cleanup plan | DONE | Archive-candidate proof table and generated/local artifact policy documented; AppleDouble ignore rule added; no deletes/moves |
 | TASK-20260517-112 | Safety hardening plan | DONE | NightSmallTargetDetector unit-test scope, offscreen QML sanity, and pipeline smoke proposal documented; no runtime/CI changes |
 | TASK-20260517-113 | Physical restructure proposal | DONE | Migration order, validation gates, and rollback policy documented; no physical moves |
-| TASK-20260514-093 | Commit boundary review | ACTIVE | Separate ready project commits from local/agent artifacts before any push or RTX sync |
+| TASK-20260514-093 | Commit boundary review | DONE | Local main is clean but 170 commits ahead with mixed project/agent history; wholesale push blocked pending sync-boundary decision |
+| TASK-20260517-114 | Sync boundary decision | ACTIVE | Decide full push vs clean branch vs patch bundle vs selective cherry-pick path before RTX sync |
 
 ## Deferred From Previous Plan
 
 | ID | Причина паузы |
 |----|---------------|
-| TASK-20260514-093 | Now active after structure stabilization proposal; required before push, RTX sync, or detector/training restart. |
 | TASK-20260514-094 | Candidate data collection continues opportunistically, but no training decision until Target Lab diagnostics are trustworthy. |
 | TRAIN-20260514-001 | Candidate training waits for useful accepted DTS/GT material and a clear tracker baseline. |
 | TASK-20260514-095 | Full production promotion gate remains required before any production model replacement. |
 
 ## Current Decision Gate
 
-TASK-20260514-093 активна. Structure stabilization intake is complete, but commit boundary review is now required before push, RTX sync, or detector/training restart. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled.
+TASK-20260517-114 активна. Structure stabilization intake is complete, and commit boundary review found that `main` is clean but 170 commits ahead with mixed project/agent history. Push/RTX sync is blocked until a sync strategy is selected. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -169,7 +170,8 @@ Detector evidence pack result:
 Next bounded step:
 1. Do not move folders or delete files yet.
 2. Do not start detector training yet.
-3. Run TASK-20260514-093 commit boundary review: identify local commits and
-   workspace artifacts that are safe to sync versus local-only.
-4. After commit boundary review, choose between implementing safety tests or
-   returning to TASK-20260517-108/TASK-20260516-100 detector strategy.
+3. Decide sync strategy: full push, clean branch, patch bundle, or selective
+   cherry-pick line.
+4. After sync boundary is chosen, return to detector strategy
+   (`TASK-20260517-108` / `TASK-20260516-100`) or implement the accepted safety
+   tests first.
