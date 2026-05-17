@@ -7,7 +7,7 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260517-112
+- TASK-20260517-113
 
 ## Active RTX Tasks (execution allowed now)
 - none
@@ -51,10 +51,11 @@ Structure stabilization has 6 stages:
    UI primary runbook, `ui_web/` decision note, and `automation/state/` status note.
 3. TASK-20260517-111 — DONE: proof-based cleanup plan, archive-candidate proof
    table, generated/local artifact ignore policy, no deletes without owner decision.
-4. TASK-20260517-112 — ACTIVE: safety hardening plan, NightSmallTargetDetector
+4. TASK-20260517-112 — DONE: safety hardening plan, NightSmallTargetDetector
    unit-test scope, offscreen PySide6 CI sanity, pipeline smoke-test proposal.
-5. TASK-20260517-113 — physical restructure proposal: only after stages 1-4,
-   decide whether to move `python_scripts/`, split configs, or archive files.
+5. TASK-20260517-113 — ACTIVE: physical restructure proposal: only after stages
+   1-4, decide whether to move `python_scripts/`, split configs, or archive
+   files.
 
 Return to `TASK-20260517-108` only after stages 1-3 are complete and pack/data
 ownership is explicit.
@@ -103,6 +104,7 @@ ownership is explicit.
 - `orchestrator/reports/REPORT-TASK-109-STRUCTURE-STABILIZATION-INTAKE-20260517.md`
 - `orchestrator/reports/REPORT-TASK-110-OWNERSHIP-DOCUMENTATION-20260517.md`
 - `orchestrator/reports/REPORT-TASK-111-PROOF-CLEANUP-PLAN-20260517.md`
+- `orchestrator/reports/REPORT-TASK-112-SAFETY-HARDENING-PLAN-20260517.md`
 
 ## Current Execution Queue
 
@@ -124,7 +126,8 @@ ownership is explicit.
 | TASK-20260517-109 | Project structure stabilization intake | DONE | Full audit converted into 6-stage stabilization backlog; no folder moves or runtime changes |
 | TASK-20260517-110 | Ownership documentation | DONE | Script registry, primary UI authority, ui_web decision note, and automation/state status note documented; no file moves |
 | TASK-20260517-111 | Proof-based cleanup plan | DONE | Archive-candidate proof table and generated/local artifact policy documented; AppleDouble ignore rule added; no deletes/moves |
-| TASK-20260517-112 | Safety hardening plan | ACTIVE | Define NightSmallTargetDetector unit tests, offscreen PySide6 CI sanity, and pipeline smoke-test scope |
+| TASK-20260517-112 | Safety hardening plan | DONE | NightSmallTargetDetector unit-test scope, offscreen QML sanity, and pipeline smoke proposal documented; no runtime/CI changes |
+| TASK-20260517-113 | Physical restructure proposal | ACTIVE | Define migration order for scripts/configs/docs/archive/tests; no physical moves |
 
 ## Deferred From Previous Plan
 
@@ -137,7 +140,7 @@ ownership is explicit.
 
 ## Current Decision Gate
 
-TASK-20260517-112 активна. Structure stabilization has priority over more detector training. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled.
+TASK-20260517-113 активна. Structure stabilization has priority over more detector training. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -164,7 +167,7 @@ Detector evidence pack result:
 
 Next bounded step:
 1. Do not move folders or delete files yet.
-2. Define the safety-hardening backlog: `NightSmallTargetDetector` unit tests,
-   offscreen UI sanity, and pipeline smoke proposal.
-3. Keep `TASK-20260517-108` paused until TASK-112 is accepted or Human explicitly
-   returns to detector/training.
+2. Prepare the physical restructure proposal: migration order, import/test
+   migration gates, archive rules, and rollback path.
+3. After TASK-113 is accepted, Human/Codex can choose whether to implement the
+   safety tests first or return to detector/training with the new structure map.
