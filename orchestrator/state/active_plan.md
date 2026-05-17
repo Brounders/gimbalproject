@@ -1,13 +1,13 @@
 # Active Plan
 
 ## Plan ID
-- AP-TARGET-LAB-TRACKING-EVOLUTION-V1
+- AP-PROJECT-STRUCTURE-STABILIZATION-V1
 
 ## Status
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260517-108
+- TASK-20260517-109
 
 ## Active RTX Tasks (execution allowed now)
 - none
@@ -32,6 +32,14 @@ The immediate target is not a new model and not cosmetic UI.  The immediate
 target is a reliable diagnosis loop for autonomous tracking: target detection,
 target size stability, prediction/reacquire behavior, scene-specific weakness,
 and FPS impact.
+
+## Structure Stabilization Direction
+
+Human accepted the Claude full-project audit direction on 2026-05-17.  Detector
+training is paused until the project has a basic ownership and migration map.
+The immediate goal is not physical folder movement.  The immediate goal is to
+turn the audit into a controlled backlog: inventory, ownership, runbooks, script
+registry, archive-candidate proof, and commit-boundary review.
 
 ## Completed Foundation
 
@@ -71,6 +79,9 @@ and FPS impact.
 - `orchestrator/reports/REPORT-TASK-105-MAC-SMOKE-MICRO3-20260517.md`
 - `orchestrator/reports/REPORT-TASK-106-WEAK4-V2-V3-GATE-20260517.md`
 - `orchestrator/reports/REPORT-TASK-107-WEAK4-LABEL-AUDIT-20260517.md`
+- `orchestrator/reports/REPORT-FULL-PROJECT-AUDIT-20260517.md`
+- `orchestrator/reports/REPORT-FULL-PROJECT-AUDIT-FILE-INVENTORY-20260517.md`
+- `orchestrator/reports/REPORT-FULL-PROJECT-AUDIT-RESTRUCTURE-PLAN-20260517.md`
 
 ## Current Execution Queue
 
@@ -88,7 +99,8 @@ and FPS impact.
 | TASK-20260517-105 | Mac-local smoke triage | DONE | Corrected Mac-vs-RTX accounting; fixed training project path; tiny smoke passed; Micro3 candidate rejected as not promotable due regression |
 | TASK-20260517-106 | Weak4 v2 protected training gate | DONE | V2/V3 candidates rejected; lower-risk variants did not preserve Micro3 improvement and protected gate |
 | TASK-20260517-107 | Weak4 label/pack audit | DONE | Contact sheets rendered; source/scale label conflict found; blind fine-tune variants stopped |
-| TASK-20260517-108 | Scale/source-aware weak4 pack | ACTIVE | Build compact thermal-positive pack with hard negatives, quarantine conflicting large/strip labels, and test one bounded candidate |
+| TASK-20260517-108 | Scale/source-aware weak4 pack | PAUSED | Paused by full-project audit intake; resume after structure stabilization and pack ownership decisions |
+| TASK-20260517-109 | Project structure stabilization intake | ACTIVE | Convert full-project audit into migration backlog without physical folder moves or runtime changes |
 
 ## Deferred From Previous Plan
 
@@ -101,7 +113,7 @@ and FPS impact.
 
 ## Current Decision Gate
 
-TASK-20260517-108 активна. Selector/reacquire work закрыт: дальнейшие слабые клипы считаются detector/data problem unless new diagnostics prove otherwise.
+TASK-20260517-109 активна. Structure stabilization has priority over more detector training. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -127,6 +139,6 @@ Detector evidence pack result:
 - `antiuav_rgbt_train_20190925_205804_1_2_infrared`: best `yolo@0.05`, Hit@0.1 `0.9543`; YOLO signal exists but operating threshold/ranking needs training/gate treatment.
 
 Next bounded step:
-1. Do not promote Micro3, V2, or V3.
-2. Quarantine wide strip labels and large protected silhouettes from ordinary training pressure.
-3. Build a compact thermal-positive pack with hard negatives and test one bounded candidate.
+1. Do not move folders or delete files yet.
+2. Convert the audit into a concrete migration backlog: Now, Next, Later.
+3. Keep `TASK-20260517-108` paused until script ownership, UI ownership, archive candidates, and commit boundary are clear.
