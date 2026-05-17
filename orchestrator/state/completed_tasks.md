@@ -114,3 +114,7 @@ TASK-20260516-100 | Codex Mac | Accepted | 2026-05-17 | Detector/training decisi
 TASK-20260517-104 | Codex Mac | Accepted | 2026-05-17 | 103h weak4 detector/training preparation complete; report orchestrator/reports/REPORT-TASK-104-WEAK4-TRAINING-PREP-20260517.md; reproducible GT-to-YOLO builder added; pack generated at runs/training_packs/weak4_103h_20260517; no runtime tracker/UI changes
 
 TASK-20260517-105 | Codex Mac | Accepted | 2026-05-17 | Mac-local smoke triage and Micro3 gate complete; report orchestrator/reports/REPORT-TASK-105-MAC-SMOKE-MICRO3-20260517.md; corrected RTX-vs-Mac accounting, fixed train project path, verified artifact smoke, rejected Micro3 due protected-clip regression
+
+TASK-20260517-106 | Codex Mac | Accepted | 2026-05-17 | Weak4 V2/V3 protected gate complete; report orchestrator/reports/REPORT-TASK-106-WEAK4-V2-V3-GATE-20260517.md; V2/V3 rejected, next step is visual label/pack audit before more training
+
+TASK-20260517-107 | Codex Mac | Accepted | 2026-05-17 | Weak4 label/pack audit complete; report orchestrator/reports/REPORT-TASK-107-WEAK4-LABEL-AUDIT-20260517.md; contact sheets rendered, source/scale conflict found, next pack must quarantine wide strip and protected large-silhouette labels

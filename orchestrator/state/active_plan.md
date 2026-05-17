@@ -7,7 +7,7 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260517-106
+- TASK-20260517-108
 
 ## Active RTX Tasks (execution allowed now)
 - none
@@ -69,6 +69,8 @@ and FPS impact.
 - `orchestrator/reports/REPORT-DETECTOR-EVIDENCE-WEAK4-20260517.md`
 - `orchestrator/reports/REPORT-TASK-104-WEAK4-TRAINING-PREP-20260517.md`
 - `orchestrator/reports/REPORT-TASK-105-MAC-SMOKE-MICRO3-20260517.md`
+- `orchestrator/reports/REPORT-TASK-106-WEAK4-V2-V3-GATE-20260517.md`
+- `orchestrator/reports/REPORT-TASK-107-WEAK4-LABEL-AUDIT-20260517.md`
 
 ## Current Execution Queue
 
@@ -84,7 +86,9 @@ and FPS impact.
 | TASK-20260516-100 | Detector/training decision gate | DONE | Weak4 detector evidence pack completed; Act5 ceiling classified as detector/data problem; 103h opened as bounded preparation task |
 | TASK-20260517-104 | 103h detector/training preparation | DONE | Weak4 GT-to-YOLO pack created at `runs/training_packs/weak4_103h_20260517`; smoke contract drafted, but not run on RTX |
 | TASK-20260517-105 | Mac-local smoke triage | DONE | Corrected Mac-vs-RTX accounting; fixed training project path; tiny smoke passed; Micro3 candidate rejected as not promotable due regression |
-| TASK-20260517-106 | Weak4 v2 protected training gate | ACTIVE | Build/train/evaluate a protected v2 candidate that improves weak clips without regressing already-strong `antiuav_rgbt_train` |
+| TASK-20260517-106 | Weak4 v2 protected training gate | DONE | V2/V3 candidates rejected; lower-risk variants did not preserve Micro3 improvement and protected gate |
+| TASK-20260517-107 | Weak4 label/pack audit | DONE | Contact sheets rendered; source/scale label conflict found; blind fine-tune variants stopped |
+| TASK-20260517-108 | Scale/source-aware weak4 pack | ACTIVE | Build compact thermal-positive pack with hard negatives, quarantine conflicting large/strip labels, and test one bounded candidate |
 
 ## Deferred From Previous Plan
 
@@ -97,7 +101,7 @@ and FPS impact.
 
 ## Current Decision Gate
 
-TASK-20260517-106 активна. Selector/reacquire work закрыт: дальнейшие слабые клипы считаются detector/data problem unless new diagnostics prove otherwise.
+TASK-20260517-108 активна. Selector/reacquire work закрыт: дальнейшие слабые клипы считаются detector/data problem unless new diagnostics prove otherwise.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -123,6 +127,6 @@ Detector evidence pack result:
 - `antiuav_rgbt_train_20190925_205804_1_2_infrared`: best `yolo@0.05`, Hit@0.1 `0.9543`; YOLO signal exists but operating threshold/ranking needs training/gate treatment.
 
 Next bounded step:
-1. Do not promote `yolo26_weak4_mac_micro3_20260517`; it improves two weak clips but regresses `antiuav_rgbt_train`.
-2. Build weak4-v2 with protected gate treatment for `antiuav_rgbt_train`.
-3. Train a short lower-risk candidate and accept only if weak clips improve without a protected-clip regression.
+1. Do not promote Micro3, V2, or V3.
+2. Quarantine wide strip labels and large protected silhouettes from ordinary training pressure.
+3. Build a compact thermal-positive pack with hard negatives and test one bounded candidate.
