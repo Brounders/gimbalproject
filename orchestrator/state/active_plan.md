@@ -7,10 +7,10 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- none
+- TASK-20260517-106
 
 ## Active RTX Tasks (execution allowed now)
-- TRAIN-20260517-002
+- none
 
 ## Source Direction
 
@@ -68,6 +68,7 @@ and FPS impact.
 - `orchestrator/reports/REPORT-TRACKING-TOOLS-AUDIT-20260517.md`
 - `orchestrator/reports/REPORT-DETECTOR-EVIDENCE-WEAK4-20260517.md`
 - `orchestrator/reports/REPORT-TASK-104-WEAK4-TRAINING-PREP-20260517.md`
+- `orchestrator/reports/REPORT-TASK-105-MAC-SMOKE-MICRO3-20260517.md`
 
 ## Current Execution Queue
 
@@ -81,7 +82,9 @@ and FPS impact.
 | TASK-20260516-102 | Act4 live-auto foundation | DONE | Removed folder/source-name routing; Target Lab uses one live preset and runtime frame-content auto-scene |
 | TASK-20260516-103 | Act5 universal selector and reacquire | DONE | 103a-103f реализованы и приняты; 103g N/A; 103h не selector-fix и переносится в detector/training gate |
 | TASK-20260516-100 | Detector/training decision gate | DONE | Weak4 detector evidence pack completed; Act5 ceiling classified as detector/data problem; 103h opened as bounded preparation task |
-| TASK-20260517-104 | 103h detector/training preparation | DONE | Weak4 GT-to-YOLO pack created at `runs/training_packs/weak4_103h_20260517`; smoke contract opened as `TRAIN-20260517-002` |
+| TASK-20260517-104 | 103h detector/training preparation | DONE | Weak4 GT-to-YOLO pack created at `runs/training_packs/weak4_103h_20260517`; smoke contract drafted, but not run on RTX |
+| TASK-20260517-105 | Mac-local smoke triage | DONE | Corrected Mac-vs-RTX accounting; fixed training project path; tiny smoke passed; Micro3 candidate rejected as not promotable due regression |
+| TASK-20260517-106 | Weak4 v2 protected training gate | ACTIVE | Build/train/evaluate a protected v2 candidate that improves weak clips without regressing already-strong `antiuav_rgbt_train` |
 
 ## Deferred From Previous Plan
 
@@ -94,7 +97,7 @@ and FPS impact.
 
 ## Current Decision Gate
 
-TRAIN-20260517-002 активна. Selector/reacquire work закрыт: дальнейшие слабые клипы считаются detector/data problem unless new diagnostics prove otherwise.
+TASK-20260517-106 активна. Selector/reacquire work закрыт: дальнейшие слабые клипы считаются detector/data problem unless new diagnostics prove otherwise.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -120,6 +123,6 @@ Detector evidence pack result:
 - `antiuav_rgbt_train_20190925_205804_1_2_infrared`: best `yolo@0.05`, Hit@0.1 `0.9543`; YOLO signal exists but operating threshold/ranking needs training/gate treatment.
 
 Next bounded step:
-1. Run `TRAIN-20260517-002` on RTX as artifact-generation proof, not quality evidence.
-2. Required artifacts: `results.csv`, `weights/last.pt`, and `train.log`.
-3. If smoke artifacts appear, decide whether to launch a longer targeted detector run from the same pack; otherwise diagnose training startup before any longer run.
+1. Do not promote `yolo26_weak4_mac_micro3_20260517`; it improves two weak clips but regresses `antiuav_rgbt_train`.
+2. Build weak4-v2 with protected gate treatment for `antiuav_rgbt_train`.
+3. Train a short lower-risk candidate and accept only if weak clips improve without a protected-clip regression.

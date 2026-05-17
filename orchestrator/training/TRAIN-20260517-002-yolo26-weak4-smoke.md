@@ -1,14 +1,15 @@
 # TRAIN-20260517-002 — YOLO26 Weak4 Smoke Retry
 
 Date: 2026-05-17
-Status: Ready
-Owner: RTX
+Status: Draft/Not started
+Owner: Human/RTX after explicit dispatch
 
 ## Purpose
 
-Artifact-generation proof for the weak4 targeted detector pack.  This is not a
-quality run and must not be counted as model evidence unless the artifact
-contract passes.
+Artifact-generation proof contract for the weak4 targeted detector pack.  This
+file is a launch recipe only.  No RTX run has been performed from this task.
+This is not a quality run and must not be counted as model evidence unless the
+artifact contract passes after explicit dispatch.
 
 ## Dataset
 

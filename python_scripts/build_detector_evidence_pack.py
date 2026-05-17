@@ -37,6 +37,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--gt-files", nargs="+", type=Path, required=True)
     p.add_argument("--out-dir", type=Path, default=Path("runs/evaluations/detector_evidence_pack"))
     p.add_argument("--yolo-preset", default="tracking_live_auto")
+    p.add_argument("--yolo-model", type=Path, default=None, help="Override YOLO model path for candidate evaluation.")
     p.add_argument("--night-presets", default="tracking_live_auto,antiuav_thermal_peak,antiuav_thermal_hotspot")
     p.add_argument("--confs", default="0.30,0.12,0.08,0.05")
     p.add_argument("--sample-step", type=int, default=5)
@@ -105,6 +106,7 @@ def diagnose_source(
     rows: list[GtRow],
     *,
     yolo_preset: str,
+    yolo_model: Path | None,
     night_presets: list[str],
     confs: list[float],
     out_dir: Path,
@@ -114,6 +116,8 @@ def diagnose_source(
         return {"source": source, "error": "source_missing"}
 
     yolo_cfg, _ = load_preset(yolo_preset)
+    if yolo_model is not None:
+        yolo_cfg.MODEL_PATH = str(yolo_model)
     backend = create_detector_backend(yolo_cfg.MODEL_PATH, yolo_cfg.DEVICE)
     night_detectors: dict[str, NightSmallTargetDetector] = {}
     for preset in night_presets:
@@ -249,6 +253,7 @@ def main() -> int:
             source,
             rows,
             yolo_preset=args.yolo_preset,
+            yolo_model=args.yolo_model,
             night_presets=night_presets,
             confs=confs,
             out_dir=args.out_dir,

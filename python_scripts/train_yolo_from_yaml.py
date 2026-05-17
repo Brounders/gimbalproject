@@ -58,6 +58,8 @@ def main() -> int:
         cache_value = "ram"
 
     model = YOLO(str(args.model))
+    project_dir = args.project.expanduser().resolve()
+
     kwargs = dict(
         data=str(args.data),
         epochs=int(args.epochs),
@@ -65,7 +67,7 @@ def main() -> int:
         batch=int(args.batch),
         device=args.device,
         workers=int(args.workers),
-        project=str(args.project),
+        project=str(project_dir),
         name=args.name,
         exist_ok=True,
         patience=int(args.patience),

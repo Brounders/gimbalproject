@@ -112,3 +112,5 @@ TASK-20260516-103 | Codex Mac | Accepted | 2026-05-17 | Act5 universal selector/
 TASK-20260516-100 | Codex Mac | Accepted | 2026-05-17 | Detector/training decision gate closed by orchestrator/reports/REPORT-DETECTOR-EVIDENCE-WEAK4-20260517.md; weak4 ceiling is detector/data, not selector/reacquire; opened next 103h preparation task
 
 TASK-20260517-104 | Codex Mac | Accepted | 2026-05-17 | 103h weak4 detector/training preparation complete; report orchestrator/reports/REPORT-TASK-104-WEAK4-TRAINING-PREP-20260517.md; reproducible GT-to-YOLO builder added; pack generated at runs/training_packs/weak4_103h_20260517; no runtime tracker/UI changes
+
+TASK-20260517-105 | Codex Mac | Accepted | 2026-05-17 | Mac-local smoke triage and Micro3 gate complete; report orchestrator/reports/REPORT-TASK-105-MAC-SMOKE-MICRO3-20260517.md; corrected RTX-vs-Mac accounting, fixed train project path, verified artifact smoke, rejected Micro3 due protected-clip regression
