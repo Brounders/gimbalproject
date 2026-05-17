@@ -7,7 +7,7 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260517-114
+- TASK-20260517-115
 
 ## Active RTX Tasks (execution allowed now)
 - none
@@ -106,6 +106,7 @@ ownership is explicit.
 - `orchestrator/reports/REPORT-TASK-112-SAFETY-HARDENING-PLAN-20260517.md`
 - `orchestrator/reports/REPORT-TASK-113-PHYSICAL-RESTRUCTURE-PROPOSAL-20260517.md`
 - `orchestrator/reports/REPORT-TASK-093-COMMIT-BOUNDARY-REVIEW-20260517.md`
+- `orchestrator/reports/REPORT-TASK-114-SYNC-BOUNDARY-DECISION-20260517.md`
 
 ## Current Execution Queue
 
@@ -130,7 +131,8 @@ ownership is explicit.
 | TASK-20260517-112 | Safety hardening plan | DONE | NightSmallTargetDetector unit-test scope, offscreen QML sanity, and pipeline smoke proposal documented; no runtime/CI changes |
 | TASK-20260517-113 | Physical restructure proposal | DONE | Migration order, validation gates, and rollback policy documented; no physical moves |
 | TASK-20260514-093 | Commit boundary review | DONE | Local main is clean but 170 commits ahead with mixed project/agent history; wholesale push blocked pending sync-boundary decision |
-| TASK-20260517-114 | Sync boundary decision | ACTIVE | Decide full push vs clean branch vs patch bundle vs selective cherry-pick path before RTX sync |
+| TASK-20260517-114 | Sync boundary decision | DONE | Selected isolated branch strategy: `codex/sync-boundary-20260517`; do not push/pull `main` for RTX |
+| TASK-20260517-115 | Sync branch validation | ACTIVE | Create/switch to sync branch, validate branch state, and prepare RTX handoff gate |
 
 ## Deferred From Previous Plan
 
@@ -142,7 +144,7 @@ ownership is explicit.
 
 ## Current Decision Gate
 
-TASK-20260517-114 активна. Structure stabilization intake is complete, and commit boundary review found that `main` is clean but 170 commits ahead with mixed project/agent history. Push/RTX sync is blocked until a sync strategy is selected. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled.
+TASK-20260517-115 активна. Structure stabilization intake is complete, and sync strategy is selected: use isolated branch `codex/sync-boundary-20260517`, not `main`, for RTX handoff. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -168,10 +170,9 @@ Detector evidence pack result:
 - `antiuav_rgbt_train_20190925_205804_1_2_infrared`: best `yolo@0.05`, Hit@0.1 `0.9543`; YOLO signal exists but operating threshold/ranking needs training/gate treatment.
 
 Next bounded step:
-1. Do not move folders or delete files yet.
-2. Do not start detector training yet.
-3. Decide sync strategy: full push, clean branch, patch bundle, or selective
-   cherry-pick line.
-4. After sync boundary is chosen, return to detector strategy
-   (`TASK-20260517-108` / `TASK-20260516-100`) or implement the accepted safety
-   tests first.
+1. Create/switch to `codex/sync-boundary-20260517`.
+2. Validate branch state and orchestration state.
+3. Do not push `main`.
+4. After branch validation, decide whether to publish the sync branch for RTX or
+   return locally to detector strategy (`TASK-20260517-108` /
+   `TASK-20260516-100`).
