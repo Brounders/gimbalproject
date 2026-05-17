@@ -164,6 +164,22 @@ class TestPipelineOperatorOverride:
         pipe.budget = type('Budget', (), {'effective_global_scan_interval': lambda self, frame_counter: 6})()
         return pipe
 
+    def test_search_mode_respects_scan_interval(self):
+        pipe = self._pipeline(enabled=True)
+        pipe.cfg.SEARCH_SCAN_INTERVAL = 3
+        pipe.frame_counter = 1
+
+        run_global, strategy = pipe._should_run_global_scan()
+
+        assert run_global is False
+        assert strategy == 'SEARCH-IDLE'
+
+        pipe.frame_counter = 3
+        run_global, strategy = pipe._should_run_global_scan()
+
+        assert run_global is True
+        assert strategy == 'GLOBAL-SCAN'
+
     def test_pipeline_queues_override_until_frame_shape_is_available(self):
         pipe = self._pipeline(enabled=True)
         override = OperatorTargetOverride.from_click(40, 50, box_size=30)

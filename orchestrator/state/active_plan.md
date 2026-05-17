@@ -188,6 +188,9 @@ Playback performance finding:
 - backend spikes mostly come from YOLO/global and sometimes local validation;
 - QML path also had a GUI-thread bottleneck: NumPy BGR -> RGB/QImage conversion happened in `TrackerBridge._on_frame_ready()`;
 - first UI fix moved QImage conversion into `TrackerWorker` and made QML image loading asynchronous.
+- Human reported that async image loading caused visible blinking; QML image loading was reverted to synchronous while keeping worker-thread QImage conversion.
+- Human also observed that focus lock is smooth while searching stutters; root cause confirmed: SEARCH ran global YOLO every frame and ROI crop inference in pure search.
+- TASK-126 fix added `SEARCH_SCAN_INTERVAL`, disabled ROI in pure search for QML/live, and reduced `tracking_live_auto` weak4 p99 search latency without recall regression in the measured clips.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -216,5 +219,5 @@ Next bounded step:
 1. Do not start RTX training.
 2. Do not push `main`.
 3. Run TASK-20260517-126: QML operator smoke for playback smoothness after worker-thread QImage conversion.
-4. If stutter remains, profile backend scheduling and tune live preset latency (`imgsz`, `GLOBAL_SCAN_INTERVAL`, local validation cadence, and frame presentation throttling).
+4. If stutter remains, profile backend scheduling and tune live preset latency (`imgsz`, `SEARCH_SCAN_INTERVAL`, local validation cadence, and frame presentation throttling).
 5. Keep TRAIN-20260517-002 deferred until Human explicitly reopens RTX training.

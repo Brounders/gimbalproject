@@ -539,7 +539,12 @@ class TrackerPipeline:
             if self.manager.is_focus_mode():
                 return False, 'OPERATOR-LOCK'
             return False, 'OPERATOR-VERIFY'
-        if not self.manager.is_focus_mode() or active is None:
+        if active is None:
+            interval = max(1, int(getattr(self.cfg, 'SEARCH_SCAN_INTERVAL', self.cfg.GLOBAL_SCAN_INTERVAL)))
+            if self.frame_counter % interval == 0:
+                return True, 'GLOBAL-SCAN'
+            return False, 'SEARCH-IDLE'
+        if not self.manager.is_focus_mode():
             return True, 'GLOBAL-SCAN'
         if active.lost_frames > self.cfg.LOCK_LOST_GRACE:
             return True, 'GLOBAL-RECOVERY'
@@ -966,6 +971,10 @@ class TrackerPipeline:
             self.cfg.ROI_ASSIST_ENABLED
             and (not self.cfg.ROI_ASSIST_ON_SMALL_TARGET_ONLY or small_target_mode)
             and not self.manager.is_focus_mode()
+            and (
+                self.manager.get_active_target() is not None
+                or (run_global_scan and bool(getattr(self.cfg, 'ROI_ASSIST_IN_SEARCH', True)))
+            )
             and self.budget.should_run_roi(self.frame_counter)
         )
         if run_roi_assist:

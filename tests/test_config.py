@@ -295,6 +295,7 @@ class TestConfigSectionPresence(unittest.TestCase):
 
     def test_section_adaptive_scan(self):
         _ = self.cfg.ADAPTIVE_SCAN_ENABLED
+        _ = self.cfg.SEARCH_SCAN_INTERVAL
         _ = self.cfg.GLOBAL_SCAN_INTERVAL
         _ = self.cfg.LOCAL_VALIDATE_INTERVAL
 
@@ -305,6 +306,7 @@ class TestConfigSectionPresence(unittest.TestCase):
 
     def test_section_roi_assist(self):
         _ = self.cfg.ROI_ASSIST_ENABLED
+        _ = self.cfg.ROI_ASSIST_IN_SEARCH
         _ = self.cfg.ROI_MAX_CANDIDATES
         _ = self.cfg.ROI_CONF_THRESH
 

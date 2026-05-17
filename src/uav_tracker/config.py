@@ -52,6 +52,7 @@ class Config:
 
     # ── Adaptive Scan ────────────────────────────────────────────────────────
     ADAPTIVE_SCAN_ENABLED: bool = True
+    SEARCH_SCAN_INTERVAL: int = 3
     GLOBAL_SCAN_INTERVAL: int = 6
     LOCAL_TRACK_IMG_SIZE: int = 640
     LOCAL_TRACK_CONF: float = 0.10
@@ -74,6 +75,7 @@ class Config:
 
     # ── ROI Assist ───────────────────────────────────────────────────────────
     ROI_ASSIST_ENABLED: bool = True
+    ROI_ASSIST_IN_SEARCH: bool = True
     ROI_ASSIST_ON_SMALL_TARGET_ONLY: bool = True
     ROI_DIFF_THRESH: int = 14
     ROI_MIN_AREA: int = 4

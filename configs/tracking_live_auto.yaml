@@ -16,6 +16,7 @@ detection_max_width_ratio: 0.30
 detection_max_height_ratio: 0.30
 small_target_mode: true
 adaptive_scan_enabled: true
+search_scan_interval: 3
 global_scan_interval: 5
 local_validate_interval: 3
 lock_tracker_enabled: true
@@ -58,6 +59,7 @@ show_gt_overlay: true
 show_debug_timings: true
 show_trails: true
 roi_assist_enabled: true
+roi_assist_in_search: false
 roi_conf_thresh: 0.12
 night_mog2_history: 20
 night_mog2_var_thresh: 8

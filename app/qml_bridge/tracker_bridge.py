@@ -203,6 +203,7 @@ class TrackerBridge(QObject):
             "SHOW_TRAILS": False,
             "OPERATOR_MINIMAL_OVERLAY": True,
             "RETICLE_OVERLAY_ENABLED": False,
+            "ROI_ASSIST_IN_SEARCH": False,
         }.items():
             if hasattr(cfg, attr):
                 setattr(cfg, attr, value)
@@ -232,6 +233,7 @@ class TrackerBridge(QObject):
             "SMALL_TARGET_CONF": ("tracker_small_target_conf", float, 0.01, 0.99),
             "IMG_SIZE": ("tracker_img_size", int, 32, 4096),
             "SMALL_TARGET_IMG_SIZE": ("tracker_small_target_img_size", int, 32, 4096),
+            "SEARCH_SCAN_INTERVAL": ("tracker_search_scan_interval", int, 1, 30),
             "NIGHT_CONFIRM": ("tracker_night_confirm", int, 1, 60),
             "LOCK_CONFIRM_FRAMES": ("tracker_lock_confirm_frames", int, 1, 60),
             "TRACK_STATE_LOST_FRAMES": ("tracker_track_state_lost_frames", int, 1, 300),
