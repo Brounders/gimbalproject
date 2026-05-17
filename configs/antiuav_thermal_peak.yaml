@@ -5,11 +5,11 @@ device: mps
 imgsz: 960
 conf_thresh: 0.45
 ignore_zones:
-  - name: top_left_osd
+  - name: top_left_osd_wide
     x1: 0.0
     y1: 0.0
-    x2: 0.22
-    y2: 0.07
+    x2: 0.42
+    y2: 0.18
     applies_to: [yolo, local, roi, night, lock]
 detection_max_area_ratio: 0.04
 detection_max_width_ratio: 0.30

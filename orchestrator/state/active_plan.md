@@ -7,7 +7,7 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260517-122
+- TASK-20260517-124
 
 ## Active RTX Tasks (execution allowed now)
 - none
@@ -114,6 +114,8 @@ ownership is explicit.
 - `orchestrator/reports/REPORT-TASK-119-NIGHT-SOURCE-AUTHORITY-AB-GATE-20260517.md`
 - `orchestrator/reports/REPORT-TASK-120-NIGHT-PRIMARY-CANDIDATE-GATE-20260517.md`
 - `orchestrator/reports/REPORT-TASK-121-WEAK4-OFFTARGET-GEOMETRY-AUDIT-20260517.md`
+- `orchestrator/reports/REPORT-TASK-122-WEAK4-VISUAL-OFFTARGET-SAMPLE-AUDIT-20260517.md`
+- `orchestrator/reports/REPORT-TASK-123-THERMAL-OSD-IGNORE-GATE-20260517.md`
 
 ## Current Execution Queue
 
@@ -146,7 +148,9 @@ ownership is explicit.
 | TASK-20260517-119 | Night-source authority A/B gate | DONE | Added default-off night primary source switch and tests; current presets unchanged |
 | TASK-20260517-120 | Night-primary candidate A/B gate | DONE | Candidate rejected: no weak4 improvement and 9_dji false-lock worsened; production presets unchanged |
 | TASK-20260517-121 | Weak4 off-target geometry audit | DONE | Geometry/source summary shows separate failure modes; visual off-target audit required before more runtime tweaks |
-| TASK-20260517-122 | Weak4 visual off-target sample audit | ACTIVE | Render and classify baseline weak4 matched/missed/off-target samples before choosing next no-training lever |
+| TASK-20260517-122 | Weak4 visual off-target sample audit | DONE | Visual samples show RGBT 20190925 locks top-left OSD; next no-training lever is thermal OSD ignore-zone A/B |
+| TASK-20260517-123 | Thermal OSD ignore-zone A/B gate | DONE | Accepted OSD-wide ignore zone for `antiuav_thermal_peak`; RGBT weak recall improved without new IR gate failure |
+| TASK-20260517-124 | Tracking-live-auto OSD propagation gate | ACTIVE | Test whether OSD-wide ignore zone should be applied to operator primary `tracking_live_auto` |
 
 ## Deferred From Previous Plan
 
@@ -158,7 +162,7 @@ ownership is explicit.
 
 ## Current Decision Gate
 
-TASK-20260517-122 активна. RTX/training is deferred by Human; sync branch `codex/sync-boundary-20260517` remains available but is not the active blocker. Night-primary candidate was rejected; next work is visual off-target sample audit before any more runtime tweaks.
+TASK-20260517-124 активна. RTX/training is deferred by Human; sync branch `codex/sync-boundary-20260517` remains available but is not the active blocker. Thermal peak OSD-wide gate was accepted; next work is deciding whether to propagate the same fix to operator primary `tracking_live_auto`.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -186,7 +190,6 @@ Detector evidence pack result:
 Next bounded step:
 1. Do not start RTX training.
 2. Do not push `main`.
-3. Run TASK-20260517-122: render and classify weak4 error samples.
-4. Only consider a new runtime candidate if visual categories point to a bounded
-   filter/scoring/sizing lever.
+3. Run TASK-20260517-124: A/B `tracking_live_auto` with OSD-wide ignore zone.
+4. Promote only if operator-primary diagnostics improve without regression.
 5. Keep TRAIN-20260517-002 deferred until Human explicitly reopens RTX training.
