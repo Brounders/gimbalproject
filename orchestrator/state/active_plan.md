@@ -7,7 +7,7 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260516-100
+- TASK-20260517-104
 
 ## Active RTX Tasks (execution allowed now)
 - none
@@ -65,6 +65,8 @@ and FPS impact.
 - `orchestrator/reports/REPORT-TARGET-LAB-ACT4-LIVE-AUTO-20260516.md`
 - `orchestrator/reports/REPORT-TASK-103-ACT5-FINAL-20260516.md`
 - `orchestrator/reports/REPORT-TASK-103f-REACQ-SUPPRESSION-20260517.md`
+- `orchestrator/reports/REPORT-TRACKING-TOOLS-AUDIT-20260517.md`
+- `orchestrator/reports/REPORT-DETECTOR-EVIDENCE-WEAK4-20260517.md`
 
 ## Current Execution Queue
 
@@ -77,7 +79,8 @@ and FPS impact.
 | TASK-20260516-101 | Act3 IR missed detection | DONE | Source-aware IR preset routing accepted; risk count 25->21; IR recall 0.103->0.556 |
 | TASK-20260516-102 | Act4 live-auto foundation | DONE | Removed folder/source-name routing; Target Lab uses one live preset and runtime frame-content auto-scene |
 | TASK-20260516-103 | Act5 universal selector and reacquire | DONE | 103a-103f реализованы и приняты; 103g N/A; 103h не selector-fix и переносится в detector/training gate |
-| TASK-20260516-100 | Detector/training decision gate | ACTIVE | Decide bounded detector strategy: targeted data/training plan, short YOLO26 smoke-run policy, and whether to open 103h |
+| TASK-20260516-100 | Detector/training decision gate | DONE | Weak4 detector evidence pack completed; Act5 ceiling classified as detector/data problem; 103h opened as bounded preparation task |
+| TASK-20260517-104 | 103h detector/training preparation | ACTIVE | Create targeted weak4 training manifest and corrected YOLO26 smoke-run contract; no runtime tracker changes |
 
 ## Deferred From Previous Plan
 
@@ -90,7 +93,7 @@ and FPS impact.
 
 ## Current Decision Gate
 
-TASK-20260516-100 активна. Selector/reacquire work закрыт: дальнейшие слабые клипы считаются detector/data problem unless new diagnostics prove otherwise.
+TASK-20260517-104 активна. Selector/reacquire work закрыт: дальнейшие слабые клипы считаются detector/data problem unless new diagnostics prove otherwise.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -109,7 +112,13 @@ Not closed in Act5:
 Invalid training evidence:
 - YOLO26 smoke-train attempt on 2026-05-17 was manually stopped and produced only `args.yaml`; no `results.csv`, `weights/best.pt`, or `weights/last.pt`. Do not count it as a result.
 
-Next bounded step proposal:
-1. Create a detector evidence pack for the four weak clips: representative frames, GT overlap, detector source/proposal counts, and false/off-target classification.
-2. Run a short YOLO26 smoke only as artifact-generation proof, not quality evidence: tiny verified subset, `epochs=1`, `workers=0`, `save_period=1`, tee log to `runs/detect/runs/smoke_train/<name>/train.log`, external timeout 45-60 minutes, and checkpoint check for `results.csv` plus `weights/last.pt`.
-3. If smoke artifacts appear, open 103h as targeted detector-training task with explicit dataset composition and gate metrics; otherwise diagnose environment/training startup before any longer run.
+Detector evidence pack result:
+- `1_minie3_range_close`: best `yolo@0.05`, Hit@0.1 `0.5312`; YOLO signal exists but current confidence/policy is too strict.
+- `9_dji2_range_medium`: best `antiuav_thermal_peak`, Hit@0.1 `0.2171`; YOLO is effectively absent and targeted detector data is needed.
+- `antiuav_rgbt_20190925_200805_1_2_infrared`: best `antiuav_thermal_peak`, Hit@0.1 `0.3333`; YOLO is effectively absent and targeted detector data is needed.
+- `antiuav_rgbt_train_20190925_205804_1_2_infrared`: best `yolo@0.05`, Hit@0.1 `0.9543`; YOLO signal exists but operating threshold/ranking needs training/gate treatment.
+
+Next bounded step:
+1. Build a targeted weak4 training manifest from Target Lab GT and hard negatives; separate YOLO-low-confidence positives from YOLO-absent thermal positives.
+2. Draft the corrected YOLO26 smoke command as artifact-generation proof, not quality evidence: tiny verified subset, `epochs=1`, `workers=0`, `save_period=1`, `tee` log, external timeout 45-60 minutes, and required `results.csv` plus `weights/last.pt`.
+3. Only after smoke artifacts appear, allow longer detector training and a quality gate against the weak4 clips.

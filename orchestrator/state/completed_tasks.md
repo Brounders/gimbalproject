@@ -108,3 +108,5 @@ TASK-20260516-101 | Codex Mac | Accepted | 2026-05-16 | Act3 IR missed detection
 TASK-20260516-102 | Codex Mac | Accepted with risks | 2026-05-16 | Act4 live-auto foundation accepted; report orchestrator/reports/REPORT-TARGET-LAB-ACT4-LIVE-AUTO-20260516.md; removed source-name routing, Target Lab uses tracking_live_auto, risk count 21->20
 
 TASK-20260516-103 | Codex Mac | Accepted | 2026-05-17 | Act5 universal selector/reacquire series accepted; reports orchestrator/reports/REPORT-TASK-103-ACT5-FINAL-20260516.md and orchestrator/reports/REPORT-TASK-103f-REACQ-SUPPRESSION-20260517.md; 103a-103f complete, 103g N/A, 103h deferred to detector/training decision gate
+
+TASK-20260516-100 | Codex Mac | Accepted | 2026-05-17 | Detector/training decision gate closed by orchestrator/reports/REPORT-DETECTOR-EVIDENCE-WEAK4-20260517.md; weak4 ceiling is detector/data, not selector/reacquire; opened next 103h preparation task
