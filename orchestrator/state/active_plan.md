@@ -108,6 +108,7 @@ ownership is explicit.
 - `orchestrator/reports/REPORT-TASK-093-COMMIT-BOUNDARY-REVIEW-20260517.md`
 - `orchestrator/reports/REPORT-TASK-114-SYNC-BOUNDARY-DECISION-20260517.md`
 - `orchestrator/reports/REPORT-TASK-115-SYNC-BRANCH-VALIDATION-20260517.md`
+- `orchestrator/reports/REPORT-TASK-116-RTX-SYNC-INTAKE-PROMPT-20260517.md`
 
 ## Current Execution Queue
 
@@ -146,7 +147,7 @@ ownership is explicit.
 
 ## Current Decision Gate
 
-TASK-20260517-116 активна. Structure stabilization intake is complete, and sync branch `codex/sync-boundary-20260517` is the RTX handoff path. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled until RTX verifies the branch snapshot.
+TASK-20260517-116 активна. Structure stabilization intake is complete, and sync branch `codex/sync-boundary-20260517` is published as the RTX handoff path. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled until RTX verifies the branch snapshot.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
