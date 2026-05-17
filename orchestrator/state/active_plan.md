@@ -7,7 +7,7 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260517-115
+- TASK-20260517-116
 
 ## Active RTX Tasks (execution allowed now)
 - none
@@ -107,6 +107,7 @@ ownership is explicit.
 - `orchestrator/reports/REPORT-TASK-113-PHYSICAL-RESTRUCTURE-PROPOSAL-20260517.md`
 - `orchestrator/reports/REPORT-TASK-093-COMMIT-BOUNDARY-REVIEW-20260517.md`
 - `orchestrator/reports/REPORT-TASK-114-SYNC-BOUNDARY-DECISION-20260517.md`
+- `orchestrator/reports/REPORT-TASK-115-SYNC-BRANCH-VALIDATION-20260517.md`
 
 ## Current Execution Queue
 
@@ -132,7 +133,8 @@ ownership is explicit.
 | TASK-20260517-113 | Physical restructure proposal | DONE | Migration order, validation gates, and rollback policy documented; no physical moves |
 | TASK-20260514-093 | Commit boundary review | DONE | Local main is clean but 170 commits ahead with mixed project/agent history; wholesale push blocked pending sync-boundary decision |
 | TASK-20260517-114 | Sync boundary decision | DONE | Selected isolated branch strategy: `codex/sync-boundary-20260517`; do not push/pull `main` for RTX |
-| TASK-20260517-115 | Sync branch validation | ACTIVE | Create/switch to sync branch, validate branch state, and prepare RTX handoff gate |
+| TASK-20260517-115 | Sync branch validation | DONE | Created and validated `codex/sync-boundary-20260517` as local sync snapshot |
+| TASK-20260517-116 | RTX sync intake | ACTIVE | Publish/fetch sync branch on RTX, verify exact HEAD and CUDA/tooling, then resume detector strategy |
 
 ## Deferred From Previous Plan
 
@@ -144,7 +146,7 @@ ownership is explicit.
 
 ## Current Decision Gate
 
-TASK-20260517-115 активна. Structure stabilization intake is complete, and sync strategy is selected: use isolated branch `codex/sync-boundary-20260517`, not `main`, for RTX handoff. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled.
+TASK-20260517-116 активна. Structure stabilization intake is complete, and sync branch `codex/sync-boundary-20260517` is the RTX handoff path. Selector/reacquire work remains closed; weak-clip detector/data work is paused, not cancelled until RTX verifies the branch snapshot.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -170,9 +172,9 @@ Detector evidence pack result:
 - `antiuav_rgbt_train_20190925_205804_1_2_infrared`: best `yolo@0.05`, Hit@0.1 `0.9543`; YOLO signal exists but operating threshold/ranking needs training/gate treatment.
 
 Next bounded step:
-1. Create/switch to `codex/sync-boundary-20260517`.
-2. Validate branch state and orchestration state.
-3. Do not push `main`.
-4. After branch validation, decide whether to publish the sync branch for RTX or
-   return locally to detector strategy (`TASK-20260517-108` /
-   `TASK-20260516-100`).
+1. Do not push `main`.
+2. Publish or otherwise transfer `codex/sync-boundary-20260517` for RTX.
+3. On RTX, verify exact HEAD, Python/CUDA/Torch/Ultralytics, orchestrator state,
+   and compileall.
+4. After RTX branch verification, return to detector strategy
+   (`TASK-20260517-108` / `TASK-20260516-100`).
