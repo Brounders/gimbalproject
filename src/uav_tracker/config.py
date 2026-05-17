@@ -192,6 +192,8 @@ class Config:
     NIGHT_ACTIVE_HOLD_RADIUS: int = 0
     NIGHT_RUN_WHEN_PRIMARY_SEEN: bool = False
     NIGHT_PRIMARY_COOLDOWN: int = 4
+    NIGHT_PRIMARY_SOURCE_ENABLED: bool = False
+    NIGHT_PRIMARY_DRONE_SCORE: float = 0.70
 
     # ── Display & Overlay ────────────────────────────────────────────────────
     DISPLAY_MIN_HIT_STREAK_PRIMARY: int = 1

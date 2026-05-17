@@ -7,7 +7,7 @@
 - Active
 
 ## Active Claude Tasks (execution allowed now)
-- TASK-20260517-119
+- TASK-20260517-120
 
 ## Active RTX Tasks (execution allowed now)
 - none
@@ -111,6 +111,7 @@ ownership is explicit.
 - `orchestrator/reports/REPORT-TASK-116-RTX-SYNC-INTAKE-PROMPT-20260517.md`
 - `orchestrator/reports/REPORT-TASK-117-NIGHT-DETECTOR-UNIT-COVERAGE-20260517.md`
 - `orchestrator/reports/REPORT-TASK-118-NO-TRAINING-DETECTOR-STRATEGY-20260517.md`
+- `orchestrator/reports/REPORT-TASK-119-NIGHT-SOURCE-AUTHORITY-AB-GATE-20260517.md`
 
 ## Current Execution Queue
 
@@ -140,7 +141,8 @@ ownership is explicit.
 | TASK-20260517-116 | RTX sync intake | DEFERRED | Human deferred RTX/training; branch remains available but is not the active blocker |
 | TASK-20260517-117 | Night detector unit coverage | DONE | Added synthetic NightSmallTargetDetector tests; 7 targeted tests pass locally |
 | TASK-20260517-118 | No-training detector strategy gate | DONE | Training not required now; selected local night-source authority A/B gate as next bounded step |
-| TASK-20260517-119 | Night-source authority A/B gate | ACTIVE | Test whether guarded night/thermal source primary/confirmation semantics can improve weak IR clips without training |
+| TASK-20260517-119 | Night-source authority A/B gate | DONE | Added default-off night primary source switch and tests; current presets unchanged |
+| TASK-20260517-120 | Night-primary candidate A/B gate | ACTIVE | Evaluate candidate config enabling night primary source for IR/night only; no RTX/training |
 
 ## Deferred From Previous Plan
 
@@ -152,7 +154,7 @@ ownership is explicit.
 
 ## Current Decision Gate
 
-TASK-20260517-119 активна. RTX/training is deferred by Human; sync branch `codex/sync-boundary-20260517` remains available but is not the active blocker. Selector/reacquire work remains closed; next work is a bounded local A/B gate for night-source authority in IR/night contexts.
+TASK-20260517-120 активна. RTX/training is deferred by Human; sync branch `codex/sync-boundary-20260517` remains available but is not the active blocker. A default-off night-primary source switch exists, but it is not enabled in current presets; next work is candidate A/B evaluation.
 
 Closed in Act5:
 - universal proposal selection and scene trust table;
@@ -180,7 +182,8 @@ Detector evidence pack result:
 Next bounded step:
 1. Do not start RTX training.
 2. Do not push `main`.
-3. Run TASK-20260517-119 as an evidence-first local A/B gate.
-4. Only consider runtime source-authority changes if protected clips and
-   airplane/noise/bird gates remain safe.
+3. Run TASK-20260517-120 as candidate A/B gate with night primary source enabled
+   only in candidate config.
+4. Only consider preset promotion if protected clips and airplane/noise/bird
+   gates remain safe.
 5. Keep TRAIN-20260517-002 deferred until Human explicitly reopens RTX training.

@@ -35,6 +35,8 @@ class TargetManager:
         return ((ax - bx) ** 2 + (ay - by) ** 2) ** 0.5
 
     def _is_primary_source(self, source: str) -> bool:
+        if source == DetectionSource.NIGHT and bool(getattr(self.cfg, "NIGHT_PRIMARY_SOURCE_ENABLED", False)):
+            return True
         return source in DetectionSource.primary_sources()
 
     def get_active_target(self) -> Optional[TrackedTarget]:
@@ -345,7 +347,9 @@ class TargetManager:
             target.source = source
             self._update_drone_score(target, cls_id, conf, source)
         else:
-            if self._is_primary_source(source) and cls_id >= 0:
+            if source == DetectionSource.NIGHT and bool(getattr(self.cfg, "NIGHT_PRIMARY_SOURCE_ENABLED", False)):
+                initial_drone_score = float(getattr(self.cfg, "NIGHT_PRIMARY_DRONE_SCORE", 0.70))
+            elif self._is_primary_source(source) and cls_id >= 0:
                 initial_drone_score = 0.70 if cls_id == self.cfg.PREFER_CLASS_ID else 0.30
             else:
                 initial_drone_score = 0.5

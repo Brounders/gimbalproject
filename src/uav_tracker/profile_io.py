@@ -141,6 +141,8 @@ def apply_overrides(cfg: Config, overrides: dict[str, Any]) -> Config:
         'night_max_ar': 'NIGHT_MAX_AR',
         'night_run_when_primary_seen': 'NIGHT_RUN_WHEN_PRIMARY_SEEN',
         'night_primary_cooldown': 'NIGHT_PRIMARY_COOLDOWN',
+        'night_primary_source_enabled': 'NIGHT_PRIMARY_SOURCE_ENABLED',
+        'night_primary_drone_score': 'NIGHT_PRIMARY_DRONE_SCORE',
         'auto_scene_detect': 'AUTO_SCENE_DETECT',
         'auto_scene_night_brightness_max': 'AUTO_SCENE_NIGHT_BRIGHTNESS_MAX',
         'auto_scene_confirm_frames': 'AUTO_SCENE_CONFIRM_FRAMES',
